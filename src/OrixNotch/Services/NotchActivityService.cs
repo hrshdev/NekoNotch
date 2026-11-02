@@ -38,8 +38,7 @@ public sealed partial class NotchActivityService : ObservableObject
         PomodoroService.Instance.PropertyChanged += OnChanged;
         CountdownService.Instance.PropertyChanged += OnChanged;
         StopwatchService.Instance.PropertyChanged += OnChanged;
-        EventReminderService.Instance.Alert += _ => Refresh();
-        EventReminderService.Instance.Dismissed += Refresh;
+        EventReminderService.Instance.PropertyChanged += OnChanged;
 
         _musicGraceTimer.Tick += (_, _) =>
         {
