@@ -6,7 +6,7 @@ using OrixNotch.Shell;
 namespace OrixNotch.Services;
 
 /// <summary>
-/// Launches or focuses the corresponding Windows application from a notification's AppId or AppName.
+/// Launches or focuses the corresponding Windows application from a notification.
 /// </summary>
 public static class AppLauncher
 {
@@ -16,13 +16,32 @@ public static class AppLauncher
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
     private const int SwRestore = 9;
+    private const int SwShow = 5;
 
-    public static void Launch(string? appId, string? appName = null)
+    private static bool BringToFront(IntPtr hWnd)
     {
-        if (string.IsNullOrWhiteSpace(appId) && string.IsNullOrWhiteSpace(appName)) return;
+        if (hWnd == IntPtr.Zero) return false;
+        try
+        {
+            if (IsIconic(hWnd)) ShowWindow(hWnd, SwRestore);
+            else ShowWindow(hWnd, SwShow);
+            return SetForegroundWindow(hWnd);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
-        // 1. Internal OrixNotch alerts
+    public static void Launch(string? appId, string? appName = null, string? title = null, string? body = null)
+    {
+        var textContext = $"{appId} {appName} {title} {body}";
+
+        // 1. Internal NekoNotch alerts
         if (appId?.StartsWith("orixnotch:", StringComparison.OrdinalIgnoreCase) == true)
         {
             var tool = appId["orixnotch:".Length..];
@@ -30,7 +49,84 @@ public static class AppLauncher
             return;
         }
 
-        // 2. Direct executable or file path
+        // 2. Web WhatsApp notification detection
+        if (textContext.Contains("web.whatsapp.com", StringComparison.OrdinalIgnoreCase) ||
+            (appName?.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase) == true && (appId == null || !appId.Contains('!'))))
+        {
+            try
+            {
+                foreach (var proc in Process.GetProcesses())
+                {
+                    try
+                    {
+                        if (proc.MainWindowHandle != IntPtr.Zero &&
+                            proc.MainWindowTitle.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase))
+                        {
+                            BringToFront(proc.MainWindowHandle);
+                            return;
+                        }
+                    }
+                    catch { }
+                }
+
+                // If no active window with "WhatsApp" title, open WhatsApp Web in the user's browser
+                Process.Start(new ProcessStartInfo("https://web.whatsapp.com") { UseShellExecute = true });
+                return;
+            }
+            catch (Exception ex)
+            {
+                App.Log(ex);
+            }
+        }
+
+        // 3. Search already-running processes by name or window title (e.g. Antigravity, Chrome, Edge, Slack, Spotify)
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(appName)) candidates.Add(appName.Trim());
+        if (!string.IsNullOrWhiteSpace(appId))
+        {
+            var cleanId = appId;
+            if (cleanId.Contains('.')) cleanId = cleanId.Split('.').Last();
+            if (cleanId.Contains('\\')) cleanId = Path.GetFileNameWithoutExtension(cleanId);
+            if (!string.IsNullOrWhiteSpace(cleanId)) candidates.Add(cleanId.Trim());
+        }
+
+        try
+        {
+            var running = Process.GetProcesses();
+            foreach (var name in candidates)
+            {
+                // Exact process name match first
+                var match = running.FirstOrDefault(p =>
+                {
+                    try { return p.MainWindowHandle != IntPtr.Zero && p.ProcessName.Equals(name, StringComparison.OrdinalIgnoreCase); }
+                    catch { return false; }
+                });
+
+                // Partial process name or window title match second
+                match ??= running.FirstOrDefault(p =>
+                {
+                    try
+                    {
+                        return p.MainWindowHandle != IntPtr.Zero &&
+                               (p.ProcessName.Contains(name, StringComparison.OrdinalIgnoreCase) ||
+                                p.MainWindowTitle.Contains(name, StringComparison.OrdinalIgnoreCase));
+                    }
+                    catch { return false; }
+                });
+
+                if (match != null)
+                {
+                    BringToFront(match.MainWindowHandle);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+
+        // 4. Direct executable or file path on disk
         if (!string.IsNullOrWhiteSpace(appId) && File.Exists(appId))
         {
             try
@@ -44,8 +140,8 @@ public static class AppLauncher
             }
         }
 
-        // 3. Launch or focus via Windows Shell AppsFolder (UWP, Store, MSIX, and registered Win32 AUMIDs)
-        if (!string.IsNullOrWhiteSpace(appId))
+        // 5. Real UWP / Store AppUserModelID (MUST contain '!' to avoid opening Explorer Documents)
+        if (!string.IsNullOrWhiteSpace(appId) && appId.Contains('!'))
         {
             try
             {
@@ -63,35 +159,31 @@ public static class AppLauncher
             }
         }
 
-        // 4. Fallback: If shell:AppsFolder was unable to activate, search running processes to restore and focus
-        var searchName = !string.IsNullOrWhiteSpace(appName) ? appName : appId;
-        if (!string.IsNullOrWhiteSpace(searchName))
+        // 6. Generic web URL in body / title
+        if (!string.IsNullOrWhiteSpace(body) && (body.Contains("http://") || body.Contains("https://")))
         {
             try
             {
-                foreach (var proc in Process.GetProcesses())
+                var words = body.Split(' ', '\n', '\r');
+                var url = words.FirstOrDefault(w => w.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                                                    w.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+                if (url != null)
                 {
-                    try
-                    {
-                        if (proc.MainWindowHandle == IntPtr.Zero) continue;
-                        if (proc.ProcessName.Contains(searchName, StringComparison.OrdinalIgnoreCase) ||
-                            proc.MainWindowTitle.Contains(searchName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            ShowWindow(proc.MainWindowHandle, SwRestore);
-                            SetForegroundWindow(proc.MainWindowHandle);
-                            return;
-                        }
-                    }
-                    catch
-                    {
-                        // Some system processes reject process name inspection
-                    }
+                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    return;
                 }
             }
-            catch (Exception ex)
+            catch { }
+        }
+
+        // 7. Last resort: Try launching by app name command if registered in PATH
+        if (!string.IsNullOrWhiteSpace(appName))
+        {
+            try
             {
-                App.Log(ex);
+                Process.Start(new ProcessStartInfo(appName) { UseShellExecute = true });
             }
+            catch { }
         }
     }
 }

@@ -93,7 +93,7 @@ public partial class NotificationsView : UserControl, IToolView
         icon.ToolTip = $"Open {n.AppName}";
         icon.MouseLeftButtonUp += (_, e) =>
         {
-            AppLauncher.Launch(n.AppId, n.AppName);
+            AppLauncher.Launch(n.AppId, n.AppName, n.Title, n.Body);
             e.Handled = true;
         };
         grid.Children.Add(icon);
@@ -146,7 +146,7 @@ public partial class NotificationsView : UserControl, IToolView
         open.SetResourceReference(ForegroundProperty, "SubTextBrush");
         open.Click += (_, e) =>
         {
-            AppLauncher.Launch(n.AppId, n.AppName);
+            AppLauncher.Launch(n.AppId, n.AppName, n.Title, n.Body);
             e.Handled = true;
         };
         top.Children.Add(open);
@@ -204,7 +204,7 @@ public partial class NotificationsView : UserControl, IToolView
         {
             if (e.ClickCount == 2)
             {
-                AppLauncher.Launch(n.AppId, n.AppName);
+                AppLauncher.Launch(n.AppId, n.AppName, n.Title, n.Body);
                 e.Handled = true;
             }
         };

@@ -1421,8 +1421,27 @@ public partial class NotchWindow : Window
             OnClick: () => Expand(activate: true))); // a live reminder routes this to Calendar
     }
 
+    private static void PlayNotificationChime()
+    {
+        try
+        {
+            var wav = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Media", "Windows Notify.wav");
+            if (System.IO.File.Exists(wav))
+            {
+                using var player = new System.Media.SoundPlayer(wav);
+                player.Play();
+            }
+            else
+            {
+                System.Media.SystemSounds.Asterisk.Play();
+            }
+        }
+        catch { }
+    }
+
     private void ShowNotificationPeek(NotchNotification n)
     {
+        PlayNotificationChime();
         var sub = string.IsNullOrWhiteSpace(n.Body) ? n.AppName : $"{n.AppName} · {n.Body}";
         // Long messages stay up a little longer (4 s + 1 s per 60 characters, at most 8 s).
         var seconds = Math.Min(8, 4 + OneLine(n.Body).Length / 60);
@@ -1430,7 +1449,7 @@ public partial class NotchWindow : Window
             OnClick: () =>
             {
                 EndPeek();
-                AppLauncher.Launch(n.AppId, n.AppName);
+                AppLauncher.Launch(n.AppId, n.AppName, n.Title, n.Body);
             }));
     }
 
