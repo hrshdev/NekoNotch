@@ -52,71 +52,65 @@
                         </Grid>
                     </Grid>
 
-                    <!-- Neko / Anime Eyes: pure rounded capsule eyes, unclipped golden aura, moving dark pupil lens -->
+                    <!-- Neko / Mac Character Eyes: Clean round white sclera, dark tracking pupil with specular glint, consistent-interval blink, expressive blush -->
                     <Grid x:Name="NotchEyes" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Left Eye Socket -->
-                            <Grid Margin="4.5,0" RenderTransformOrigin="0.5,0.92">
-                                <Grid.RenderTransform>
-                                    <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
-                                </Grid.RenderTransform>
-                                <!-- Outer Glow Aura (pure capsule, 100% unclipped) -->
-                                <Border Width="8" Height="15" CornerRadius="4" Background="#FFF382">
-                                    <Border.Effect>
-                                        <DropShadowEffect Color="#FFE168" BlurRadius="8" ShadowDepth="0" Opacity="0.95" />
-                                    </Border.Effect>
-                                </Border>
-                                <!-- Inner Eye Body & Pupil Lens (clipped strictly to smooth capsule curve, no box) -->
-                                <Border Width="8" Height="15" CornerRadius="4" Background="#FFF382">
-                                    <Border.Clip>
-                                        <RectangleGeometry Rect="0,0,8,15" RadiusX="4" RadiusY="4" />
-                                    </Border.Clip>
-                                    <Grid>
-                                        <!-- Sleek Dark Pupil Lens that tracks cursor -->
-                                        <Border x:Name="LeftPupil" Width="3.2" Height="8" CornerRadius="1.6"
-                                                Background="#111318" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Border.RenderTransform>
-                                                <TranslateTransform x:Name="LeftPupilShift" />
-                                            </Border.RenderTransform>
-                                            <!-- Specular White Glint Reflection -->
-                                            <Ellipse Width="1.2" Height="1.2" Fill="#FFFFFF" Opacity="0.95"
-                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0.5,1.0,0,0" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
-                            </Grid>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Blush Cheeks (Glow warm orange when charging / plugged in) -->
+                            <Ellipse x:Name="LeftBlush" Width="6" Height="4" Fill="#FF8438" Opacity="0"
+                                     HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-9,5,0,0">
+                                <Ellipse.Effect><BlurEffect Radius="3" /></Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse x:Name="RightBlush" Width="6" Height="4" Fill="#FF8438" Opacity="0"
+                                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,-9,0">
+                                <Ellipse.Effect><BlurEffect Radius="3" /></Ellipse.Effect>
+                            </Ellipse>
 
-                            <!-- Right Eye Socket -->
-                            <Grid Margin="4.5,0" RenderTransformOrigin="0.5,0.92">
-                                <Grid.RenderTransform>
-                                    <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
-                                </Grid.RenderTransform>
-                                <!-- Outer Glow Aura (pure capsule, 100% unclipped) -->
-                                <Border Width="8" Height="15" CornerRadius="4" Background="#FFF382">
-                                    <Border.Effect>
-                                        <DropShadowEffect Color="#FFE168" BlurRadius="8" ShadowDepth="0" Opacity="0.95" />
-                                    </Border.Effect>
-                                </Border>
-                                <!-- Inner Eye Body & Pupil Lens (clipped strictly to smooth capsule curve, no box) -->
-                                <Border Width="8" Height="15" CornerRadius="4" Background="#FFF382">
-                                    <Border.Clip>
-                                        <RectangleGeometry Rect="0,0,8,15" RadiusX="4" RadiusY="4" />
-                                    </Border.Clip>
-                                    <Grid>
-                                        <!-- Sleek Dark Pupil Lens that tracks cursor -->
-                                        <Border x:Name="RightPupil" Width="3.2" Height="8" CornerRadius="1.6"
-                                                Background="#111318" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Border.RenderTransform>
-                                                <TranslateTransform x:Name="RightPupilShift" />
-                                            </Border.RenderTransform>
-                                            <!-- Specular White Glint Reflection -->
-                                            <Ellipse Width="1.2" Height="1.2" Fill="#FFFFFF" Opacity="0.95"
-                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0.5,1.0,0,0" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-                        </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Left Eye Socket -->
+                                <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.95">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
+                                    </Grid.RenderTransform>
+                                    <!-- White Eye Sclera (Smooth circle, clips pupil inside) -->
+                                    <Border Width="15" Height="15" CornerRadius="7.5" Background="#FFFFFF" ClipToBounds="True">
+                                        <Grid>
+                                            <!-- Dark Pupil with Specular White Glint -->
+                                            <Border x:Name="LeftPupil" Width="9.5" Height="9.5" CornerRadius="4.75"
+                                                    Background="#0C0E14" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1.2,0,0">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="LeftPupilShift" />
+                                                </Border.RenderTransform>
+                                                <!-- Specular Glint Reflection -->
+                                                <Ellipse Width="2.8" Height="2.8" Fill="#FFFFFF" Opacity="0.95"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.4,1.2,0,0" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Right Eye Socket -->
+                                <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.95">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
+                                    </Grid.RenderTransform>
+                                    <!-- White Eye Sclera (Smooth circle, clips pupil inside) -->
+                                    <Border Width="15" Height="15" CornerRadius="7.5" Background="#FFFFFF" ClipToBounds="True">
+                                        <Grid>
+                                            <!-- Dark Pupil with Specular White Glint -->
+                                            <Border x:Name="RightPupil" Width="9.5" Height="9.5" CornerRadius="4.75"
+                                                    Background="#0C0E14" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1.2,0,0">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="RightPupilShift" />
+                                                </Border.RenderTransform>
+                                                <!-- Specular Glint Reflection -->
+                                                <Ellipse Width="2.8" Height="2.8" Fill="#FFFFFF" Opacity="0.95"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.4,1.2,0,0" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
 
                     <!-- Music: art, title and artist (scrolls when long), waveform tinted from the album art -->

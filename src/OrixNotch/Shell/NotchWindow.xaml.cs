@@ -1998,10 +1998,11 @@ public partial class NotchWindow : Window
     private readonly Random _eyeRng = new();
     private double _curEyeX, _curEyeY;
     private bool _blinking;
+    private const double ConstantBlinkIntervalSec = 3.5;
 
     private void InitNotchEyes()
     {
-        _blinkTimer.Interval = TimeSpan.FromSeconds(2.5);
+        _blinkTimer.Interval = TimeSpan.FromSeconds(ConstantBlinkIntervalSec);
         _blinkTimer.Tick += (_, _) => TriggerEyeBlink();
         _blinkTimer.Start();
     }
@@ -2011,17 +2012,19 @@ public partial class NotchWindow : Window
         if (_blinking || _expanded || NotchEyes.Visibility != Visibility.Visible) return;
         _blinking = true;
 
+        // Eyelid closes smoothly down to bottom
         var closeAnim = new DoubleAnimation
         {
             From = 1.0,
-            To = 0.06,
+            To = 0.05,
             Duration = TimeSpan.FromMilliseconds(75),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
 
+        // Eyelid opens back up with subtle organic bounce
         var openAnim = new DoubleAnimation
         {
-            From = 0.06,
+            From = 0.05,
             To = 1.0,
             Duration = TimeSpan.FromMilliseconds(95),
             EasingFunction = new BackEase { Amplitude = 0.15, EasingMode = EasingMode.EaseOut }
@@ -2034,7 +2037,8 @@ public partial class NotchWindow : Window
                 _blinking = false;
                 LeftEyeScale.ScaleY = 1.0;
                 RightEyeScale.ScaleY = 1.0;
-                _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.0 + 2.5);
+                // Always reset to the exact same interval (no random jitter)
+                _blinkTimer.Interval = TimeSpan.FromSeconds(ConstantBlinkIntervalSec);
             };
             LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, openAnim);
             RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, openAnim);
@@ -2048,6 +2052,20 @@ public partial class NotchWindow : Window
     {
         if (_expanded || NotchEyes.Visibility != Visibility.Visible) return;
 
+        // Reactive Body Language: Show subtle warm orange blush cheeks when plugged in / charging
+        try
+        {
+            var ps = System.Windows.Forms.SystemInformation.PowerStatus;
+            var isPlugged = ps.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online;
+            var targetBlush = isPlugged ? 0.75 : 0.0;
+            if (Math.Abs(LeftBlush.Opacity - targetBlush) > 0.03)
+            {
+                LeftBlush.Opacity += (targetBlush - LeftBlush.Opacity) * 0.1;
+                RightBlush.Opacity = LeftBlush.Opacity;
+            }
+        }
+        catch { }
+
         if (!Win32.GetCursorPos(out var pt)) return;
 
         // Notch pill center coordinates
@@ -2057,9 +2075,9 @@ public partial class NotchWindow : Window
         var dx = pt.X - notchCenterX;
         var dy = pt.Y - notchCenterY;
 
-        // Smoothly turn/shift only the inner pupil lenses inside their sockets
-        var targetX = Math.Clamp(dx / 50.0, -2.0, 2.0);
-        var targetY = Math.Clamp(dy / 50.0, -2.5, 2.5);
+        // Smoothly turn/shift only the inner pupil lenses inside the white eye sockets
+        var targetX = Math.Clamp(dx / 50.0, -2.5, 2.5);
+        var targetY = Math.Clamp(dy / 50.0, -2.2, 2.2);
 
         _curEyeX += (targetX - _curEyeX) * 0.25;
         _curEyeY += (targetY - _curEyeY) * 0.25;
