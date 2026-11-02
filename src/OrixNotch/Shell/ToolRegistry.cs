@@ -30,7 +30,7 @@ public static class ToolRegistry
 
     public static IReadOnlyList<ToolDef> All { get; } =
     [
-        new("home", "OrixNotch", AppIcon.Grid, W, H, () => new HomeView()),
+        new("home", "NekoNotch", AppIcon.Grid, W, H, () => new HomeView()),
         new("ask", "Ask AI", AppIcon.Sparkles, W, H, () => new AskAiView()),
         new("aiusage", "AI Usage", AppIcon.ChartBar, W, H, () => new AiUsageView()),
         new("shelf", "Shelf", AppIcon.ArchiveBox, W, H, () => new ShelfView()),

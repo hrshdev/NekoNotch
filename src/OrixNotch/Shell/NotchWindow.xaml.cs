@@ -1441,7 +1441,7 @@ public partial class NotchWindow : Window
 
     private void ShowUpdatePeek(string version)
     {
-        var sub = version.Length > 0 ? $"OrixNotch {version} · click to install" : "A new version is ready · click to install";
+        var sub = version.Length > 0 ? $"NekoNotch {version} · click to install" : "A new version is ready · click to install";
         EnqueuePeek(new PeekRequest("update", () => GlyphTile(AppIcon.ArrowDown), "Update available", sub,
             TimeSpan.FromSeconds(8), OnClick: () => _ = UpdateService.Instance.InstallAsync()));
     }

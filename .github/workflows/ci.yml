@@ -53,7 +53,7 @@ jobs:
       - name: Upload packages
         uses: actions/upload-artifact@v6
         with:
-          name: OrixNotch-${{ github.sha }}
+          name: NekoNotch-${{ github.sha }}
           path: |
             publish/exe/OrixNotch.exe
             publish/OrixNotch.msi

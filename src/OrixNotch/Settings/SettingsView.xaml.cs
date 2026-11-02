@@ -36,7 +36,7 @@ public partial class SettingsView : UserControl, IToolView
     public SettingsView()
     {
         InitializeComponent();
-        VersionText.Text = $"OrixNotch {typeof(App).Assembly.GetName().Version?.ToString(3)}";
+        VersionText.Text = $"NekoNotch {typeof(App).Assembly.GetName().Version?.ToString(3)}";
 
         foreach (var (id, name, icon, section) in Pages)
         {
@@ -270,7 +270,7 @@ public partial class SettingsView : UserControl, IToolView
 
     private void RenderGeneral()
     {
-        Title("General", "How OrixNotch behaves on your PC.");
+        Title("General", "How NekoNotch behaves on your PC.");
         Section("PROFILE");
         Row("Name", "Shown in the greeting on Home.",
             TextInput(App.Settings.DisplayName, Environment.UserName, ProfileService.SetName));
@@ -333,7 +333,7 @@ public partial class SettingsView : UserControl, IToolView
         Section("SYSTEM");
         Row("Open at login", StartupService.DisabledByUser
                 ? "Turned off in Task Manager → Startup apps. Turn it back on there."
-                : "Start OrixNotch when you sign in to Windows.",
+                : "Start NekoNotch when you sign in to Windows.",
             Toggle(S.LaunchAtStartup, async v =>
             {
                 var on = await StartupService.ApplyAsync(v);
@@ -949,7 +949,7 @@ public partial class SettingsView : UserControl, IToolView
     private void RenderAbout()
     {
         var version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "?";
-        Title("About", "Version, privacy and the work OrixNotch builds on.");
+        Title("About", "Version, privacy and the work NekoNotch builds on.");
 
         // Hero: logo tile, wordmark, tagline, version chips and project links.
         var hero = new Grid();
@@ -1060,7 +1060,7 @@ public partial class SettingsView : UserControl, IToolView
             Text = $"© {DateTime.Now.Year} OrixNotch",
             Style = (Style)FindResource("SubText"), FontWeight = FontWeights.Normal, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center,
         });
-        var quit = new Button { Content = "Quit OrixNotch", HorizontalAlignment = HorizontalAlignment.Right };
+        var quit = new Button { Content = "Quit NekoNotch", HorizontalAlignment = HorizontalAlignment.Right };
         quit.SetResourceReference(ForegroundProperty, "BadBrush");
         quit.Click += (_, _) => Application.Current.Shutdown();
         footer.Children.Add(quit);

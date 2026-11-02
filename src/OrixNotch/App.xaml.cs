@@ -28,7 +28,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        _mutex = new Mutex(true, "OrixNotch.SingleInstance", out var created);
+        _mutex = new Mutex(true, "NekoNotch.SingleInstance", out var created);
         if (!created)
         {
             _mutex = null;

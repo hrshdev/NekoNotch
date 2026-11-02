@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\Brand\OrixNotch.ico</ApplicationIcon>
     <Version>0.9.0</Version>
-    <Product>OrixNotch</Product>
+    <Product>NekoNotch</Product>
     <!-- WPF needs the DPI settings in app.manifest; the WinForms analyzer only knows SetHighDpiMode. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>

@@ -23,10 +23,10 @@
     ProcessorArchitecture="x64" />
   <mp:PhoneIdentity PhoneProductId="3f1d7c9e-0b2a-4e6d-9c8f-7a1b2c3d4e5f" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
-    <DisplayName>OrixNotch</DisplayName>
+    <DisplayName>NekoNotch</DisplayName>
     <PublisherDisplayName>Faisal Shohag</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
-    <Description>OrixNotch — Your Screen, Smarter. A dynamic-island style toolbox for Windows.</Description>
+    <Description>NekoNotch — Your Screen, Smarter. A dynamic-island style toolbox for Windows.</Description>
   </Properties>
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
@@ -37,7 +37,7 @@
   <Applications>
     <Application Id="OrixNotch" Executable="OrixNotch.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="OrixNotch"
+        DisplayName="NekoNotch"
         Description="Your Screen, Smarter — Smoother, Faster, Smarter."
         BackgroundColor="#0B0E17"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -46,7 +46,7 @@
         <desktop:Extension Category="windows.startupTask" Executable="OrixNotch.exe" EntryPoint="Windows.FullTrustApplication">
           <!-- Enabled: Windows turns open-at-login on after the first launch; the user can switch it off in
                Task Manager or OrixNotch's settings (StartupService). -->
-          <desktop:StartupTask TaskId="OrixNotchAutostart" Enabled="true" DisplayName="OrixNotch" />
+          <desktop:StartupTask TaskId="NekoNotchAutostart" Enabled="true" DisplayName="NekoNotch" />
         </desktop:Extension>
       </Extensions>
     </Application>
