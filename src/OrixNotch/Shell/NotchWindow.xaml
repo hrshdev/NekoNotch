@@ -140,16 +140,21 @@
                                    Text="{Binding Text, Source={x:Static svc:NotchActivityService.Instance}}" />
                     </Grid>
 
-                    <!-- Idle: items the user picked in Settings → Display (rotate, split left/right, or all in a row).
-                         Slots are filled in code; animations live on the slots so 1 s value refreshes don't reset them. -->
-                    <Grid x:Name="IdlePart" Margin="12,0,13,0" Visibility="Collapsed">
-                        <ContentControl x:Name="IdleSlotA" Focusable="False" HorizontalAlignment="Left" VerticalAlignment="Center">
-                            <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
-                        </ContentControl>
-                        <ContentControl x:Name="IdleSlotB" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
-                        </ContentControl>
-                        <StackPanel x:Name="IdleRow" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <!-- Idle: items split symmetrically around the center eyes -->
+                    <Grid x:Name="IdlePart" Margin="12,0,12,0" Visibility="Collapsed">
+                        <StackPanel x:Name="IdleLeftGroup" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <ContentControl x:Name="IdleSlotA" Focusable="False" VerticalAlignment="Center">
+                                <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
+                            </ContentControl>
+                            <StackPanel x:Name="IdleRowLeft" Orientation="Horizontal" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="IdleRightGroup" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <StackPanel x:Name="IdleRowRight" Orientation="Horizontal" VerticalAlignment="Center" />
+                            <ContentControl x:Name="IdleSlotB" Focusable="False" VerticalAlignment="Center">
+                                <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
+                            </ContentControl>
+                        </StackPanel>
                     </Grid>
 
                     <!-- Event reminder (compact): calendar tile, "10m", dismiss -->

@@ -1026,8 +1026,10 @@ public partial class NotchWindow : Window
         switch (App.Settings.IdleLayout)
         {
             case "Row":
-                IdleRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                return Math.Clamp(IdleRow.DesiredSize.Width + 30, _idleW, IdleRowMax);
+                IdleRowLeft.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                IdleRowRight.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var sideMax = Math.Max(IdleRowLeft.DesiredSize.Width, IdleRowRight.DesiredSize.Width);
+                return Math.Clamp(sideMax * 2 + 80, _idleW, IdleRowMax);
             case "Split" when items.Count > 1:
                 return _musicW;
             default:
@@ -1044,26 +1046,24 @@ public partial class NotchWindow : Window
         var items = IdleInfoService.Instance.Items;
         IdleSlotA.Content = null;
         IdleSlotB.Content = null;
-        IdleRow.Children.Clear();
+        IdleRowLeft.Children.Clear();
+        IdleRowRight.Children.Clear();
         if (items.Count == 0) return;
 
         switch (App.Settings.IdleLayout)
         {
             case "Row":
-                // Add whole items until the row would outgrow the widest notch; never clip one in half.
-                for (var i = 0; i < items.Count; i++)
+                // Distribute items to the left and right of the eyes so the eyes always stay in the center
+                var mid = (items.Count + 1) / 2;
+                for (var i = 0; i < mid; i++)
                 {
-                    var dot = i > 0 ? IdleDot() : null;
-                    var chip = IdleChip(items[i]);
-                    if (dot is not null) IdleRow.Children.Add(dot);
-                    IdleRow.Children.Add(chip);
-                    IdleRow.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                    if (IdleRow.DesiredSize.Width + 30 > IdleRowMax && i > 0)
-                    {
-                        IdleRow.Children.Remove(chip);
-                        IdleRow.Children.Remove(dot);
-                        break;
-                    }
+                    if (i > 0) IdleRowLeft.Children.Add(IdleDot());
+                    IdleRowLeft.Children.Add(IdleChip(items[i]));
+                }
+                for (var i = mid; i < items.Count; i++)
+                {
+                    if (i > mid) IdleRowRight.Children.Add(IdleDot());
+                    IdleRowRight.Children.Add(IdleChip(items[i]));
                 }
                 break;
             case "Split" when items.Count > 1:
