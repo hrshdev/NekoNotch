@@ -28,11 +28,11 @@ public sealed class VolumeService
             if (enumerator.GetDefaultAudioEndpoint(0 /* eRender */, 1 /* eMultimedia */, out var device) != 0) return;
             var iid = typeof(IAudioEndpointVolume).GUID;
             if (device.Activate(ref iid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out var obj) != 0) return;
-            _endpoint = (IAudioEndpointVolume)obj;
+            if (obj is IAudioEndpointVolume ep) _endpoint = ep; else return;
             _callback = new Callback(this);
             if (_endpoint.RegisterControlChangeNotify(_callback) != 0) _endpoint = null;
         }
-        catch (COMException)
+        catch (Exception)
         {
             _endpoint = null; // no audio device / service
         }
@@ -58,20 +58,20 @@ public sealed class VolumeService
     private class MMDeviceEnumerator;
 
     [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDeviceEnumerator
+    internal interface IMMDeviceEnumerator
     {
         [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
         [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice device);
     }
 
     [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDevice
+    internal interface IMMDevice
     {
         [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object iface);
     }
 
     [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IAudioEndpointVolume
+    public interface IAudioEndpointVolume
     {
         [PreserveSig] int RegisterControlChangeNotify(IAudioEndpointVolumeCallback notify);
         [PreserveSig] int UnregisterControlChangeNotify(IAudioEndpointVolumeCallback notify);

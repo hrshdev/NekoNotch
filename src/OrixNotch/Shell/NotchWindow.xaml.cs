@@ -200,9 +200,9 @@ public partial class NotchWindow : Window
         ThemeService.Changed += ApplyGlass;
         ApplyGlass();
         ApplyCaptureAffinity();
-        VolumeService.Instance.Start();
-        BluetoothWatcher.Instance.Start();
-        DownloadWatcher.Instance.Start();
+        try { VolumeService.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
+        try { BluetoothWatcher.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
+        try { DownloadWatcher.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
         ForegroundAppWatcher.Instance.Changed += OnForegroundAppChanged;
         ForegroundAppWatcher.Instance.Start();
         _guardTimer.Start();
