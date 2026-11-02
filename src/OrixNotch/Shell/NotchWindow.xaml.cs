@@ -1820,7 +1820,7 @@ public partial class NotchWindow : Window
     {
         if (!_views.TryGetValue(id, out var view))
         {
-            view = create();
+            try { view = create(); } catch (Exception ex) { App.Log(ex); return; }
             _views[id] = view;
         }
 

@@ -148,44 +148,56 @@ public partial class NowPlayingView : UserControl, IToolView
         timer.Start();
     }
 
-    private void UpdatePlayGlyph() =>
-        PlayIcon.Kind = Service.IsPlaying ? AppIcon.Pause : AppIcon.Play;
+    private void UpdatePlayGlyph()
+    {
+        if (PlayIcon is not null)
+        {
+            PlayIcon.Kind = Service.IsPlaying ? AppIcon.Pause : AppIcon.Play;
+        }
+    }
 
     private void UpdateTint()
     {
-        var surface = ((SolidColorBrush)ThemeService.Get("SurfaceBrush")).Color;
-        var hasArt = Service.Art is not null;
-        Backdrop.Visibility = hasArt ? Visibility.Visible : Visibility.Collapsed;
+        try
+        {
+            var surface = (ThemeService.Get("SurfaceBrush") as SolidColorBrush)?.Color ?? Color.FromRgb(0x12, 0x12, 0x14);
+            var hasArt = Service.Art is not null;
+            if (Backdrop is not null) Backdrop.Visibility = hasArt ? Visibility.Visible : Visibility.Collapsed;
 
-        if (hasArt)
-        {
-            var scrim = new LinearGradientBrush
+            if (hasArt)
             {
-                StartPoint = new Point(0, 0),
-                EndPoint = new Point(1, 1),
-                GradientStops =
+                var scrim = new LinearGradientBrush
                 {
-                    new GradientStop(Color.FromArgb(0x40, surface.R, surface.G, surface.B), 0),
-                    new GradientStop(Color.FromArgb(0xA8, surface.R, surface.G, surface.B), 0.55),
-                    new GradientStop(Color.FromArgb(0xE0, surface.R, surface.G, surface.B), 1),
-                },
-            };
-            scrim.Freeze();
-            Scrim.Background = scrim;
-            Card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(1, 1),
+                    GradientStops =
+                    {
+                        new GradientStop(Color.FromArgb(0x40, surface.R, surface.G, surface.B), 0),
+                        new GradientStop(Color.FromArgb(0xA8, surface.R, surface.G, surface.B), 0.55),
+                        new GradientStop(Color.FromArgb(0xE0, surface.R, surface.G, surface.B), 1),
+                    },
+                };
+                scrim.Freeze();
+                if (Scrim is not null) Scrim.Background = scrim;
+                Card?.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+            }
+            else if (Service.ArtTint is { } tint)
+            {
+                if (Scrim is not null) Scrim.Background = null;
+                var mixed = Color.FromRgb((byte)((tint.R + surface.R * 2) / 3), (byte)((tint.G + surface.G * 2) / 3), (byte)((tint.B + surface.B * 2) / 3));
+                var brush = new LinearGradientBrush(mixed, surface, 0);
+                brush.Freeze();
+                if (Card is not null) Card.Background = brush;
+            }
+            else
+            {
+                if (Scrim is not null) Scrim.Background = null;
+                Card?.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+            }
         }
-        else if (Service.ArtTint is { } tint)
+        catch (Exception ex)
         {
-            Scrim.Background = null;
-            var mixed = Color.FromRgb((byte)((tint.R + surface.R * 2) / 3), (byte)((tint.G + surface.G * 2) / 3), (byte)((tint.B + surface.B * 2) / 3));
-            var brush = new LinearGradientBrush(mixed, surface, 0);
-            brush.Freeze();
-            Card.Background = brush;
-        }
-        else
-        {
-            Scrim.Background = null;
-            Card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+            App.Log(ex);
         }
     }
 
