@@ -1412,7 +1412,11 @@ public partial class NotchWindow : Window
         // Long messages stay up a little longer (4 s + 1 s per 60 characters, at most 8 s).
         var seconds = Math.Min(8, 4 + OneLine(n.Body).Length / 60);
         EnqueuePeek(new PeekRequest("app:" + n.AppId, () => AppTile(n), n.Title, sub, TimeSpan.FromSeconds(seconds),
-            OnClick: () => OpenTool("notifications")));
+            OnClick: () =>
+            {
+                EndPeek();
+                AppLauncher.Launch(n.AppId, n.AppName);
+            }));
     }
 
     /// <summary>

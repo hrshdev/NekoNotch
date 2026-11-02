@@ -89,6 +89,13 @@ public partial class NotificationsView : UserControl, IToolView
         var icon = AppIcon(n);
         icon.VerticalAlignment = VerticalAlignment.Top;
         icon.Margin = new Thickness(0, 1, 11, 0);
+        icon.Cursor = Cursors.Hand;
+        icon.ToolTip = $"Open {n.AppName}";
+        icon.MouseLeftButtonUp += (_, e) =>
+        {
+            AppLauncher.Launch(n.AppId, n.AppName);
+            e.Handled = true;
+        };
         grid.Children.Add(icon);
 
         var text = new StackPanel();
@@ -125,6 +132,24 @@ public partial class NotificationsView : UserControl, IToolView
             NotificationHistory.Instance.Remove(n.Id);
             e.Handled = true;
         };
+        var open = new Button
+        {
+            Style = (Style)FindResource("IconButton"),
+            Width = 22,
+            Height = 22,
+            Margin = new Thickness(0, -3, 24, -3),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            ToolTip = $"Open {n.AppName}",
+            Content = new HeroIcon { Kind = Shell.AppIcon.ArrowRight, Width = 10, Height = 10 },
+            Opacity = 0,
+        };
+        open.SetResourceReference(ForegroundProperty, "SubTextBrush");
+        open.Click += (_, e) =>
+        {
+            AppLauncher.Launch(n.AppId, n.AppName);
+            e.Handled = true;
+        };
+        top.Children.Add(open);
         top.Children.Add(delete);
         text.Children.Add(top);
 
@@ -167,11 +192,21 @@ public partial class NotificationsView : UserControl, IToolView
         {
             card.SetResourceReference(Border.BackgroundProperty, "Surface2Brush");
             delete.Opacity = 1;
+            open.Opacity = 1;
         };
         card.MouseLeave += (_, _) =>
         {
             card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
             delete.Opacity = 0;
+            open.Opacity = 0;
+        };
+        card.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount == 2)
+            {
+                AppLauncher.Launch(n.AppId, n.AppName);
+                e.Handled = true;
+            }
         };
         // Click toggles the full text of a long message.
         card.MouseLeftButtonUp += (_, _) =>
