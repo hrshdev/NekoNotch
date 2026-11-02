@@ -19,7 +19,7 @@
     <MediaTemplate EmbedCab="yes" />
     <Icon Id="ProductIcon" SourceFile="$(var.BrandIco)" />
     <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/faisal-shohag/orixNotch" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/hrshdev/orixNotch" />
     <Property Id="LAUNCHAPP" Value="1" Secure="yes" />
 
     <Feature Id="Main" Title="NekoNotch" Level="1">

@@ -1802,8 +1802,8 @@ public partial class NotchWindow : Window
             _views[id] = view;
         }
 
-        var oldIndex = TabIndex(_activeTool);
-        var newIndex = TabIndex(id);
+        var oldIndex = GetTabIndex(_activeTool);
+        var newIndex = GetTabIndex(id);
         var switched = !ReferenceEquals(ToolHost.Content, view);
         if (switched)
         {
@@ -1866,7 +1866,7 @@ public partial class NotchWindow : Window
     /// <summary>Background opacity for the notch silhouette (teleprompter "see-through" mode).</summary>
     public void SetBackgroundOpacity(double opacity) => Shape.Opacity = Math.Clamp(opacity, 0.15, 1);
 
-    private int TabIndex(string id)
+    private int GetTabIndex(string id)
     {
         if (id == SettingsId) return Tabs.Children.Count; // pinned after the strip
         for (var i = 0; i < Tabs.Children.Count; i++)

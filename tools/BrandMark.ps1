@@ -4,8 +4,8 @@
 
 Add-Type -AssemblyName PresentationCore, WindowsBase
 
-$BrandPink = [System.Windows.Media.Color]::FromRgb(0xFD, 0x03, 0x88)
-$BrandOrange = [System.Windows.Media.Color]::FromRgb(0xFC, 0x6F, 0x18)
+$BrandPink = [System.Windows.Media.Color]::FromRgb(0xFF, 0xF3, 0x82)
+$BrandOrange = [System.Windows.Media.Color]::FromRgb(0xFF, 0xE0, 0x66)
 $BrandTile = [System.Windows.Media.Color]::FromRgb(0x0B, 0x0E, 0x17)
 
 # The mark's outline (both paths), moved so its bounds start at 0,0. Even-odd fill keeps the ring's hole.

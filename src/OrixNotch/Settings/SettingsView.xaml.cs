@@ -273,7 +273,7 @@ public partial class SettingsView : UserControl, IToolView
         Title("General", "How NekoNotch behaves on your PC.");
         Section("PROFILE");
         Row("Name", "Shown in the greeting on Home.",
-            TextInput(App.Settings.DisplayName, Environment.UserName, ProfileService.SetName));
+            CreateTextInput(App.Settings.DisplayName, Environment.UserName, ProfileService.SetName));
         Row("Picture", ProfileService.HasAvatar ? "Shown next to the greeting. Click Home's avatar to change it too." : "Pick a photo for Home; otherwise your initial is shown.",
             AvatarPicker());
 
@@ -382,7 +382,7 @@ public partial class SettingsView : UserControl, IToolView
                     Render();
                 }));
         }
-        var url = TextInput("", "Paste .ics link", _ => { });
+        var url = CreateTextInput("", "Paste .ics link", _ => { });
         var add = new Button { Content = "Add", Height = RowControlHeight, Margin = new Thickness(6, 0, 0, 0) };
         void AddFeed()
         {
@@ -944,7 +944,7 @@ public partial class SettingsView : UserControl, IToolView
                 i => { S.PomodoroBreakMin = breaks[i]; Save(false); }));
     }
 
-    private const string RepoUrl = "https://github.com/faisal-shohag/orixNotch";
+    private const string RepoUrl = "https://github.com/hrshdev/orixNotch";
 
     private void RenderAbout()
     {
@@ -962,7 +962,19 @@ public partial class SettingsView : UserControl, IToolView
             CornerRadius = new CornerRadius(18),
             VerticalAlignment = VerticalAlignment.Top,
             BorderThickness = new Thickness(1),
-            Child = new BrandMark { Variant = BrandVariant.Gradient, Width = 46, Height = 46, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+            Child = new BrandMark {
+                Variant = BrandVariant.Gradient,
+                Width = 46,
+                Height = 46,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect {
+                    Color = System.Windows.Media.Color.FromRgb(0xFF, 0xE0, 0x66),
+                    BlurRadius = 14,
+                    ShadowDepth = 0,
+                    Opacity = 0.9
+                }
+            },
         };
         tile.SetResourceReference(Border.BackgroundProperty, "PillBrush");
         tile.SetResourceReference(Border.BorderBrushProperty, "StrokeBrush");
@@ -970,7 +982,7 @@ public partial class SettingsView : UserControl, IToolView
 
         var info = new StackPanel { Margin = new Thickness(16, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         var name = new TextBlock { FontSize = 22, FontWeight = FontWeights.Bold };
-        name.Inlines.Add(new System.Windows.Documents.Run("Orix"));
+        name.Inlines.Add(new System.Windows.Documents.Run("Neko"));
         name.Inlines.Add(new System.Windows.Documents.Run("Notch") { Foreground = (Brush)FindResource("BrandGradientBrush") });
         info.Children.Add(name);
         info.Children.Add(new TextBlock
@@ -1057,7 +1069,7 @@ public partial class SettingsView : UserControl, IToolView
         var footer = new Grid { Margin = new Thickness(4, 18, 0, 4) };
         footer.Children.Add(new TextBlock
         {
-            Text = $"© {DateTime.Now.Year} OrixNotch",
+            Text = $"© {DateTime.Now.Year} NekoNotch",
             Style = (Style)FindResource("SubText"), FontWeight = FontWeights.Normal, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center,
         });
         var quit = new Button { Content = "Quit NekoNotch", HorizontalAlignment = HorizontalAlignment.Right };
@@ -1298,7 +1310,7 @@ public partial class SettingsView : UserControl, IToolView
         field.FontSize = 13.5;
     }
 
-    private static TextBox TextInput(string value, string placeholder, Action<string> changed)
+    private static TextBox CreateTextInput(string value, string placeholder, Action<string> changed)
     {
         var box = new TextBox { Text = value, Tag = placeholder, Width = 200 };
         Compact(box);

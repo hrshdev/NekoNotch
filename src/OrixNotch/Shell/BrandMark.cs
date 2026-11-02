@@ -18,24 +18,23 @@ public enum BrandVariant
     Outline,
 }
 
-/// <summary>Brand colours: the mark's gradient runs pink → orange (from the logo artwork).</summary>
+/// <summary>Brand colours: warm glowing eyes (#FFF382 → #FFE066).</summary>
 public static class BrandPalette
 {
-    public static readonly Color Pink = Color.FromRgb(0xFD, 0x03, 0x88);
-    public static readonly Color Orange = Color.FromRgb(0xFC, 0x6F, 0x18);
+    public static readonly Color EyeYellow = Color.FromRgb(0xFF, 0xF3, 0x82);
+    public static readonly Color EyeGlow = Color.FromRgb(0xFF, 0xE0, 0x66);
     public static readonly Color MonoDark = Color.FromRgb(0x11, 0x13, 0x18);
 
     public static LinearGradientBrush CreateGradientBrush()
     {
-        var brush = new LinearGradientBrush(Pink, Orange, new Point(0, 0.5), new Point(1, 0.5));
+        var brush = new LinearGradientBrush(EyeYellow, EyeGlow, new Point(0, 0), new Point(0, 1));
         brush.Freeze();
         return brush;
     }
 }
 
 /// <summary>
-/// The OrixNotch mark (sparkles + notched ring), drawn from Assets/Brand/mark.svg, the same file the
-/// icon and Store-art scripts use (tools/BrandMark.ps1). Keeps its aspect ratio, centred in the control.
+/// The NekoNotch mark (the two glowing eyes), drawn from Assets/Brand/mark.svg. Keeps its aspect ratio, centred in the control.
 /// </summary>
 public class BrandMark : Control
 {
@@ -90,7 +89,7 @@ public class BrandMark : Control
     {
         var bounds = Mark.Bounds;
         if (size.Width <= 0 || size.Height <= 0 || bounds.IsEmpty) return;
-        var scale = Math.Min(size.Width / bounds.Width, size.Height / bounds.Height);
+        var scale = Math.Min(size.Width / bounds.Width, size.Height / bounds.Height) * 0.88;
         dc.PushTransform(new TranslateTransform((size.Width - bounds.Width * scale) / 2, (size.Height - bounds.Height * scale) / 2));
         dc.PushTransform(new ScaleTransform(scale, scale));
         dc.DrawGeometry(fill ?? Brushes.Transparent, outline is null ? null : new Pen(outline, 1.5 / scale) { LineJoin = PenLineJoin.Round }, Mark);
@@ -98,15 +97,15 @@ public class BrandMark : Control
         dc.Pop();
     }
 
-    /// <summary>Both paths of mark.svg (with their translate), moved so the bounds start at 0,0. Even-odd keeps the ring's hole.</summary>
     private static Geometry LoadMark()
     {
         var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
         try
         {
             var resource = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/Brand/mark.svg"));
-            using (var stream = resource.Stream)
+            if (resource != null)
             {
+                using var stream = resource.Stream;
                 foreach (var path in XDocument.Load(stream).Descendants().Where(e => e.Name.LocalName == "path"))
                 {
                     var geometry = Geometry.Parse(path.Attribute("d")?.Value ?? "").Clone();
@@ -118,12 +117,22 @@ public class BrandMark : Control
                     group.Children.Add(geometry);
                 }
             }
-            var bounds = group.Bounds;
-            group.Transform = new TranslateTransform(-bounds.X, -bounds.Y);
         }
         catch (Exception ex)
         {
-            App.Log(ex); // missing or broken asset: draw nothing rather than crash the About page
+            App.Log(ex);
+        }
+
+        if (group.Children.Count == 0)
+        {
+            group.Children.Add(Geometry.Parse("M 36,32 A 8,8 0 0,1 44,40 L 44,60 A 8,8 0 0,1 36,68 A 8,8 0 0,1 28,60 L 28,40 A 8,8 0 0,1 36,32 Z"));
+            group.Children.Add(Geometry.Parse("M 64,32 A 8,8 0 0,1 72,40 L 72,60 A 8,8 0 0,1 64,68 A 8,8 0 0,1 56,60 L 56,40 A 8,8 0 0,1 64,32 Z"));
+        }
+
+        var bounds = group.Bounds;
+        if (!bounds.IsEmpty)
+        {
+            group.Transform = new TranslateTransform(-bounds.X, -bounds.Y);
         }
         group.Freeze();
         return group;

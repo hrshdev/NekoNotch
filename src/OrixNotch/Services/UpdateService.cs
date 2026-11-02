@@ -33,9 +33,9 @@ public enum UpdateStatus
 /// </summary>
 public sealed partial class UpdateService : ObservableObject
 {
-    private const string ReleasesApi = "https://api.github.com/repos/faisal-shohag/orixNotch";
-    private static readonly TimeSpan FirstCheck = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan Every = TimeSpan.FromHours(24);
+    private const string ReleasesApi = "https://api.github.com/repos/hrshdev/orixNotch";
+    private static readonly TimeSpan FirstCheck = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan Every = TimeSpan.FromHours(4);
 
     public static UpdateService Instance { get; } = new();
 
@@ -88,7 +88,7 @@ public sealed partial class UpdateService : ObservableObject
             CheckedAt = DateTime.Now;
             Status = found ? UpdateStatus.Available : UpdateStatus.UpToDate;
             if (found && !userAsked && StartMsiDownload() is { } download) await download; // announce once it can install
-            else if (found) StartMsiDownload();
+            else if (found) _ = StartMsiDownload();
             if (found && !userAsked) NotifyOnce();
         }
         catch (Exception ex)
@@ -116,7 +116,7 @@ public sealed partial class UpdateService : ObservableObject
         if (release?.TagName is not { Length: > 0 } tag) return false;
         if (!Version.TryParse(tag.TrimStart('v', 'V'), out var latest) || !Version.TryParse(CurrentVersion, out var current)) return false;
         _releaseUrl = release.HtmlUrl;
-        _msiAsset = release.Assets?.FirstOrDefault(a => a.Name?.EndsWith("-setup.msi", StringComparison.OrdinalIgnoreCase) == true);
+        _msiAsset = release.Assets?.FirstOrDefault(a => a.Name?.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) == true);
         LatestVersion = latest.ToString(3);
         return latest > current;
     }
@@ -188,7 +188,7 @@ public sealed partial class UpdateService : ObservableObject
                 }
             }
         }
-        Open(_releaseUrl ?? "https://github.com/faisal-shohag/orixNotch/releases/latest");
+        Open(_releaseUrl ?? "https://github.com/hrshdev/orixNotch/releases/latest");
     }
 
     /// <summary>Starts (or reuses) the background download of the latest setup; MSI installs only.</summary>
@@ -211,7 +211,8 @@ public sealed partial class UpdateService : ObservableObject
     {
         try
         {
-            if (Registry.GetValue(@"HKEY_CURRENT_USER\Software\OrixNotch", "InstallDir", null) is not string dir) return false;
+            var dir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\NekoNotch", "InstallDir", null) as string ?? Registry.GetValue(@"HKEY_CURRENT_USER\Software\OrixNotch", "InstallDir", null) as string;
+            if (dir == null) return false;
             static string Norm(string p) => Path.GetFullPath(p).TrimEnd('\\');
             return string.Equals(Norm(dir), Norm(AppContext.BaseDirectory), StringComparison.OrdinalIgnoreCase);
         }

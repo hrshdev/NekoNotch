@@ -26,6 +26,15 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Compute version
+        id: version
+        shell: pwsh
+        run: |
+          $ver = "0.9.${{ github.run_number }}"
+          echo "APP_VERSION=$ver" >> $env:GITHUB_ENV
+          echo "TAG_NAME=v$ver" >> $env:GITHUB_ENV
+          Write-Host "Building version $ver (tag v$ver)"
+
       - name: NuGet cache
         uses: actions/cache@v6
         with:
@@ -36,7 +45,7 @@ jobs:
       - name: Build
         run: |
           dotnet restore OrixNotch.sln
-          dotnet build OrixNotch.sln -c Release --no-restore
+          dotnet build OrixNotch.sln -c Release --no-restore -p:Version=${{ env.APP_VERSION }}
 
       - name: Install WiX
         run: |
@@ -46,14 +55,14 @@ jobs:
       - name: Package (exe, MSI, MSIX)
         shell: pwsh
         run: |
-          ./packaging/Build-Exe.ps1
-          ./packaging/Build-Msi.ps1
-          ./packaging/Build-Msix.ps1
+          ./packaging/Build-Exe.ps1 -Version $env:APP_VERSION
+          ./packaging/Build-Msi.ps1 -Version $env:APP_VERSION
+          ./packaging/Build-Msix.ps1 -Version $env:APP_VERSION
 
       - name: Upload packages
         uses: actions/upload-artifact@v6
         with:
-          name: NekoNotch-${{ github.sha }}
+          name: NekoNotch-${{ env.APP_VERSION }}
           path: |
             publish/exe/OrixNotch.exe
             publish/NekoNotch-Setup.msi
@@ -65,12 +74,13 @@ jobs:
         run: |
           Copy-Item publish/exe/OrixNotch.exe publish/exe/NekoNotch.exe
 
-      - name: Publish Direct .exe to GitHub Releases
+      - name: Publish Direct .exe and Setup to GitHub Releases
         uses: softprops/action-gh-release@v3
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v0.9.0
-          name: NekoNotch v0.9.0 (Direct .exe)
+          tag_name: ${{ env.TAG_NAME }}
+          name: NekoNotch ${{ env.TAG_NAME }}
+          make_latest: true
           files: |
             publish/exe/NekoNotch.exe
             publish/NekoNotch-Setup.msi
