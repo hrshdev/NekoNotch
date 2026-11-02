@@ -56,8 +56,8 @@ jobs:
           name: NekoNotch-${{ github.sha }}
           path: |
             publish/exe/OrixNotch.exe
-            publish/NekoNotch.msi
-            publish/NekoNotch.msix
+            publish/NekoNotch-Setup.msi
+            publish/NekoNotch-Setup.msix
           retention-days: 14
 
       - name: Prepare NekoNotch.exe
@@ -73,4 +73,4 @@ jobs:
           name: NekoNotch v0.9.0 (Direct .exe)
           files: |
             publish/exe/NekoNotch.exe
-            publish/NekoNotch.msi
+            publish/NekoNotch-Setup.msi
