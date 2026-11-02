@@ -114,6 +114,7 @@ public partial class NotchWindow : Window
         {
             UpdateConceal();
             FollowPointerScreen();
+            UpdateNotchEyes();
             if (!(_dodging && _animating)) Repel(_repelTimer.Interval.TotalSeconds); // the frame loop owns it while dodging
         };
         _guardTimer.Tick += (_, _) => Guard();
@@ -140,6 +141,7 @@ public partial class NotchWindow : Window
         CountdownService.Instance.PropertyChanged += OnActivityChanged;
         StopwatchService.Instance.PropertyChanged += OnActivityChanged;
         NotchActivityService.Instance.PropertyChanged += (_, _) => UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
         EventReminderService.Instance.Alert += _ => ShowReminderPeek();
         NotificationWatcher.Instance.Arrived += ShowNotificationPeek;
         AiLimitWatcher.Instance.Alert += ShowAiLimitPeek;
@@ -162,6 +164,7 @@ public partial class NotchWindow : Window
         HotkeyService.Triggered += OnHotkey;
 
         BuildEqualizer();
+        InitNotchEyes();
         Tabs.LayoutUpdated += (_, _) =>
         {
             if (TabIndicator.Opacity < 0.5 && _expanded && _activeTool != SettingsId) MoveTabIndicator(_activeTool, animate: false);
@@ -169,6 +172,7 @@ public partial class NotchWindow : Window
         WireTabScroll();
         BuildTabs();
         UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
         ApplyGeometry();
     }
 
@@ -379,7 +383,7 @@ public partial class NotchWindow : Window
             _ => (207.0, 38.0), // ≈ a MacBook hardware notch
         };
         _timerW = _idleW + 44;
-        _musicW = _idleW + 150;
+        _musicW = _idleW + 36;
         CollapsedLayer.Height = _collapsedH;
         if (!_expanded)
         {
@@ -416,6 +420,7 @@ public partial class NotchWindow : Window
                 _currentPeek = null;
                 _peekTimer.Stop();
                 PeekLayer.Visibility = Visibility.Collapsed;
+        if (!_expanded) NotchEyes.Visibility = Visibility.Visible;
             }
             _expanded = true;
             UpdateConceal();
@@ -428,6 +433,7 @@ public partial class NotchWindow : Window
             _awaitingCursor = activate && !IsCursorOverPill();
             _leaveTimer.Start();
             SetEqualizer(false);
+            NotchEyes.Visibility = Visibility.Collapsed;
         }
         if (activate) Activate();
     }
@@ -462,6 +468,7 @@ public partial class NotchWindow : Window
         if (IsKeyboardFocusWithin) Keyboard.ClearFocus();
         StartAnimation();
         UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
         // Alerts that arrived while the notch was open play once it has closed.
         if (_peekQueue.Count > 0)
         {
@@ -854,6 +861,7 @@ public partial class NotchWindow : Window
             or nameof(NowPlayingService.Title) or nameof(NowPlayingService.Artist) or nameof(NowPlayingService.ArtTint)
             or nameof(PomodoroService.IsRunning) or nameof(CountdownService.IsRunning) or nameof(StopwatchService.IsRunning))
             UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
         if (e.PropertyName == nameof(NowPlayingService.Title))
         {
             _trackTimer.Stop(); // art and artist land a moment after the title
@@ -1073,11 +1081,13 @@ public partial class NotchWindow : Window
         if (_expanded || !IdleActive)
         {
             if (!NotchActivityService.Instance.HasActivity && IdleInfoService.Instance.Items.Count == 0) UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
             return;
         }
         if (IdlePart.Visibility != Visibility.Visible)
         {
             UpdateActivity();
+        NotchEyes.Visibility = Visibility.Visible;
             return;
         }
         RenderIdle();
@@ -1302,6 +1312,7 @@ public partial class NotchWindow : Window
 
     private void ShowNextPeek()
     {
+        NotchEyes.Visibility = Visibility.Collapsed;
         if (_expanded || AlertsHeld()) return; // stays queued until the notch is closed / the app is left
         if (Visibility != Visibility.Visible) Visibility = Visibility.Visible; // a listed app hid it but lets alerts through
         _peekQueue.RemoveAll(r => DateTime.Now - r.QueuedAt > TimeSpan.FromMinutes(1)); // stale while the notch was open
@@ -1372,6 +1383,7 @@ public partial class NotchWindow : Window
         _peeking = false;
         PeekLayer.BeginAnimation(OpacityProperty, null);
         PeekLayer.Visibility = Visibility.Collapsed;
+        if (!_expanded) NotchEyes.Visibility = Visibility.Visible;
         if (_expanded) return;
         _width.Target = ActivityWidth();
         _height.Target = _collapsedH;
@@ -1877,4 +1889,84 @@ public partial class NotchWindow : Window
             else ShelfService.Instance.AddText(text);
         }
     }
+
+    // ---------------------------------------------------------------- Neko / Anime Notch Eyes
+    private readonly DispatcherTimer _blinkTimer = new();
+    private readonly Random _eyeRng = new();
+    private double _curEyeX, _curEyeY;
+    private bool _blinking;
+
+    private void InitNotchEyes()
+    {
+        _blinkTimer.Interval = TimeSpan.FromSeconds(3);
+        _blinkTimer.Tick += (_, _) => TriggerEyeBlink();
+        _blinkTimer.Start();
+    }
+
+    private void TriggerEyeBlink()
+    {
+        if (_blinking || _expanded) return;
+        _blinking = true;
+
+        var animClose = new DoubleAnimation(1.0, 0.06, TimeSpan.FromMilliseconds(75))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+        };
+        var animOpen = new DoubleAnimation(0.06, 1.0, TimeSpan.FromMilliseconds(95))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(80),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        animOpen.Completed += (_, _) =>
+        {
+            _blinking = false;
+            _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.0 + 2.0);
+        };
+
+        var sb = new Storyboard();
+        Storyboard.SetTarget(animClose, LeftEyeScale);
+        Storyboard.SetTargetProperty(animClose, new PropertyPath(ScaleTransform.ScaleYProperty));
+        Storyboard.SetTarget(animOpen, LeftEyeScale);
+        Storyboard.SetTargetProperty(animOpen, new PropertyPath(ScaleTransform.ScaleYProperty));
+        sb.Children.Add(animClose);
+        sb.Children.Add(animOpen);
+
+        var animCloseR = animClose.Clone();
+        var animOpenR = animOpen.Clone();
+        Storyboard.SetTarget(animCloseR, RightEyeScale);
+        Storyboard.SetTargetProperty(animCloseR, new PropertyPath(ScaleTransform.ScaleYProperty));
+        Storyboard.SetTarget(animOpenR, RightEyeScale);
+        Storyboard.SetTargetProperty(animOpenR, new PropertyPath(ScaleTransform.ScaleYProperty));
+        sb.Children.Add(animCloseR);
+        sb.Children.Add(animOpenR);
+
+        sb.Begin();
+    }
+
+    private void UpdateNotchEyes()
+    {
+        if (_expanded || NotchEyes.Visibility != Visibility.Visible) return;
+
+        if (!Win32.GetCursorPos(out var pt)) return;
+
+        // Notch pill center coordinates
+        var notchCenterX = Left + Width / 2.0;
+        var notchCenterY = Top + 16.0;
+
+        var dx = pt.X - notchCenterX;
+        var dy = pt.Y - notchCenterY;
+
+        // Smoothly shift eyes towards pointer in range [-4, +4] px horizontal and [-3, +3] px vertical
+        var targetX = Math.Clamp(dx / 70.0, -4.0, 4.0);
+        var targetY = Math.Clamp(dy / 70.0, -3.0, 3.0);
+
+        _curEyeX += (targetX - _curEyeX) * 0.22;
+        _curEyeY += (targetY - _curEyeY) * 0.22;
+
+        LeftEyeShift.X = _curEyeX;
+        LeftEyeShift.Y = _curEyeY;
+        RightEyeShift.X = _curEyeX;
+        RightEyeShift.Y = _curEyeY;
+    }
+
 }

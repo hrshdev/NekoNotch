@@ -32,6 +32,36 @@
                 <!-- Collapsed: one live activity at a time, Dynamic Island style: a leading glyph in the
                      left ear, the live value in the right one. -->
                 <Grid x:Name="CollapsedLayer" Height="32" VerticalAlignment="Top">
+                    <!-- Neko / Anime Glowing Blinking Eyes that track the cursor -->
+                    <Grid x:Name="NotchEyes" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border x:Name="LeftEye" Width="7.5" Height="14" CornerRadius="3.75" Margin="3.5,0"
+                                    Background="#FFF382" RenderTransformOrigin="0.5,0.5">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#FFE168" BlurRadius="9" ShadowDepth="0" Opacity="0.9" />
+                                </Border.Effect>
+                                <Border.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="LeftEyeScale" />
+                                        <TranslateTransform x:Name="LeftEyeShift" />
+                                    </TransformGroup>
+                                </Border.RenderTransform>
+                            </Border>
+                            <Border x:Name="RightEye" Width="7.5" Height="14" CornerRadius="3.75" Margin="3.5,0"
+                                    Background="#FFF382" RenderTransformOrigin="0.5,0.5">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#FFE168" BlurRadius="9" ShadowDepth="0" Opacity="0.9" />
+                                </Border.Effect>
+                                <Border.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="RightEyeScale" />
+                                        <TranslateTransform x:Name="RightEyeShift" />
+                                    </TransformGroup>
+                                </Border.RenderTransform>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
                     <!-- Music: art, title and artist (scrolls when long), waveform tinted from the album art -->
                     <Grid x:Name="MusicPart" Margin="9,0,12,0" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
@@ -50,7 +80,7 @@
                                 <Image Source="{Binding Art, Source={x:Static svc:NowPlayingService.Instance}}" Stretch="UniformToFill" />
                             </Grid>
                         </Border>
-                        <Canvas x:Name="TitleSlot" Grid.Column="1" Margin="10,0,10,0" ClipToBounds="True" Height="18" VerticalAlignment="Center">
+                        <Canvas x:Name="TitleSlot" Grid.Column="1" Margin="10,0,10,0" ClipToBounds="True" Height="18" VerticalAlignment="Center" Visibility="Collapsed">
                             <TextBlock x:Name="TrackText" FontSize="12.5">
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform x:Name="TrackShift" />
