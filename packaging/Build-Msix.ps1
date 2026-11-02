@@ -22,7 +22,7 @@ Add-Type -AssemblyName System.Drawing
 
 $appVersion = Get-AppVersion $Version
 $layout = Join-Path $PSScriptRoot "layout"
-if (-not $OutFile) { $OutFile = Join-Path $RepoRoot "publish/OrixNotch.msix" }
+if (-not $OutFile) { $OutFile = Join-Path $RepoRoot "publish/NekoNotch-Setup.msix" }
 Write-Host "MSIX $appVersion.0 · $IdentityName · $Publisher"
 
 # 1. Self-contained folder publish.

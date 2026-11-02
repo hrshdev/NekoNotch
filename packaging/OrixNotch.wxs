@@ -26,24 +26,18 @@
       <ComponentGroupRef Id="AppFiles" />
     </Feature>
 
-    <!-- Close any running NekoNotch or OrixNotch so files can be replaced without being locked. -->
-    <SetProperty Id="CloseNekoNotch" Value="&quot;[System64Folder]taskkill.exe&quot; /F /IM NekoNotch.exe"
-                 Before="CloseNekoNotch" Sequence="execute" />
-    <CustomAction Id="CloseNekoNotch" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
-                  Execute="immediate" Return="ignore" />
-
-    <SetProperty Id="CloseOrixNotch" Value="&quot;[System64Folder]taskkill.exe&quot; /F /IM OrixNotch.exe"
-                 Before="CloseOrixNotch" Sequence="execute" />
-    <CustomAction Id="CloseOrixNotch" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
+    <!-- Close any running NekoNotch or OrixNotch before replacing files -->
+    <SetProperty Id="CloseRunningApp" Value="&quot;[System64Folder]taskkill.exe&quot; /F /IM NekoNotch.exe /IM OrixNotch.exe"
+                 Before="CloseRunningApp" Sequence="execute" />
+    <CustomAction Id="CloseRunningApp" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
                   Execute="immediate" Return="ignore" />
 
     <!-- Start NekoNotch once setup finishes (runs in user desktop session). -->
     <CustomAction Id="LaunchApp" Directory="INSTALLFOLDER"
-                  ExeCommand="[System64Folder]cmd.exe /c start &quot;&quot; &quot;[INSTALLFOLDER]NekoNotch.exe&quot;"
+                  ExeCommand="&quot;[INSTALLFOLDER]NekoNotch.exe&quot;"
                   Return="asyncNoWait" Impersonate="yes" Execute="immediate" />
     <InstallExecuteSequence>
-      <Custom Action="CloseNekoNotch" Before="InstallValidate" />
-      <Custom Action="CloseOrixNotch" Before="InstallValidate" />
+      <Custom Action="CloseRunningApp" Before="InstallValidate" />
       <Custom Action="LaunchApp" After="InstallFinalize" Condition="LAUNCHAPP = &quot;1&quot; AND NOT REMOVE" />
     </InstallExecuteSequence>
 
