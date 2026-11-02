@@ -35,6 +35,24 @@ public static class AppLauncher
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int X, int Y);
+
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
+
+    private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+
+    private static void ClickScreenPoint(int x, int y)
+    {
+        SetCursorPos(x, y);
+        Thread.Sleep(25);
+        mouse_event(MOUSEEVENTF_LEFTDOWN, (uint)x, (uint)y, 0, 0);
+        Thread.Sleep(25);
+        mouse_event(MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
+    }
+
     private const int SwRestore = 9;
     private const int SwShow = 5;
 
@@ -72,14 +90,14 @@ public static class AppLauncher
         return found;
     }
 
-    private static IntPtr FindWindowByProcessName(string processName)
+    private static List<IntPtr> FindWindowsByProcessName(string processName)
     {
+        var list = new List<IntPtr>();
         try
         {
             var pids = new HashSet<uint>(Process.GetProcessesByName(processName).Select(p => (uint)p.Id));
-            if (pids.Count == 0) return IntPtr.Zero;
+            if (pids.Count == 0) return list;
 
-            IntPtr found = IntPtr.Zero;
             EnumWindows((hWnd, _) =>
             {
                 if (!IsWindowVisible(hWnd)) return true;
@@ -90,18 +108,14 @@ public static class AppLauncher
                     GetWindowText(hWnd, sb, 512);
                     if (sb.Length > 0)
                     {
-                        found = hWnd;
-                        return false;
+                        list.Add(hWnd);
                     }
                 }
                 return true;
             }, IntPtr.Zero);
-            return found;
         }
-        catch
-        {
-            return IntPtr.Zero;
-        }
+        catch { }
+        return list;
     }
 
     private static bool TrySwitchToBrowserTab(IntPtr hWnd, string tabTitleSubstring)
@@ -111,25 +125,49 @@ public static class AppLauncher
             var root = AutomationElement.FromHandle(hWnd);
             if (root == null) return false;
 
-            var tabCond = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem);
-            var tabs = root.FindAll(TreeScope.Descendants, tabCond);
-            foreach (AutomationElement tab in tabs)
+            // Search across all tab-like control types (tabs, lists, custom XUL sidebar items, buttons, panes)
+            var tabCond = new OrCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TreeItem),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Custom),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Pane)
+            );
+
+            var elements = root.FindAll(TreeScope.Descendants, tabCond);
+            foreach (AutomationElement tab in elements)
             {
                 try
                 {
                     var name = tab.Current.Name;
                     if (!string.IsNullOrEmpty(name) && name.Contains(tabTitleSubstring, StringComparison.OrdinalIgnoreCase))
                     {
+                        // 1. SelectionItemPattern
                         if (tab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPattern) &&
                             selPattern is SelectionItemPattern sip)
                         {
                             sip.Select();
                             return true;
                         }
+
+                        // 2. InvokePattern
                         if (tab.TryGetCurrentPattern(InvokePattern.Pattern, out var invPattern) &&
                             invPattern is InvokePattern ip)
                         {
                             ip.Invoke();
+                            return true;
+                        }
+
+                        // 3. Click bounding rectangle on screen
+                        var rect = tab.Current.BoundingRectangle;
+                        if (rect.Width > 0 && rect.Height > 0)
+                        {
+                            BringToFront(hWnd);
+                            Thread.Sleep(50);
+                            var cx = (int)(rect.Left + rect.Width / 2);
+                            var cy = (int)(rect.Top + rect.Height / 2);
+                            ClickScreenPoint(cx, cy);
                             return true;
                         }
                     }
@@ -168,14 +206,13 @@ public static class AppLauncher
                 }
 
                 // B. Check running browsers (Zen Browser, Firefox, Chrome, Edge, Brave, etc.)
-                // Use UI Automation to switch directly to the "WhatsApp" tab without blind keystrokes
                 var browsers = new[] { "zen", "firefox", "chrome", "msedge", "brave", "opera", "vivaldi" };
                 IntPtr fallbackBrowserHwnd = IntPtr.Zero;
 
                 foreach (var bName in browsers)
                 {
-                    var hWnd = FindWindowByProcessName(bName);
-                    if (hWnd != IntPtr.Zero)
+                    var hwnds = FindWindowsByProcessName(bName);
+                    foreach (var hWnd in hwnds)
                     {
                         if (fallbackBrowserHwnd == IntPtr.Zero) fallbackBrowserHwnd = hWnd;
 
@@ -188,8 +225,14 @@ public static class AppLauncher
                     }
                 }
 
-                // If a browser was found but no WhatsApp tab could be selected, open web.whatsapp.com directly
-                // (NEVER inject keystrokes into the address bar which corrupts user navigation)
+                // If a browser is already running, simply bring it to front without opening duplicate tabs
+                if (fallbackBrowserHwnd != IntPtr.Zero)
+                {
+                    BringToFront(fallbackBrowserHwnd);
+                    return;
+                }
+
+                // Only if NO browser is running at all, launch WhatsApp Web
                 Process.Start(new ProcessStartInfo("https://web.whatsapp.com") { UseShellExecute = true });
                 return;
             }
