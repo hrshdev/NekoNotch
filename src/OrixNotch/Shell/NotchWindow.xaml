@@ -52,41 +52,59 @@
                         </Grid>
                     </Grid>
 
-                    <!-- Neko / Anime Eyes: lowering eyelids, turning pupils tracking cursor -->
+                    <!-- Neko / Anime Eyes: glowing yellow body, animated dark pupil lens tracking cursor, eyelid lowering blink -->
                     <Grid x:Name="NotchEyes" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <!-- Left Eye Socket -->
-                            <Grid Width="9" Height="15" Margin="3.5,0" ClipToBounds="True">
-                                <!-- Pupil (turns towards pointer) -->
-                                <Border x:Name="LeftEye" Width="7.5" Height="14" CornerRadius="3.75"
-                                        Background="#FFF382" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="4,0" RenderTransformOrigin="0.5,0.92">
+                                <Grid.RenderTransform>
+                                    <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
+                                </Grid.RenderTransform>
+                                <!-- Glowing Yellow Eye Body (Unclipped glow aura) -->
+                                <Border Width="8.5" Height="15" CornerRadius="4.25" Background="#FFF47A">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="#FFE168" BlurRadius="9" ShadowDepth="0" Opacity="0.9" />
+                                        <DropShadowEffect Color="#FFDA47" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
                                     </Border.Effect>
-                                    <Border.RenderTransform>
-                                        <TranslateTransform x:Name="LeftEyeShift" />
-                                    </Border.RenderTransform>
+                                    <!-- Inner Pupil Socket (Clips pupil inside the yellow eye) -->
+                                    <Grid ClipToBounds="True">
+                                        <!-- Sleek Dark Pupil Lens that tracks cursor -->
+                                        <Border x:Name="LeftPupil" Width="3.2" Height="8.5" CornerRadius="1.6"
+                                                Background="#0D0F14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform x:Name="LeftPupilShift" />
+                                            </Border.RenderTransform>
+                                            <!-- Specular White Glint Reflection -->
+                                            <Ellipse Width="1.2" Height="1.2" Fill="#FFFFFF" Opacity="0.9"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0.6,1.0,0,0" />
+                                        </Border>
+                                    </Grid>
                                 </Border>
-                                <!-- Eyelid (lowers from top to close eye) -->
-                                <Border x:Name="LeftEyelid" VerticalAlignment="Top" HorizontalAlignment="Stretch"
-                                        Height="0" Background="#000000" CornerRadius="0,0,4,4" />
                             </Grid>
 
                             <!-- Right Eye Socket -->
-                            <Grid Width="9" Height="15" Margin="3.5,0" ClipToBounds="True">
-                                <!-- Pupil (turns towards pointer) -->
-                                <Border x:Name="RightEye" Width="7.5" Height="14" CornerRadius="3.75"
-                                        Background="#FFF382" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="4,0" RenderTransformOrigin="0.5,0.92">
+                                <Grid.RenderTransform>
+                                    <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
+                                </Grid.RenderTransform>
+                                <!-- Glowing Yellow Eye Body (Unclipped glow aura) -->
+                                <Border Width="8.5" Height="15" CornerRadius="4.25" Background="#FFF47A">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="#FFE168" BlurRadius="9" ShadowDepth="0" Opacity="0.9" />
+                                        <DropShadowEffect Color="#FFDA47" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
                                     </Border.Effect>
-                                    <Border.RenderTransform>
-                                        <TranslateTransform x:Name="RightEyeShift" />
-                                    </Border.RenderTransform>
+                                    <!-- Inner Pupil Socket (Clips pupil inside the yellow eye) -->
+                                    <Grid ClipToBounds="True">
+                                        <!-- Sleek Dark Pupil Lens that tracks cursor -->
+                                        <Border x:Name="RightPupil" Width="3.2" Height="8.5" CornerRadius="1.6"
+                                                Background="#0D0F14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform x:Name="RightPupilShift" />
+                                            </Border.RenderTransform>
+                                            <!-- Specular White Glint Reflection -->
+                                            <Ellipse Width="1.2" Height="1.2" Fill="#FFFFFF" Opacity="0.9"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0.6,1.0,0,0" />
+                                        </Border>
+                                    </Grid>
                                 </Border>
-                                <!-- Eyelid (lowers from top to close eye) -->
-                                <Border x:Name="RightEyelid" VerticalAlignment="Top" HorizontalAlignment="Stretch"
-                                        Height="0" Background="#000000" CornerRadius="0,0,4,4" />
                             </Grid>
                         </StackPanel>
                     </Grid>

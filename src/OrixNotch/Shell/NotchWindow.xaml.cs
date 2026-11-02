@@ -1631,7 +1631,9 @@ public partial class NotchWindow : Window
     }
 
     private readonly double[] _eqLevels = new double[5] { 0.15, 0.15, 0.15, 0.15, 0.15 };
-    private readonly double[] _eqScales = new double[5] { 0.75, 1.05, 1.25, 0.95, 0.65 };
+    private double _eqTime;
+    private readonly double[] _eqFreqs = new double[5] { 7.2, 11.5, 8.4, 13.8, 9.6 };
+    private readonly double[] _eqPhases = new double[5] { 0.0, 1.8, 3.5, 5.1, 2.3 };
 
     private void BuildEqualizer()
     {
@@ -1660,22 +1662,36 @@ public partial class NotchWindow : Window
         var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
         var peak = AudioMeterService.Instance.GetPeak();
 
+        if (peak <= 0.0005f)
+        {
+            // Audio is muted, paused, or completely silent: settle to flat resting dots
+            for (var i = 0; i < 5; i++)
+            {
+                _eqLevels[i] += (0.15 - _eqLevels[i]) * 0.25;
+                if (bars[i].RenderTransform is ScaleTransform st) st.ScaleY = _eqLevels[i];
+                else bars[i].RenderTransform = new ScaleTransform(1.0, _eqLevels[i]);
+            }
+            return;
+        }
+
+        // Advance time for organic dynamic dance
+        _eqTime += 0.08;
+
+        // Base power from real audio peak, enhanced for dynamic sensitivity
+        var basePower = Math.Sqrt(Math.Min(1.0, peak * 3.2));
+
         for (var i = 0; i < 5; i++)
         {
-            double target;
-            if (peak <= 0.0005f)
-            {
-                // Audio is muted, paused, or completely silent: settle to flat resting dots
-                target = 0.15;
-            }
-            else
-            {
-                // Sensitive to real audio: square root enhances sensitivity to quiet passages
-                var factor = Math.Sqrt(Math.Min(1.0, peak * 2.8));
-                target = Math.Clamp(0.18 + factor * _eqScales[i] * 0.82, 0.15, 1.0);
-            }
+            // Organic wave modulation combining primary and secondary harmonics
+            var wave1 = Math.Sin(_eqTime * _eqFreqs[i] + _eqPhases[i]);
+            var wave2 = Math.Cos(_eqTime * (_eqFreqs[i] * 0.61) + _eqPhases[i] * 1.5);
+            var danceFactor = 0.55 + 0.45 * (wave1 * 0.65 + wave2 * 0.35);
 
-            var speed = target > _eqLevels[i] ? 0.5 : 0.25;
+            // Target height combines base audio energy with independent band wave dance
+            var target = Math.Clamp(0.20 + basePower * danceFactor * 0.80, 0.15, 1.0);
+
+            // Responsive attack, smooth release
+            var speed = target > _eqLevels[i] ? 0.6 : 0.3;
             _eqLevels[i] += (target - _eqLevels[i]) * speed;
 
             if (bars[i].RenderTransform is ScaleTransform st)
@@ -1997,18 +2013,18 @@ public partial class NotchWindow : Window
 
         var closeAnim = new DoubleAnimation
         {
-            From = 0.0,
-            To = 15.0,
+            From = 1.0,
+            To = 0.06,
             Duration = TimeSpan.FromMilliseconds(75),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
 
         var openAnim = new DoubleAnimation
         {
-            From = 15.0,
-            To = 0.0,
+            From = 0.06,
+            To = 1.0,
             Duration = TimeSpan.FromMilliseconds(95),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = new BackEase { Amplitude = 0.15, EasingMode = EasingMode.EaseOut }
         };
 
         closeAnim.Completed += (_, _) =>
@@ -2016,14 +2032,16 @@ public partial class NotchWindow : Window
             openAnim.Completed += (_, _) =>
             {
                 _blinking = false;
-                _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.5 + 2.0);
+                LeftEyeScale.ScaleY = 1.0;
+                RightEyeScale.ScaleY = 1.0;
+                _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.0 + 2.5);
             };
-            LeftEyelid.BeginAnimation(HeightProperty, openAnim);
-            RightEyelid.BeginAnimation(HeightProperty, openAnim);
+            LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, openAnim);
+            RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, openAnim);
         };
 
-        LeftEyelid.BeginAnimation(HeightProperty, closeAnim);
-        RightEyelid.BeginAnimation(HeightProperty, closeAnim);
+        LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, closeAnim);
+        RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, closeAnim);
     }
 
     private void UpdateNotchEyes()
@@ -2039,17 +2057,17 @@ public partial class NotchWindow : Window
         var dx = pt.X - notchCenterX;
         var dy = pt.Y - notchCenterY;
 
-        // Smoothly turn/shift only the pupils inside their sockets (range [-2.2, +2.2] X, [-1.8, +1.8] Y)
-        var targetX = Math.Clamp(dx / 60.0, -2.2, 2.2);
-        var targetY = Math.Clamp(dy / 60.0, -1.8, 1.8);
+        // Smoothly turn/shift only the inner pupil lenses inside their sockets
+        var targetX = Math.Clamp(dx / 50.0, -2.0, 2.0);
+        var targetY = Math.Clamp(dy / 50.0, -2.5, 2.5);
 
         _curEyeX += (targetX - _curEyeX) * 0.25;
         _curEyeY += (targetY - _curEyeY) * 0.25;
 
-        LeftEyeShift.X = _curEyeX;
-        LeftEyeShift.Y = _curEyeY;
-        RightEyeShift.X = _curEyeX;
-        RightEyeShift.Y = _curEyeY;
+        LeftPupilShift.X = _curEyeX;
+        LeftPupilShift.Y = _curEyeY;
+        RightPupilShift.X = _curEyeX;
+        RightPupilShift.Y = _curEyeY;
     }
 
 }
