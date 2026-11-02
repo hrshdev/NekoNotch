@@ -1026,10 +1026,10 @@ public partial class NotchWindow : Window
         switch (App.Settings.IdleLayout)
         {
             case "Row":
-                IdleRowLeft.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                IdleRowRight.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var sideMax = Math.Max(IdleRowLeft.DesiredSize.Width, IdleRowRight.DesiredSize.Width);
-                return Math.Clamp(sideMax * 2 + 80, _idleW, IdleRowMax);
+                IdleLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                IdleRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var sideMax = Math.Max(IdleLeftGroup.DesiredSize.Width, IdleRightGroup.DesiredSize.Width);
+                return Math.Clamp(sideMax * 2 + 56 + 28, _idleW, IdleRowMax);
             case "Split" when items.Count > 1:
                 return _musicW;
             default:

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Automation;
 using OrixNotch.Shell;
 
 namespace OrixNotch.Services;
@@ -103,6 +104,43 @@ public static class AppLauncher
         }
     }
 
+    private static bool TrySwitchToBrowserTab(IntPtr hWnd, string tabTitleSubstring)
+    {
+        try
+        {
+            var root = AutomationElement.FromHandle(hWnd);
+            if (root == null) return false;
+
+            var tabCond = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem);
+            var tabs = root.FindAll(TreeScope.Descendants, tabCond);
+            foreach (AutomationElement tab in tabs)
+            {
+                try
+                {
+                    var name = tab.Current.Name;
+                    if (!string.IsNullOrEmpty(name) && name.Contains(tabTitleSubstring, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (tab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPattern) &&
+                            selPattern is SelectionItemPattern sip)
+                        {
+                            sip.Select();
+                            return true;
+                        }
+                        if (tab.TryGetCurrentPattern(InvokePattern.Pattern, out var invPattern) &&
+                            invPattern is InvokePattern ip)
+                        {
+                            ip.Invoke();
+                            return true;
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
+        return false;
+    }
+
     public static void Launch(string? appId, string? appName = null, string? title = null, string? body = null)
     {
         var textContext = $"{appId} {appName} {title} {body}";
@@ -115,7 +153,7 @@ public static class AppLauncher
             return;
         }
 
-        // 2. Web WhatsApp notification detection: switch to existing tab without opening new tabs
+        // 2. Web WhatsApp notification detection: switch to existing tab safely without typing into address bar
         if (textContext.Contains("web.whatsapp.com", StringComparison.OrdinalIgnoreCase) ||
             (appName?.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase) == true && (appId == null || !appId.Contains('!'))))
         {
@@ -130,38 +168,28 @@ public static class AppLauncher
                 }
 
                 // B. Check running browsers (Zen Browser, Firefox, Chrome, Edge, Brave, etc.)
+                // Use UI Automation to switch directly to the "WhatsApp" tab without blind keystrokes
                 var browsers = new[] { "zen", "firefox", "chrome", "msedge", "brave", "opera", "vivaldi" };
+                IntPtr fallbackBrowserHwnd = IntPtr.Zero;
+
                 foreach (var bName in browsers)
                 {
                     var hWnd = FindWindowByProcessName(bName);
                     if (hWnd != IntPtr.Zero)
                     {
-                        BringToFront(hWnd);
+                        if (fallbackBrowserHwnd == IntPtr.Zero) fallbackBrowserHwnd = hWnd;
 
-                        // If Zen Browser or Firefox: switch to existing WhatsApp tab using "% WhatsApp"
-                        if (bName.Equals("zen", StringComparison.OrdinalIgnoreCase) ||
-                            bName.Equals("firefox", StringComparison.OrdinalIgnoreCase))
+                        // Try to find and switch to WhatsApp tab cleanly via UI Automation
+                        if (TrySwitchToBrowserTab(hWnd, "WhatsApp"))
                         {
-                            Thread.Sleep(90);
-                            System.Windows.Forms.SendKeys.SendWait("^l");
-                            Thread.Sleep(70);
-                            System.Windows.Forms.SendKeys.SendWait("% WhatsApp{ENTER}");
+                            BringToFront(hWnd);
+                            return;
                         }
-                        // If Chromium-based (Chrome, Edge, Brave): switch to existing tab via Tab Search
-                        else if (bName.Equals("chrome", StringComparison.OrdinalIgnoreCase) ||
-                                 bName.Equals("msedge", StringComparison.OrdinalIgnoreCase) ||
-                                 bName.Equals("brave", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Thread.Sleep(90);
-                            System.Windows.Forms.SendKeys.SendWait("^+a");
-                            Thread.Sleep(70);
-                            System.Windows.Forms.SendKeys.SendWait("WhatsApp{ENTER}");
-                        }
-                        return;
                     }
                 }
 
-                // C. Only if no browser is running, open WhatsApp Web
+                // If a browser was found but no WhatsApp tab could be selected, open web.whatsapp.com directly
+                // (NEVER inject keystrokes into the address bar which corrupts user navigation)
                 Process.Start(new ProcessStartInfo("https://web.whatsapp.com") { UseShellExecute = true });
                 return;
             }
