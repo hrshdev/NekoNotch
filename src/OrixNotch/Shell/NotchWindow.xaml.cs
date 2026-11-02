@@ -186,9 +186,9 @@ public partial class NotchWindow : Window
         _hwnd = new WindowInteropHelper(this).Handle;
 
         // Tool window: no taskbar button, no Alt+Tab entry.
-        var ex = (long)Win32.GetWindowLongPtr(_hwnd, Win32.GWL_EXSTYLE);
-        ex = (ex | Win32.WS_EX_TOOLWINDOW) & ~Win32.WS_EX_APPWINDOW;
-        Win32.SetWindowLongPtr(_hwnd, Win32.GWL_EXSTYLE, new IntPtr(ex));
+        var exStyle = (long)Win32.GetWindowLongPtr(_hwnd, Win32.GWL_EXSTYLE);
+        exStyle = (exStyle | Win32.WS_EX_TOOLWINDOW) & ~Win32.WS_EX_APPWINDOW;
+        Win32.SetWindowLongPtr(_hwnd, Win32.GWL_EXSTYLE, new IntPtr(exStyle));
 
         HwndSource.FromHwnd(_hwnd)!.AddHook(WndProc);
         ClipboardService.Instance.Attach(_hwnd);
@@ -200,9 +200,9 @@ public partial class NotchWindow : Window
         ThemeService.Changed += ApplyGlass;
         ApplyGlass();
         ApplyCaptureAffinity();
-        try { VolumeService.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
-        try { BluetoothWatcher.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
-        try { DownloadWatcher.Instance.Start(); } catch (Exception ex) { App.Log(ex); }
+        try { VolumeService.Instance.Start(); } catch (Exception err) { App.Log(err); }
+        try { BluetoothWatcher.Instance.Start(); } catch (Exception err) { App.Log(err); }
+        try { DownloadWatcher.Instance.Start(); } catch (Exception err) { App.Log(err); }
         ForegroundAppWatcher.Instance.Changed += OnForegroundAppChanged;
         ForegroundAppWatcher.Instance.Start();
         _guardTimer.Start();
