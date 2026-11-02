@@ -68,7 +68,7 @@ jobs:
           $v = "${{ steps.version.outputs.version }}"
           New-Item -ItemType Directory dist -Force | Out-Null
           ./packaging/Build-Exe.ps1 -Version $v
-          Copy-Item publish/exe/OrixNotch.exe "dist/OrixNotch-$v-portable.exe"
+          Copy-Item publish/exe/OrixNotch.exe "dist/NekoNotch-$v-portable.exe"
           ./packaging/Build-Msi.ps1 -Version $v -OutFile "$PWD/dist/OrixNotch-$v-setup.msi"
           $msix = @{ Version = $v; OutFile = "$PWD/dist/OrixNotch-$v-store.msix" }
           if ($env:STORE_IDENTITY_NAME) {
@@ -93,8 +93,8 @@ jobs:
           generate_release_notes: true
           body: |
             ## Install
-            - **`OrixNotch-${{ steps.version.outputs.version }}-setup.msi`** — recommended. Installs for your user only (no admin), starts OrixNotch right away and opens it at login (turn off in Settings → General → Open at login). Silent: `msiexec /i OrixNotch-${{ steps.version.outputs.version }}-setup.msi /qn LAUNCHAPP=0`.
-            - **`OrixNotch-${{ steps.version.outputs.version }}-portable.exe`** — no install, run from anywhere.
+            - **`NekoNotch-${{ steps.version.outputs.version }}-setup.msi`** — recommended. Installs for your user only (no admin), starts OrixNotch right away and opens it at login (turn off in Settings → General → Open at login). Silent: `msiexec /i NekoNotch-${{ steps.version.outputs.version }}-setup.msi /qn LAUNCHAPP=0`.
+            - **`NekoNotch-${{ steps.version.outputs.version }}-portable.exe`** — no install, run from anywhere.
             - `OrixNotch-${{ steps.version.outputs.version }}-store.msix` is the Microsoft Store upload package (the Store signs it); it can't be installed by double-clicking.
             - Windows 10 (2004) or later, x64. Checksums in `SHA256SUMS.txt`.
 

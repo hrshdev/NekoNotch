@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -59,3 +59,18 @@ jobs:
             publish/OrixNotch.msi
             publish/OrixNotch.msix
           retention-days: 14
+
+      - name: Prepare NekoNotch.exe
+        shell: pwsh
+        run: |
+          Copy-Item publish/exe/OrixNotch.exe publish/exe/NekoNotch.exe
+
+      - name: Publish Direct .exe to GitHub Releases
+        uses: softprops/action-gh-release@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v0.9.0
+          name: NekoNotch v0.9.0 (Direct .exe)
+          files: |
+            publish/exe/NekoNotch.exe
+            publish/OrixNotch.msi
