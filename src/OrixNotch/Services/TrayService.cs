@@ -17,7 +17,7 @@ public sealed class TrayService : IDisposable
         _icon = new Forms.NotifyIcon
         {
             Icon = IconFactory.CreateTrayIcon(),
-            Text = "OrixNotch",
+            Text = "NekoNotch",
             Visible = true,
         };
 
@@ -25,7 +25,7 @@ public sealed class TrayService : IDisposable
         menu.Items.Add("Open panel  (Ctrl+Alt+N)", null, (_, _) => window.Expand(activate: true));
         menu.Items.Add("Settings…", null, (_, _) => window.OpenTool(NotchWindow.SettingsId));
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Quit OrixNotch", null, (_, _) => Application.Current.Shutdown());
+        menu.Items.Add("Quit NekoNotch", null, (_, _) => Application.Current.Shutdown());
         _icon.ContextMenuStrip = menu;
         _icon.MouseClick += (_, e) =>
         {

@@ -72,7 +72,7 @@ public static class ThemeService
         new("aurora", "Aurora", C("#04131A"), C("#0B1E24"), C("#12292F"), C("#1B353B"), C("#E8F6F5"), C("#86A9A8"), false, "lagoon", C("#0F2F2A")),
         new("nebula", "Nebula", C("#0B0718"), C("#161026"), C("#201833"), C("#2B2241"), C("#F1ECFA"), C("#9C92B3"), false, "berry", C("#2A1240")),
         new("sunset", "Sunset", C("#130A12"), C("#20121A"), C("#2B1922"), C("#38222C"), C("#FAEEEB"), C("#B0928F"), false, "sunrise", C("#3A1A1C")),
-        new("abyss", "Abyss", C("#02060F"), C("#0A1220"), C("#111B2C"), C("#1A2639"), C("#E9EEF7"), C("#8995A8"), false, "brand", C("#0A2340")),
+        new("abyss", "Abyss", C("#02060F"), C("#0A1220"), C("#111B2C"), C("#1A2639"), C("#E9EEF7"), C("#8995A8"), false, "neon", C("#0A2340")),
         new("dawn", "Dawn", C("#FFF7F0"), C("#F5EDE8"), C("#ECE2DD"), C("#E0D4CF"), C("#241C1A"), C("#7A6B66"), true, "flamingo", C("#F3E6FA")),
     ];
 
@@ -95,7 +95,7 @@ public static class ThemeService
         new("mono", "Mono", C("#9A9AA2")),
 
         // Gradient accents (left to right).
-        new("brand", "OrixNotch", C("#FD3A50"), C("#FD0388"), C("#FC6F18")),
+        new("brand", "NekoNotch", C("#FFE066"), C("#FFF382"), C("#FFA657")),
         new("sunrise", "Sunrise", C("#FF7E5F"), C("#FF7E5F"), C("#FEB47B")),
         new("flamingo", "Flamingo", C("#FF5ACD"), C("#FF5ACD"), C("#FBDA61")),
         new("ocean-g", "Ocean", C("#2BC0E4"), C("#2BC0E4"), C("#4F7CFF")),
