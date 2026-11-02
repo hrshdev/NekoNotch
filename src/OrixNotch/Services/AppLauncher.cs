@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using OrixNotch.Shell;
 
 namespace OrixNotch.Services;
@@ -18,6 +19,20 @@ public static class AppLauncher
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     private const int SwRestore = 9;
     private const int SwShow = 5;
@@ -37,6 +52,57 @@ public static class AppLauncher
         }
     }
 
+    private static IntPtr FindWindowByTitle(string substring)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((hWnd, _) =>
+        {
+            if (!IsWindowVisible(hWnd)) return true;
+            var sb = new StringBuilder(512);
+            GetWindowText(hWnd, sb, 512);
+            var title = sb.ToString();
+            if (title.Contains(substring, StringComparison.OrdinalIgnoreCase))
+            {
+                found = hWnd;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    private static IntPtr FindWindowByProcessName(string processName)
+    {
+        try
+        {
+            var pids = new HashSet<uint>(Process.GetProcessesByName(processName).Select(p => (uint)p.Id));
+            if (pids.Count == 0) return IntPtr.Zero;
+
+            IntPtr found = IntPtr.Zero;
+            EnumWindows((hWnd, _) =>
+            {
+                if (!IsWindowVisible(hWnd)) return true;
+                GetWindowThreadProcessId(hWnd, out var pid);
+                if (pids.Contains(pid))
+                {
+                    var sb = new StringBuilder(512);
+                    GetWindowText(hWnd, sb, 512);
+                    if (sb.Length > 0)
+                    {
+                        found = hWnd;
+                        return false;
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+            return found;
+        }
+        catch
+        {
+            return IntPtr.Zero;
+        }
+    }
+
     public static void Launch(string? appId, string? appName = null, string? title = null, string? body = null)
     {
         var textContext = $"{appId} {appName} {title} {body}";
@@ -49,27 +115,53 @@ public static class AppLauncher
             return;
         }
 
-        // 2. Web WhatsApp notification detection
+        // 2. Web WhatsApp notification detection: switch to existing tab without opening new tabs
         if (textContext.Contains("web.whatsapp.com", StringComparison.OrdinalIgnoreCase) ||
             (appName?.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase) == true && (appId == null || !appId.Contains('!'))))
         {
             try
             {
-                foreach (var proc in Process.GetProcesses())
+                // A. If ANY window currently has "WhatsApp" in its title, bring it to front directly
+                var whatsAppWnd = FindWindowByTitle("WhatsApp");
+                if (whatsAppWnd != IntPtr.Zero)
                 {
-                    try
-                    {
-                        if (proc.MainWindowHandle != IntPtr.Zero &&
-                            proc.MainWindowTitle.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase))
-                        {
-                            BringToFront(proc.MainWindowHandle);
-                            return;
-                        }
-                    }
-                    catch { }
+                    BringToFront(whatsAppWnd);
+                    return;
                 }
 
-                // If no active window with "WhatsApp" title, open WhatsApp Web in the user's browser
+                // B. Check running browsers (Zen Browser, Firefox, Chrome, Edge, Brave, etc.)
+                var browsers = new[] { "zen", "firefox", "chrome", "msedge", "brave", "opera", "vivaldi" };
+                foreach (var bName in browsers)
+                {
+                    var hWnd = FindWindowByProcessName(bName);
+                    if (hWnd != IntPtr.Zero)
+                    {
+                        BringToFront(hWnd);
+
+                        // If Zen Browser or Firefox: switch to existing WhatsApp tab using "% WhatsApp"
+                        if (bName.Equals("zen", StringComparison.OrdinalIgnoreCase) ||
+                            bName.Equals("firefox", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Thread.Sleep(90);
+                            System.Windows.Forms.SendKeys.SendWait("^l");
+                            Thread.Sleep(70);
+                            System.Windows.Forms.SendKeys.SendWait("% WhatsApp{ENTER}");
+                        }
+                        // If Chromium-based (Chrome, Edge, Brave): switch to existing tab via Tab Search
+                        else if (bName.Equals("chrome", StringComparison.OrdinalIgnoreCase) ||
+                                 bName.Equals("msedge", StringComparison.OrdinalIgnoreCase) ||
+                                 bName.Equals("brave", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Thread.Sleep(90);
+                            System.Windows.Forms.SendKeys.SendWait("^+a");
+                            Thread.Sleep(70);
+                            System.Windows.Forms.SendKeys.SendWait("WhatsApp{ENTER}");
+                        }
+                        return;
+                    }
+                }
+
+                // C. Only if no browser is running, open WhatsApp Web
                 Process.Start(new ProcessStartInfo("https://web.whatsapp.com") { UseShellExecute = true });
                 return;
             }
