@@ -10,13 +10,14 @@ using OrixNotch.Shell;
 
 namespace OrixNotch.Tools;
 
-/// <summary>Player page: art + track on the left, time-synced lyrics (or big controls) on the right.</summary>
+/// <summary>Player page: thumbnail on the left, details + neat timeline bar + playback controls on the right.</summary>
 public partial class NowPlayingView : UserControl, IToolView
 {
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private IReadOnlyList<LyricLine>? _lines;
     private string _trackKey = "";
     private int _current = -2;
+    private bool _lyricsActive;
     private static NowPlayingService Service => NowPlayingService.Instance;
 
     public NowPlayingView()
@@ -47,7 +48,7 @@ public partial class NowPlayingView : UserControl, IToolView
             case nameof(NowPlayingService.Title) or nameof(NowPlayingService.Artist) or nameof(NowPlayingService.Duration):
                 if (IsVisible) _ = LoadLyricsAsync();
                 break;
-            case nameof(NowPlayingService.ArtTint):
+            case nameof(NowPlayingService.Art) or nameof(NowPlayingService.ArtTint):
                 UpdateTint();
                 break;
         }
@@ -56,9 +57,17 @@ public partial class NowPlayingView : UserControl, IToolView
     private void Tick()
     {
         Service.Tick();
-        if (_lines is null) return;
+        if (_lines is null || !_lyricsActive) return;
         var index = LyricsService.IndexAt(_lines, Service.Position);
         if (index != _current) Highlight(index);
+    }
+
+    private void OnToggleLyrics(object sender, RoutedEventArgs e)
+    {
+        _lyricsActive = !_lyricsActive;
+        InfoPanel.Visibility = _lyricsActive ? Visibility.Collapsed : Visibility.Visible;
+        LyricsPanel.Visibility = _lyricsActive ? Visibility.Visible : Visibility.Collapsed;
+        if (_lyricsActive) Tick();
     }
 
     private async Task LoadLyricsAsync()
@@ -69,7 +78,10 @@ public partial class NowPlayingView : UserControl, IToolView
         _lines = null;
         _current = -2;
         LyricsLines.Children.Clear();
-        ShowLyrics(false);
+        LyricsToggle.Visibility = Visibility.Collapsed;
+        _lyricsActive = false;
+        InfoPanel.Visibility = Visibility.Visible;
+        LyricsPanel.Visibility = Visibility.Collapsed;
 
         if (!App.Settings.LyricsEnabled || !Service.HasSession)
         {
@@ -77,12 +89,11 @@ public partial class NowPlayingView : UserControl, IToolView
             return;
         }
 
-        LyricsStatus.Text = "Looking for lyrics…";
         var lines = await LyricsService.GetAsync(Service.Title, Service.Artist, Service.Duration);
-        if (key != _trackKey) return; // track changed meanwhile
-        if (lines is null)
+        if (key != _trackKey) return;
+        if (lines is null || lines.Count == 0)
         {
-            LyricsStatus.Text = "No synced lyrics for this track";
+            LyricsStatus.Text = "";
             return;
         }
 
@@ -92,21 +103,15 @@ public partial class NowPlayingView : UserControl, IToolView
             LyricsLines.Children.Add(new TextBlock
             {
                 Text = string.IsNullOrEmpty(line.Text) ? "♪" : line.Text,
-                FontSize = 14,
+                FontSize = 13.5,
                 FontWeight = FontWeights.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 3, 0, 3),
+                Margin = new Thickness(0, 2, 0, 2),
                 Opacity = 0.35,
             });
         }
-        ShowLyrics(true);
+        LyricsToggle.Visibility = Visibility.Visible;
         Tick();
-    }
-
-    private void ShowLyrics(bool on)
-    {
-        LyricsPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        ControlsPanel.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /// <summary>Brightens the current line and glides it to the vertical center.</summary>
@@ -149,8 +154,29 @@ public partial class NowPlayingView : UserControl, IToolView
     private void UpdateTint()
     {
         var surface = ((SolidColorBrush)ThemeService.Get("SurfaceBrush")).Color;
-        if (Service.ArtTint is { } tint)
+        var hasArt = Service.Art is not null;
+        Backdrop.Visibility = hasArt ? Visibility.Visible : Visibility.Collapsed;
+
+        if (hasArt)
         {
+            var scrim = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(1, 1),
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(0x40, surface.R, surface.G, surface.B), 0),
+                    new GradientStop(Color.FromArgb(0xA8, surface.R, surface.G, surface.B), 0.55),
+                    new GradientStop(Color.FromArgb(0xE0, surface.R, surface.G, surface.B), 1),
+                },
+            };
+            scrim.Freeze();
+            Scrim.Background = scrim;
+            Card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
+        }
+        else if (Service.ArtTint is { } tint)
+        {
+            Scrim.Background = null;
             var mixed = Color.FromRgb((byte)((tint.R + surface.R * 2) / 3), (byte)((tint.G + surface.G * 2) / 3), (byte)((tint.B + surface.B * 2) / 3));
             var brush = new LinearGradientBrush(mixed, surface, 0);
             brush.Freeze();
@@ -158,6 +184,7 @@ public partial class NowPlayingView : UserControl, IToolView
         }
         else
         {
+            Scrim.Background = null;
             Card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
         }
     }

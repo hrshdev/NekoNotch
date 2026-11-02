@@ -120,7 +120,16 @@ public partial class HomeView : UserControl, IToolView
     private void UpdateCard()
     {
         PlayIcon.Kind = Player.IsPlaying ? AppIcon.Pause : AppIcon.Play;
-        ArtistLine.Text = string.Join(" · ", new[] { Player.Artist, Player.SourceApp }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var sub = Player.Artist;
+        if (string.IsNullOrWhiteSpace(sub) || sub.Equals(Player.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            sub = Player.SourceApp.Equals(Player.Title, StringComparison.OrdinalIgnoreCase) ? "" : Player.SourceApp;
+        }
+        else if (!string.IsNullOrWhiteSpace(Player.SourceApp) && !sub.Contains(Player.SourceApp, StringComparison.OrdinalIgnoreCase))
+        {
+            sub = $"{sub} · {Player.SourceApp}";
+        }
+        ArtistLine.Text = sub;
         NowLabel.Text = Player.IsPlaying ? "NOW PLAYING" : Player.HasSession ? "PAUSED" : "NOTHING PLAYING";
 
         var surface = ((SolidColorBrush)ThemeService.Get("SurfaceBrush")).Color;
