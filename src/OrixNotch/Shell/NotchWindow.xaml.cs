@@ -115,6 +115,7 @@ public partial class NotchWindow : Window
             UpdateConceal();
             FollowPointerScreen();
             UpdateNotchEyes();
+            if (_eqRunning) UpdateEqualizerBars();
             if (!(_dodging && _animating)) Repel(_repelTimer.Interval.TotalSeconds); // the frame loop owns it while dodging
         };
         _guardTimer.Tick += (_, _) => Guard();
@@ -1629,33 +1630,63 @@ public partial class NotchWindow : Window
         return geometry;
     }
 
+    private readonly double[] _eqLevels = new double[5] { 0.15, 0.15, 0.15, 0.15, 0.15 };
+    private readonly double[] _eqScales = new double[5] { 0.75, 1.05, 1.25, 0.95, 0.65 };
+
     private void BuildEqualizer()
     {
-        // Bars breathe around their centre like a voice waveform, each at its own pace.
-        var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
-        var periods = new[] { 0.46, 0.33, 0.52, 0.38, 0.6 };
-        var lows = new[] { 0.3, 0.45, 0.25, 0.4, 0.3 };
-        for (var i = 0; i < bars.Length; i++)
+        AudioMeterService.Instance.Start();
+    }
+
+    /// <summary>Only animate while visible, and reactive to real-time audio output.</summary>
+    private void SetEqualizer(bool on)
+    {
+        _eqRunning = on;
+        if (!on)
         {
-            var anim = new DoubleAnimation(lows[i], 1.0, TimeSpan.FromSeconds(periods[i]))
+            var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
+            for (var i = 0; i < 5; i++)
             {
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever,
-                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
-            };
-            Storyboard.SetTarget(anim, bars[i]);
-            Storyboard.SetTargetProperty(anim, new PropertyPath("RenderTransform.ScaleY"));
-            _eq.Children.Add(anim);
+                _eqLevels[i] = 0.15;
+                if (bars[i].RenderTransform is ScaleTransform st) st.ScaleY = 0.15;
+            }
         }
     }
 
-    /// <summary>Only animate while visible, so the idle app does not keep WPF rendering at 60 fps.</summary>
-    private void SetEqualizer(bool on)
+    private void UpdateEqualizerBars()
     {
-        if (on == _eqRunning) return;
-        _eqRunning = on;
-        if (on) _eq.Begin(this, true);
-        else _eq.Stop(this);
+        if (MusicPart.Visibility != Visibility.Visible || _expanded) return;
+
+        var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
+        var peak = AudioMeterService.Instance.GetPeak();
+
+        for (var i = 0; i < 5; i++)
+        {
+            double target;
+            if (peak <= 0.003f)
+            {
+                // Audio is muted, paused, or completely silent: settle to flat resting dots
+                target = 0.15;
+            }
+            else
+            {
+                // Sensitive to real audio: square root enhances sensitivity to quiet passages
+                var factor = Math.Sqrt(peak);
+                target = Math.Clamp(0.18 + factor * _eqScales[i] * 0.82, 0.15, 1.0);
+            }
+
+            var speed = target > _eqLevels[i] ? 0.5 : 0.25;
+            _eqLevels[i] += (target - _eqLevels[i]) * speed;
+
+            if (bars[i].RenderTransform is ScaleTransform st)
+            {
+                st.ScaleY = _eqLevels[i];
+            }
+            else
+            {
+                bars[i].RenderTransform = new ScaleTransform(1.0, _eqLevels[i]);
+            }
+        }
     }
 
     // ---------------------------------------------------------------- tools
