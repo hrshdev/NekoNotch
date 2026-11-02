@@ -211,7 +211,7 @@
                         </Border>
                         <TextBlock Text="Nothing yet" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,6,0,0" />
                         <TextBlock Style="{StaticResource SubText}" FontWeight="Normal" FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0"
-                                   Text="Files from the phone land on the Shelf and in Downloads\OrixNotch." />
+                                   Text="Files from the phone land on the Shelf and in Downloads\NekoNotch." />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" hero:SmoothScroll.IsEnabled="True">
                         <ItemsControl x:Name="TransferList">

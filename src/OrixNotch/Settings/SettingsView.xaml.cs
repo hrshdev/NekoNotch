@@ -511,7 +511,7 @@ public partial class SettingsView : UserControl, IToolView
         Section("ACCENT");
         Page.Children.Add(new TextBlock
         {
-            Text = "Every scheme comes with its own accent (Auto). Pick another to override it.",
+            Text = "Auto dynamically adapts to your desktop wallpaper and theme. Pick another to override it.",
             Style = (Style)FindResource("SubText"), FontWeight = FontWeights.Normal, FontSize = 11.5, Margin = new Thickness(4, -4, 0, 8),
         });
         var accents = new WrapPanel();
@@ -1522,12 +1522,12 @@ public partial class SettingsView : UserControl, IToolView
     private FrameworkElement AutoAccentSwatch()
     {
         var scheme = ThemeService.CurrentScheme;
-        var own = ThemeService.Accents.FirstOrDefault(a => a.Id == scheme.Accent) ?? ThemeService.Accents[0];
+        var own = ThemeService.CurrentAccent;
         var selected = ThemeService.IsAutoAccent;
         var swatch = new Grid
         {
             Width = 28, Height = 28, Margin = new Thickness(0, 0, 2, 4), Cursor = Cursors.Hand, Background = Brushes.Transparent,
-            ToolTip = $"Auto · {own.Name} for {scheme.Name}",
+            ToolTip = $"Auto · {own.Name} (Adaptive to Wallpaper)",
         };
         swatch.Children.Add(new System.Windows.Shapes.Ellipse { Stroke = selected ? own.Brush() : Brushes.Transparent, StrokeThickness = 2 });
         swatch.Children.Add(new System.Windows.Shapes.Ellipse { Width = 20, Height = 20, Fill = own.Brush() });

@@ -211,7 +211,7 @@ public sealed partial class PhoneTransferService
 
     private const string Denied =
         "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>" +
-        "<meta name=color-scheme content='dark light'><title>OrixNotch · Link turned off</title>" +
+        "<meta name=color-scheme content='dark light'><title>NekoNotch · Link turned off</title>" +
         "<style>:root{--bg:#0a0a0c;--text:#f4f4f6;--sub:#8b8b93;--card:#151518;--line:#26262b}" +
         "@media(prefers-color-scheme:light){:root{--bg:#f3f3f6;--text:#141417;--sub:#6b6b73;--card:#fff;--line:#e4e4ea}}" +
         "body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);" +
@@ -219,5 +219,5 @@ public sealed partial class PhoneTransferService
         "div{max-width:360px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px 24px}" +
         "i{display:block;width:12px;height:12px;border-radius:50%;background:#ff453a;margin:0 auto 18px;box-shadow:0 0 0 6px #ff453a26}" +
         "h1{font-size:20px;margin:0 0 8px}p{margin:0;color:var(--sub)}</style>" +
-        "<div><i></i><h1>Link turned off</h1><p>Phone transfer was turned off on the PC. Turn on Phone in OrixNotch and scan the new code.</p></div>";
+        "<div><i></i><h1>Link turned off</h1><p>Phone transfer was turned off on the PC. Turn on Phone in NekoNotch and scan the new code.</p></div>";
 }

@@ -95,7 +95,7 @@
                         <Button x:Name="LyricsToggle" Style="{StaticResource IconButton}" Width="26" Height="26"
                                 HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Toggle Lyrics"
                                 Foreground="{DynamicResource SubTextBrush}" Click="OnToggleLyrics" Visibility="Collapsed">
-                            <hero:HeroIcon Kind="ChatBubbleBottomCenterText" Width="14" Height="14" />
+                            <hero:HeroIcon Kind="Quote" Width="14" Height="14" />
                         </Button>
                     </Grid>
 

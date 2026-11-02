@@ -78,7 +78,7 @@ public sealed class NotificationWatcher
         try
         {
             var status = await UserNotificationListener.Current.RequestAccessAsync();
-            Problem = status == UserNotificationListenerAccessStatus.Allowed ? null : "Notification access is turned off for OrixNotch in Windows Settings.";
+            Problem = status == UserNotificationListenerAccessStatus.Allowed ? null : "Notification access is turned off for NekoNotch in Windows Settings.";
             return Problem is null;
         }
         catch (Exception ex)
@@ -123,7 +123,7 @@ public sealed class NotificationWatcher
         var listener = UserNotificationListener.Current;
         if (listener.GetAccessStatus() != UserNotificationListenerAccessStatus.Allowed)
         {
-            Problem = "Allow OrixNotch to read notifications in Windows Settings.";
+            Problem = "Allow NekoNotch to read notifications in Windows Settings.";
             return result;
         }
         Problem = null;
@@ -244,10 +244,10 @@ public sealed class NotificationWatcher
     {
         if (!App.Settings.NotifyEnabled) return;
         if (string.IsNullOrWhiteSpace(n.Title) && string.IsNullOrWhiteSpace(n.Body)) return;
-        if (n.AppId.Contains("OrixNotch", StringComparison.OrdinalIgnoreCase)) return; // our own toasts
+        if (n.AppId.Contains("OrixNotch", StringComparison.OrdinalIgnoreCase) || n.AppId.Contains("NekoNotch", StringComparison.OrdinalIgnoreCase)) return; // our own toasts
 
         var (name, icon) = AppInfo(n.AppId, n.AppName, n.Icon);
-        if (name.Equals("OrixNotch", StringComparison.OrdinalIgnoreCase)) return;
+        if (name.Equals("OrixNotch", StringComparison.OrdinalIgnoreCase) || name.Equals("NekoNotch", StringComparison.OrdinalIgnoreCase)) return;
         RememberApp(n.AppId, name);
         if (App.Settings.NotifyMutedApps.Contains(n.AppId, StringComparer.OrdinalIgnoreCase)) return;
 

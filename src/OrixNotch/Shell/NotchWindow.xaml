@@ -71,6 +71,19 @@
                                     <Grid.RenderTransform>
                                         <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
                                     </Grid.RenderTransform>
+                                    <!-- Luminous Golden Glow Halo (Radiant amber aura) -->
+                                    <Border Width="27" Height="27" CornerRadius="13.5" Background="#FFE066" Opacity="0.38"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Border.Effect>
+                                            <BlurEffect Radius="8" />
+                                        </Border.Effect>
+                                    </Border>
+                                    <Border Width="19" Height="19" CornerRadius="9.5" Background="#FFCA28" Opacity="0.75"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Border.Effect>
+                                            <BlurEffect Radius="4" />
+                                        </Border.Effect>
+                                    </Border>
                                     <!-- White Eye Sclera (Smooth circle, clips pupil inside) -->
                                     <Border Width="15" Height="15" CornerRadius="7.5" Background="#FFFFFF" ClipToBounds="True">
                                         <Grid>
@@ -93,6 +106,19 @@
                                     <Grid.RenderTransform>
                                         <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
                                     </Grid.RenderTransform>
+                                    <!-- Luminous Golden Glow Halo (Radiant amber aura) -->
+                                    <Border Width="27" Height="27" CornerRadius="13.5" Background="#FFE066" Opacity="0.38"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Border.Effect>
+                                            <BlurEffect Radius="8" />
+                                        </Border.Effect>
+                                    </Border>
+                                    <Border Width="19" Height="19" CornerRadius="9.5" Background="#FFCA28" Opacity="0.75"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <Border.Effect>
+                                            <BlurEffect Radius="4" />
+                                        </Border.Effect>
+                                    </Border>
                                     <!-- White Eye Sclera (Smooth circle, clips pupil inside) -->
                                     <Border Width="15" Height="15" CornerRadius="7.5" Background="#FFFFFF" ClipToBounds="True">
                                         <Grid>

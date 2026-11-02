@@ -115,11 +115,87 @@ public static class ThemeService
 
     public static bool IsAutoAccent => App.Settings.ThemeAccent == AutoAccent;
 
+    private static AccentColor? _cachedSystemAccent;
+    private static DateTime _lastSystemAccentCheck = DateTime.MinValue;
+
+    static ThemeService()
+    {
+        try
+        {
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, _) =>
+            {
+                if (IsAutoAccent)
+                {
+                    _cachedSystemAccent = null;
+                    _lastSystemAccentCheck = DateTime.MinValue;
+                    Application.Current?.Dispatcher?.BeginInvoke(() => Apply());
+                }
+            };
+        }
+        catch { }
+    }
+
+    public static AccentColor? GetDynamicAutoAccent(ColorScheme scheme)
+    {
+        if (DateTime.UtcNow - _lastSystemAccentCheck > TimeSpan.FromSeconds(3))
+        {
+            _lastSystemAccentCheck = DateTime.UtcNow;
+            _cachedSystemAccent = DetectDesktopAccent();
+        }
+
+        return _cachedSystemAccent ?? Accents.FirstOrDefault(a => a.Id == scheme.Accent);
+    }
+
+    private static AccentColor? DetectDesktopAccent()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (key != null)
+            {
+                if (key.GetValue("AccentColor") is int rawAccent)
+                {
+                    byte b = (byte)((rawAccent >> 16) & 0xFF);
+                    byte g = (byte)((rawAccent >> 8) & 0xFF);
+                    byte r = (byte)(rawAccent & 0xFF);
+                    if (r > 20 || g > 20 || b > 20)
+                    {
+                        var primary = Color.FromRgb(r, g, b);
+                        var highlight = Color.FromRgb(
+                            (byte)Math.Min(255, r + 45),
+                            (byte)Math.Min(255, g + 45),
+                            (byte)Math.Min(255, b + 45));
+                        return new AccentColor("auto-system", "Wallpaper Accent", primary, highlight, primary);
+                    }
+                }
+
+                if (key.GetValue("ColorizationColor") is int rawColor)
+                {
+                    byte r = (byte)((rawColor >> 16) & 0xFF);
+                    byte g = (byte)((rawColor >> 8) & 0xFF);
+                    byte b = (byte)(rawColor & 0xFF);
+                    if (r > 20 || g > 20 || b > 20)
+                    {
+                        var primary = Color.FromRgb(r, g, b);
+                        var highlight = Color.FromRgb(
+                            (byte)Math.Min(255, r + 45),
+                            (byte)Math.Min(255, g + 45),
+                            (byte)Math.Min(255, b + 45));
+                        return new AccentColor("auto-system", "Wallpaper Accent", primary, highlight, primary);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return null;
+    }
+
     public static AccentColor CurrentAccent => AccentFor(CurrentScheme);
 
     /// <summary>The accent <paramref name="scheme"/> shows: its own while the accent is Auto, else the one picked.</summary>
     public static AccentColor AccentFor(ColorScheme scheme) =>
-        (IsAutoAccent ? null : Accents.FirstOrDefault(a => a.Id == App.Settings.ThemeAccent))
+        (IsAutoAccent ? GetDynamicAutoAccent(scheme) : Accents.FirstOrDefault(a => a.Id == App.Settings.ThemeAccent))
         ?? Accents.FirstOrDefault(a => a.Id == scheme.Accent)
         ?? Accents[0];
 
