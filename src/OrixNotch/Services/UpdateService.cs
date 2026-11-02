@@ -178,8 +178,18 @@ public sealed partial class UpdateService : ObservableObject
             {
                 try
                 {
-                    // The setup closes this app, upgrades in place and starts the new version (OrixNotch.wxs).
-                    Process.Start(new ProcessStartInfo("msiexec.exe", $"/i \"{msi}\" /passive") { UseShellExecute = false });
+                    // Upgrades in place via msiexec and automatically restarts NekoNotch
+                    var exePath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = $"/c start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    Process.Start(psi);
+                    Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
                     return;
                 }
                 catch (Exception ex)

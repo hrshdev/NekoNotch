@@ -1404,6 +1404,12 @@ public partial class NotchWindow : Window
         e.Handled = true;
     }
 
+    private void OnMusicPartClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        OpenTool("nowplaying");
+    }
+
     private void OnPeekClick(object sender, MouseButtonEventArgs e)
     {
         var click = _currentPeek?.OnClick;

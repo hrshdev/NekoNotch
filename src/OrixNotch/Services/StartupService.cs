@@ -90,10 +90,15 @@ public static class StartupService
 
             using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
             if (key is null) return false;
+
+            // Clean up any legacy or stale entry under the old name
+            try { key.DeleteValue("OrixNotch", throwOnMissingValue: false); } catch { }
+
             if (enabled)
             {
-                var command = $"\"{Environment.ProcessPath}\"";
-                if (key.GetValue(ValueName) as string != command) key.SetValue(ValueName, command);
+                var exePath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
+                var command = $"\"{exePath}\"";
+                key.SetValue(ValueName, command);
             }
             else
             {

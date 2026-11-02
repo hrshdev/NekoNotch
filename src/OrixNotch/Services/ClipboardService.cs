@@ -90,7 +90,7 @@ public sealed class ClipItem
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.DecodePixelHeight = 80;
+                bmp.DecodePixelHeight = 196;
                 bmp.UriSource = new Uri(ImagePath!);
                 bmp.EndInit();
                 bmp.Freeze();
@@ -123,7 +123,48 @@ public sealed class ClipboardService
 
     private ClipboardService()
     {
-        Items = new ObservableCollection<ClipItem>(Storage.Load<List<ClipItem>>(FileName));
+        var raw = Storage.Load<List<ClipItem>>(FileName);
+        var deduped = new List<ClipItem>();
+        foreach (var item in raw)
+        {
+            var isDup = deduped.Any(x =>
+                x.Kind == item.Kind &&
+                ((x.Kind == ClipKind.Image && x.ImagePath != null && item.ImagePath != null &&
+                  File.Exists(x.ImagePath) && File.Exists(item.ImagePath) &&
+                  (x.ImagePath.Equals(item.ImagePath, StringComparison.OrdinalIgnoreCase) ||
+                   (new FileInfo(x.ImagePath).Length == new FileInfo(item.ImagePath).Length && FilesMatch(x.ImagePath, item.ImagePath)))) ||
+                 (x.Kind != ClipKind.Image && x.Text == item.Text && (x.Files ?? []).SequenceEqual(item.Files ?? []))));
+
+            if (!isDup) deduped.Add(item);
+            else if (item.Kind == ClipKind.Image && item.ImagePath != null && File.Exists(item.ImagePath))
+            {
+                // Delete duplicate image file from disk
+                try { File.Delete(item.ImagePath); } catch { }
+            }
+        }
+        Items = new ObservableCollection<ClipItem>(deduped);
+    }
+
+    private static bool FilesMatch(string path1, string path2)
+    {
+        try
+        {
+            var info1 = new FileInfo(path1);
+            var info2 = new FileInfo(path2);
+            if (info1.Length != info2.Length) return false;
+            using var s1 = File.OpenRead(path1);
+            using var s2 = File.OpenRead(path2);
+            var b1 = new byte[4096];
+            var b2 = new byte[4096];
+            int read;
+            while ((read = s1.Read(b1, 0, b1.Length)) > 0)
+            {
+                if (s2.Read(b2, 0, b2.Length) != read) return false;
+                for (var i = 0; i < read; i++) if (b1[i] != b2[i]) return false;
+            }
+            return true;
+        }
+        catch { return false; }
     }
 
     public void Attach(IntPtr hwnd) => Win32.AddClipboardFormatListener(hwnd);
@@ -191,10 +232,31 @@ public sealed class ClipboardService
 
         if (item is null) return;
 
-        var duplicate = Items.FirstOrDefault(x => x.Kind == item.Kind && x.Kind != ClipKind.Image &&
+        ClipItem? duplicate = null;
+        if (item.Kind == ClipKind.Image && item.ImagePath is not null && File.Exists(item.ImagePath))
+        {
+            var newLen = new FileInfo(item.ImagePath).Length;
+            duplicate = Items.FirstOrDefault(x => x.Kind == ClipKind.Image &&
+                                                  x.ImagePath is not null && File.Exists(x.ImagePath) &&
+                                                  new FileInfo(x.ImagePath).Length == newLen &&
+                                                  FilesMatch(x.ImagePath, item.ImagePath));
+        }
+        else
+        {
+            duplicate = Items.FirstOrDefault(x => x.Kind == item.Kind &&
                                                   x.Text == item.Text &&
                                                   (x.Files ?? []).SequenceEqual(item.Files ?? []));
-        if (duplicate is not null) Items.Remove(duplicate);
+        }
+
+        if (duplicate is not null)
+        {
+            if (item.Kind == ClipKind.Image && item.ImagePath is not null)
+            {
+                try { File.Delete(item.ImagePath); } catch { }
+                item.ImagePath = duplicate.ImagePath;
+            }
+            Items.Remove(duplicate);
+        }
 
         Items.Insert(0, item);
         Trim();

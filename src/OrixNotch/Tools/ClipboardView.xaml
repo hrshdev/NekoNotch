@@ -81,11 +81,11 @@
                                         <TextBlock Text="{Binding LinkPath}" Style="{StaticResource SubText}" FontSize="13" TextWrapping="Wrap"
                                                    TextTrimming="CharacterEllipsis" MaxHeight="64" Margin="0,2,0,0" />
                                     </StackPanel>
-                                    <Image x:Name="Thumb" Source="{Binding Thumb}" Stretch="UniformToFill" Visibility="Collapsed">
-                                        <Image.Clip>
-                                            <RectangleGeometry Rect="0,0,126,98" RadiusX="6" RadiusY="6" />
-                                        </Image.Clip>
-                                    </Image>
+                                    <Border x:Name="ThumbBox" Width="126" Height="98" CornerRadius="6"
+                                            Background="{DynamicResource Surface2Brush}" ClipToBounds="True" Visibility="Collapsed">
+                                        <Image x:Name="Thumb" Source="{Binding Thumb}" Stretch="Uniform"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
                                 </Grid>
                             </DockPanel>
                         </Border>
@@ -98,7 +98,7 @@
                                 <Setter TargetName="PinMark" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding HasThumb}" Value="True">
-                                <Setter TargetName="Thumb" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="ThumbBox" Property="Visibility" Value="Visible" />
                                 <Setter TargetName="PreviewText" Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Kind}" Value="Link">
