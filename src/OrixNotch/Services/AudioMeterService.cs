@@ -18,7 +18,18 @@ public sealed class AudioMeterService
         try
         {
             var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-            if (enumerator.GetDefaultAudioEndpoint(0 /* eRender */, 1 /* eMultimedia */, out var device) == 0)
+            // Try Multimedia role (1) first, fallback to Console role (0)
+            IMMDevice? device = null;
+            if (enumerator.GetDefaultAudioEndpoint(0 /* eRender */, 1 /* eMultimedia */, out var dev1) == 0)
+            {
+                device = dev1;
+            }
+            else if (enumerator.GetDefaultAudioEndpoint(0 /* eRender */, 0 /* eConsole */, out var dev0) == 0)
+            {
+                device = dev0;
+            }
+
+            if (device != null)
             {
                 var iid = typeof(IAudioMeterInformation).GUID;
                 if (device.Activate(ref iid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out var obj) == 0)
@@ -75,7 +86,8 @@ public sealed class AudioMeterService
         [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object iface);
     }
 
-    [ComImport, Guid("C0221673-0307-4A44-8469-157A8EB528E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    // Official Windows SDK IAudioMeterInformation GUID from endpointvolume.h
+    [ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IAudioMeterInformation
     {
         [PreserveSig] int GetPeakValue(out float pfPeak);

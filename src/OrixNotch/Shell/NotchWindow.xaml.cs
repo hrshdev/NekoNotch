@@ -1663,7 +1663,7 @@ public partial class NotchWindow : Window
         for (var i = 0; i < 5; i++)
         {
             double target;
-            if (peak <= 0.003f)
+            if (peak <= 0.0005f)
             {
                 // Audio is muted, paused, or completely silent: settle to flat resting dots
                 target = 0.15;
@@ -1671,7 +1671,7 @@ public partial class NotchWindow : Window
             else
             {
                 // Sensitive to real audio: square root enhances sensitivity to quiet passages
-                var factor = Math.Sqrt(peak);
+                var factor = Math.Sqrt(Math.Min(1.0, peak * 2.8));
                 target = Math.Clamp(0.18 + factor * _eqScales[i] * 0.82, 0.15, 1.0);
             }
 
@@ -1985,49 +1985,45 @@ public partial class NotchWindow : Window
 
     private void InitNotchEyes()
     {
-        _blinkTimer.Interval = TimeSpan.FromSeconds(3);
+        _blinkTimer.Interval = TimeSpan.FromSeconds(2.5);
         _blinkTimer.Tick += (_, _) => TriggerEyeBlink();
         _blinkTimer.Start();
     }
 
     private void TriggerEyeBlink()
     {
-        if (_blinking || _expanded) return;
+        if (_blinking || _expanded || NotchEyes.Visibility != Visibility.Visible) return;
         _blinking = true;
 
-        var animClose = new DoubleAnimation(1.0, 0.06, TimeSpan.FromMilliseconds(75))
+        var closeAnim = new DoubleAnimation
         {
+            From = 0.0,
+            To = 15.0,
+            Duration = TimeSpan.FromMilliseconds(75),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
-        var animOpen = new DoubleAnimation(0.06, 1.0, TimeSpan.FromMilliseconds(95))
+
+        var openAnim = new DoubleAnimation
         {
-            BeginTime = TimeSpan.FromMilliseconds(80),
+            From = 15.0,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(95),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
         };
-        animOpen.Completed += (_, _) =>
+
+        closeAnim.Completed += (_, _) =>
         {
-            _blinking = false;
-            _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.0 + 2.0);
+            openAnim.Completed += (_, _) =>
+            {
+                _blinking = false;
+                _blinkTimer.Interval = TimeSpan.FromSeconds(_eyeRng.NextDouble() * 3.5 + 2.0);
+            };
+            LeftEyelid.BeginAnimation(HeightProperty, openAnim);
+            RightEyelid.BeginAnimation(HeightProperty, openAnim);
         };
 
-        var sb = new Storyboard();
-        Storyboard.SetTarget(animClose, LeftEyeScale);
-        Storyboard.SetTargetProperty(animClose, new PropertyPath(ScaleTransform.ScaleYProperty));
-        Storyboard.SetTarget(animOpen, LeftEyeScale);
-        Storyboard.SetTargetProperty(animOpen, new PropertyPath(ScaleTransform.ScaleYProperty));
-        sb.Children.Add(animClose);
-        sb.Children.Add(animOpen);
-
-        var animCloseR = animClose.Clone();
-        var animOpenR = animOpen.Clone();
-        Storyboard.SetTarget(animCloseR, RightEyeScale);
-        Storyboard.SetTargetProperty(animCloseR, new PropertyPath(ScaleTransform.ScaleYProperty));
-        Storyboard.SetTarget(animOpenR, RightEyeScale);
-        Storyboard.SetTargetProperty(animOpenR, new PropertyPath(ScaleTransform.ScaleYProperty));
-        sb.Children.Add(animCloseR);
-        sb.Children.Add(animOpenR);
-
-        sb.Begin();
+        LeftEyelid.BeginAnimation(HeightProperty, closeAnim);
+        RightEyelid.BeginAnimation(HeightProperty, closeAnim);
     }
 
     private void UpdateNotchEyes()
@@ -2043,12 +2039,12 @@ public partial class NotchWindow : Window
         var dx = pt.X - notchCenterX;
         var dy = pt.Y - notchCenterY;
 
-        // Smoothly shift eyes towards pointer in range [-4, +4] px horizontal and [-3, +3] px vertical
-        var targetX = Math.Clamp(dx / 70.0, -4.0, 4.0);
-        var targetY = Math.Clamp(dy / 70.0, -3.0, 3.0);
+        // Smoothly turn/shift only the pupils inside their sockets (range [-2.2, +2.2] X, [-1.8, +1.8] Y)
+        var targetX = Math.Clamp(dx / 60.0, -2.2, 2.2);
+        var targetY = Math.Clamp(dy / 60.0, -1.8, 1.8);
 
-        _curEyeX += (targetX - _curEyeX) * 0.22;
-        _curEyeY += (targetY - _curEyeY) * 0.22;
+        _curEyeX += (targetX - _curEyeX) * 0.25;
+        _curEyeY += (targetY - _curEyeY) * 0.25;
 
         LeftEyeShift.X = _curEyeX;
         LeftEyeShift.Y = _curEyeY;
