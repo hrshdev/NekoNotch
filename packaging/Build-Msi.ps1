@@ -3,7 +3,7 @@
 #   dotnet tool install --global wix --version 5.0.2
 #   wix extension add -g WixToolset.Util.wixext/5.0.2
 # Run from repo root:  pwsh packaging/Build-Msi.ps1 [-Version 1.2.3]
-# Silent install:      msiexec /i publish/OrixNotch.msi /qn LAUNCHAPP=0
+# Silent install:      msiexec /i publish/NekoNotch.msi /qn LAUNCHAPP=0
 param([string]$Version, [string]$OutFile)
 
 $ErrorActionPreference = "Stop"
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 
 $appVersion = Get-AppVersion $Version
 $stage = Join-Path $PSScriptRoot "msi-stage"
-if (-not $OutFile) { $OutFile = Join-Path $RepoRoot "publish/OrixNotch.msi" }
+if (-not $OutFile) { $OutFile = Join-Path $RepoRoot "publish/NekoNotch.msi" }
 Write-Host "MSI $appVersion"
 
 # 1. Self-contained single-file publish (same exe as the portable download), signed if a cert is set up.
