@@ -248,7 +248,7 @@
                             <hero:BrandMark x:Name="TitleLogo" Variant="Gradient" Width="20" Height="20" Margin="0,0,8,0"
                                             VerticalAlignment="Center" Visibility="Collapsed">
                                 <hero:BrandMark.Effect>
-                                    <DropShadowEffect Color="#FFE066" BlurRadius="6" ShadowDepth="0" Opacity="0.85"/>
+                                    <DropShadowEffect Color="#FFFFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.4"/>
                                 </hero:BrandMark.Effect>
                             </hero:BrandMark>
                             <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />

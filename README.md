@@ -1,6 +1,6 @@
-# OrixNotch
+# NekoNotch
 
-<img src="src/OrixNotch/Assets/Brand/logo-512.png" width="180" alt="OrixNotch logo — sparkles and a notched ring, pink to orange" />
+<img src="src/OrixNotch/Assets/Brand/logo-512.png" width="180" alt="NekoNotch logo — dynamic island with expressive character eyes" />
 
 > **Your Screen, Smarter** — Smoother • Faster • Smarter
 

@@ -969,10 +969,10 @@ public partial class SettingsView : UserControl, IToolView
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Effect = new System.Windows.Media.Effects.DropShadowEffect {
-                    Color = System.Windows.Media.Color.FromRgb(0xFF, 0xE0, 0x66),
-                    BlurRadius = 14,
+                    Color = System.Windows.Media.Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF),
+                    BlurRadius = 10,
                     ShadowDepth = 0,
-                    Opacity = 0.9
+                    Opacity = 0.5
                 }
             },
         };

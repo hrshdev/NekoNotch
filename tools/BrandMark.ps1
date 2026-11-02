@@ -1,14 +1,13 @@
-# The OrixNotch mark, shared by tools/Export-BrandIcon.ps1 and store-assets/Export-StoreArt.ps1.
+# The NekoNotch mark, shared by tools/Export-BrandIcon.ps1 and store-assets/Export-StoreArt.ps1.
 # Source of truth: src/OrixNotch/Assets/Brand/mark.svg (the designer's file; the app's BrandMark reads it too).
 # Drawn with WPF so the SVG path data is used as-is. Dot-source it:  . (Join-Path $repoRoot "tools/BrandMark.ps1")
 
 Add-Type -AssemblyName PresentationCore, WindowsBase
 
-$BrandPink = [System.Windows.Media.Color]::FromRgb(0xFF, 0xF3, 0x82)
-$BrandOrange = [System.Windows.Media.Color]::FromRgb(0xFF, 0xE0, 0x66)
-$BrandTile = [System.Windows.Media.Color]::FromRgb(0x0B, 0x0E, 0x17)
+$BrandEye = [System.Windows.Media.Color]::FromRgb(0xFF, 0xFF, 0xFF)
+$BrandTile = [System.Windows.Media.Color]::FromRgb(0x0C, 0x0E, 0x14)
 
-# The mark's outline (both paths), moved so its bounds start at 0,0. Even-odd fill keeps the ring's hole.
+# The mark's outline (all paths), moved so its bounds start at 0,0. Even-odd fill keeps pupil holes and glints.
 function Get-BrandMarkGeometry([string]$RepoRoot) {
     [xml]$svg = Get-Content -Raw (Join-Path $RepoRoot "src/OrixNotch/Assets/Brand/mark.svg")
     $group = New-Object System.Windows.Media.GeometryGroup
@@ -27,22 +26,19 @@ function Get-BrandMarkGeometry([string]$RepoRoot) {
     return $group
 }
 
-function New-BrandGradient {
-    $brush = New-Object System.Windows.Media.LinearGradientBrush($BrandPink, $BrandOrange,
-        (New-Object System.Windows.Point(0, 0.5)), (New-Object System.Windows.Point(1, 0.5)))
-    $brush.Freeze()
-    return $brush
+function New-BrandBrush {
+    return [System.Windows.Media.Brushes]::White
 }
 
 # Square PNG of the mark: $MarkScale = share of the canvas the mark's longer side fills; -Tile puts it on
 # the dark rounded square used for the app icon.
-function Save-BrandMarkPng([string]$RepoRoot, [int]$Size, [string]$Path, [double]$MarkScale = 0.62, [switch]$Tile) {
+function Save-BrandMarkPng([string]$RepoRoot, [int]$Size, [string]$Path, [double]$MarkScale = 0.64, [switch]$Tile) {
     $mark = Get-BrandMarkGeometry $RepoRoot
     $visual = New-Object System.Windows.Media.DrawingVisual
     $dc = $visual.RenderOpen()
     try {
         if ($Tile) {
-            $radius = $Size * 0.24
+            $radius = $Size * 0.22
             $dc.DrawRoundedRectangle((New-Object System.Windows.Media.SolidColorBrush($BrandTile)), $null,
                 (New-Object System.Windows.Rect(0, 0, $Size, $Size)), $radius, $radius)
         }
@@ -52,7 +48,7 @@ function Save-BrandMarkPng([string]$RepoRoot, [int]$Size, [string]$Path, [double
         $y = ($Size - $b.Height * $scale) / 2
         $dc.PushTransform((New-Object System.Windows.Media.TranslateTransform($x, $y)))
         $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform($scale, $scale)))
-        $dc.DrawGeometry((New-BrandGradient), $null, $mark)
+        $dc.DrawGeometry((New-BrandBrush), $null, $mark)
         $dc.Pop(); $dc.Pop()
     } finally { $dc.Close() }
 

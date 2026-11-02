@@ -1,6 +1,6 @@
-# Exports the OrixNotch app icon (gradient mark on a dark rounded square) to logo-512.png + a multi-size .ico.
-# The mark comes from src/OrixNotch/Assets/Brand/mark.svg (see tools/BrandMark.ps1): pink #FD0388 -> orange #FC6F18 on #0B0E17.
-# Run: pwsh tools/Export-BrandIcon.ps1
+# Exports the NekoNotch app icon (eyes mark on a dark rounded square) to logo-512.png + a multi-size .ico.
+# The mark comes from src/OrixNotch/Assets/Brand/mark.svg (see tools/BrandMark.ps1).
+# Run: powershell -File tools/Export-BrandIcon.ps1
 param(
     [string]$OutDir = "src/OrixNotch/Assets/Brand"
 )
@@ -13,11 +13,11 @@ if (-not (Test-Path (Join-Path $repoRoot "OrixNotch.sln"))) { $repoRoot = (Get-L
 $out = Join-Path $repoRoot $OutDir
 New-Item -ItemType Directory -Path $out -Force | Out-Null
 
-# Small sizes get a bigger mark so the little star still reads at 16 px.
-function Get-MarkScale([int]$size) { if ($size -le 32) { 0.78 } elseif ($size -le 64) { 0.7 } else { 0.62 } }
+# Small sizes get a slightly bigger mark so the eyes still read clearly at 16 px.
+function Get-MarkScale([int]$size) { if ($size -le 32) { 0.76 } elseif ($size -le 64) { 0.70 } else { 0.64 } }
 
 $sizes = @(16, 24, 32, 48, 64, 128, 256)
-$temp = Join-Path ([IO.Path]::GetTempPath()) "OrixNotch-icon"
+$temp = Join-Path ([IO.Path]::GetTempPath()) "NekoNotch-icon"
 New-Item -ItemType Directory -Path $temp -Force | Out-Null
 $pngs = @()
 foreach ($s in $sizes) {
@@ -43,8 +43,9 @@ try {
     for ($idx = 0; $idx -lt $entries.Count; $idx++) {
         $s = $sizes[$idx]
         $len = $entries[$idx].Length
-        $bw.Write([byte](($s -eq 256) ? 0 : $s))
-        $bw.Write([byte](($s -eq 256) ? 0 : $s))
+        $bVal = [byte]$(if ($s -eq 256) { 0 } else { $s })
+        $bw.Write($bVal)
+        $bw.Write($bVal)
         $bw.Write([byte]0); $bw.Write([byte]0)
         $bw.Write([uint16]1); $bw.Write([uint16]32)
         $bw.Write([uint32]$len); $bw.Write([uint32]$offset)

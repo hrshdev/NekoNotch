@@ -8,7 +8,7 @@ using OrixNotch.Services;
 
 namespace OrixNotch.Shell;
 
-/// <summary>Which artwork to render. <see cref="Auto"/> follows the theme: gradient on dark, near-black mono on light.</summary>
+/// <summary>Which artwork to render. <see cref="Auto"/> follows the theme: white on dark, near-black mono on light.</summary>
 public enum BrandVariant
 {
     Auto,
@@ -18,28 +18,21 @@ public enum BrandVariant
     Outline,
 }
 
-/// <summary>Brand colours: warm glowing eyes (#FFF382 → #FFE066).</summary>
+/// <summary>Brand colours: character eyes (white sclera on dark notch).</summary>
 public static class BrandPalette
 {
-    public static readonly Color EyeYellow = Color.FromRgb(0xFF, 0xF3, 0x82);
-    public static readonly Color EyeGlow = Color.FromRgb(0xFF, 0xE0, 0x66);
+    public static readonly Color EyeWhite = Colors.White;
     public static readonly Color MonoDark = Color.FromRgb(0x11, 0x13, 0x18);
 
-    public static LinearGradientBrush CreateGradientBrush()
-    {
-        var brush = new LinearGradientBrush(EyeYellow, EyeGlow, new Point(0, 0), new Point(0, 1));
-        brush.Freeze();
-        return brush;
-    }
+    public static SolidColorBrush CreateBrush() => Brushes.White;
 }
 
 /// <summary>
-/// The NekoNotch mark (the two glowing eyes), drawn from Assets/Brand/mark.svg. Keeps its aspect ratio, centred in the control.
+/// The NekoNotch mark (the character eyes), drawn from Assets/Brand/mark.svg. Keeps its aspect ratio, centred in the control.
 /// </summary>
 public class BrandMark : Control
 {
     private static readonly Geometry Mark = LoadMark();
-    private static readonly LinearGradientBrush Gradient = BrandPalette.CreateGradientBrush();
     private static readonly SolidColorBrush WhiteBrush = Freeze(new SolidColorBrush(Colors.White));
     private static readonly SolidColorBrush DarkBrush = Freeze(new SolidColorBrush(BrandPalette.MonoDark));
 
@@ -63,11 +56,11 @@ public class BrandMark : Control
         if (Variant != BrandVariant.Auto) return Variant;
         try
         {
-            return ThemeService.CurrentScheme.IsLight ? BrandVariant.MonoDark : BrandVariant.Gradient;
+            return ThemeService.CurrentScheme.IsLight ? BrandVariant.MonoDark : BrandVariant.MonoWhite;
         }
         catch
         {
-            return BrandVariant.Gradient;
+            return BrandVariant.MonoWhite;
         }
     }
 
@@ -77,10 +70,9 @@ public class BrandMark : Control
         var variant = EffectiveVariant();
         Draw(dc, RenderSize, variant switch
         {
-            BrandVariant.MonoWhite => WhiteBrush,
             BrandVariant.MonoDark => DarkBrush,
             BrandVariant.Outline => null,
-            _ => Gradient,
+            _ => WhiteBrush,
         }, variant == BrandVariant.Outline ? Foreground : null);
     }
 
@@ -125,8 +117,12 @@ public class BrandMark : Control
 
         if (group.Children.Count == 0)
         {
-            group.Children.Add(Geometry.Parse("M 36,32 A 8,8 0 0,1 44,40 L 44,60 A 8,8 0 0,1 36,68 A 8,8 0 0,1 28,60 L 28,40 A 8,8 0 0,1 36,32 Z"));
-            group.Children.Add(Geometry.Parse("M 64,32 A 8,8 0 0,1 72,40 L 72,60 A 8,8 0 0,1 64,68 A 8,8 0 0,1 56,60 L 56,40 A 8,8 0 0,1 64,32 Z"));
+            group.Children.Add(Geometry.Parse("M 15,50 A 14,14 0 1,0 43,50 A 14,14 0 1,0 15,50 Z"));
+            group.Children.Add(Geometry.Parse("M 20,52.2 A 9,9 0 1,0 38,52.2 A 9,9 0 1,0 20,52.2 Z"));
+            group.Children.Add(Geometry.Parse("M 22.9,48.7 A 2.6,2.6 0 1,0 28.1,48.7 A 2.6,2.6 0 1,0 22.9,48.7 Z"));
+            group.Children.Add(Geometry.Parse("M 57,50 A 14,14 0 1,0 85,50 A 14,14 0 1,0 57,50 Z"));
+            group.Children.Add(Geometry.Parse("M 62,52.2 A 9,9 0 1,0 80,52.2 A 9,9 0 1,0 62,52.2 Z"));
+            group.Children.Add(Geometry.Parse("M 64.9,48.7 A 2.6,2.6 0 1,0 70.1,48.7 A 2.6,2.6 0 1,0 64.9,48.7 Z"));
         }
 
         var bounds = group.Bounds;
