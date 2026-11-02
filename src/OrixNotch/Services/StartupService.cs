@@ -17,7 +17,7 @@ namespace OrixNotch.Services;
 public static class StartupService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "OrixNotch";
+    private const string ValueName = "NekoNotch";
     private const string TaskId = "OrixNotchAutostart"; // Package.appxmanifest → desktop:StartupTask
 
     /// <summary>True when running from an MSIX package (Store or sideloaded).</summary>

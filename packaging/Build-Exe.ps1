@@ -10,8 +10,12 @@ if (-not $OutDir) { $OutDir = Join-Path $RepoRoot "publish/exe" }
 Write-Host "Portable exe $appVersion"
 
 Invoke-Publish -OutDir $OutDir -Version $appVersion -SingleFile
-$exe = Join-Path $OutDir "OrixNotch.exe"
+$mainExe = Get-ChildItem $OutDir -Filter *.exe | Select-Object -First 1
+if ($mainExe -and $mainExe.Name -ne "NekoNotch.exe") {
+    Copy-Item $mainExe.FullName (Join-Path $OutDir "NekoNotch.exe") -Force
+}
+$exe = Join-Path $OutDir "NekoNotch.exe"
 Invoke-CodeSign $exe
 
 Write-Host "Exe ready: $exe"
-Copy-ToOutput $exe "OrixNotch.exe"
+Copy-ToOutput $exe "NekoNotch.exe"

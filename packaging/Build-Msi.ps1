@@ -16,13 +16,17 @@ Write-Host "MSI $appVersion"
 
 # 1. Self-contained single-file publish (same exe as the portable download), signed if a cert is set up.
 Invoke-Publish -OutDir $stage -Version $appVersion -SingleFile
-Invoke-CodeSign (Join-Path $stage "OrixNotch.exe")
+$mainExe = Get-ChildItem $stage -Filter *.exe | Select-Object -First 1
+if ($mainExe -and $mainExe.Name -ne "NekoNotch.exe") {
+    Move-Item $mainExe.FullName (Join-Path $stage "NekoNotch.exe") -Force
+}
+Invoke-CodeSign (Join-Path $stage "NekoNotch.exe")
 
 # 2. File list for the AppBinaries component.
 $files = Get-ChildItem $stage -File | Sort-Object Name
 $xml = @('<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">')
 foreach ($f in $files) {
-    $id = if ($f.Name -eq "OrixNotch.exe") { ' Id="MainExe"' } else { "" }
+    $id = if ($f.Name -eq "NekoNotch.exe" -or $f.Name -eq "OrixNotch.exe") { ' Id="MainExe"' } else { "" }
     $xml += "  <File$id Source=`"$($f.FullName)`" />"
 }
 $xml += "</Include>"

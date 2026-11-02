@@ -64,15 +64,18 @@ jobs:
         with:
           name: NekoNotch-${{ env.APP_VERSION }}
           path: |
-            publish/exe/OrixNotch.exe
+            publish/exe/NekoNotch.exe
             publish/NekoNotch-Setup.msi
             publish/NekoNotch-Setup.msix
           retention-days: 14
 
-      - name: Prepare NekoNotch.exe
+      - name: Ensure NekoNotch.exe
         shell: pwsh
         run: |
-          Copy-Item publish/exe/OrixNotch.exe publish/exe/NekoNotch.exe
+          if (-not (Test-Path publish/exe/NekoNotch.exe)) {
+            $ex = Get-ChildItem publish/exe -Filter *.exe | Select-Object -First 1
+            Copy-Item $ex.FullName publish/exe/NekoNotch.exe
+          }
 
       - name: Publish Direct .exe and Setup to GitHub Releases
         uses: softprops/action-gh-release@v3

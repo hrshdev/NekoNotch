@@ -8,7 +8,10 @@ namespace OrixNotch;
 
 public partial class App : Application
 {
+    private static readonly string MutexName = "NekoNotch.SingleInstance";
+    private static readonly string WakeupEventName = "NekoNotch.WakeupEvent";
     private Mutex? _mutex;
+    private EventWaitHandle? _wakeupEvent;
     private TrayService? _tray;
 
     public static AppSettings Settings => SettingsService.Current;
@@ -28,12 +31,40 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        _mutex = new Mutex(true, "NekoNotch.SingleInstance", out var created);
+        _mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
+            try
+            {
+                using var wakeup = EventWaitHandle.OpenExisting(WakeupEventName);
+                wakeup.Set();
+            }
+            catch
+            {
+            }
             _mutex = null;
             Shutdown();
             return;
+        }
+
+        try
+        {
+            _wakeupEvent = new EventWaitHandle(false, EventResetMode.AutoReset, WakeupEventName);
+            ThreadPool.RegisterWaitForSingleObject(_wakeupEvent, (_, _) =>
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (MainWindow is NotchWindow win)
+                    {
+                        win.Show();
+                        win.Activate();
+                        win.Expand(activate: true);
+                    }
+                });
+            }, null, -1, false);
+        }
+        catch
+        {
         }
 
         base.OnStartup(e);
@@ -74,6 +105,7 @@ public partial class App : Application
         _tray?.Dispose();
         ShelfService.Instance.Save();
         _ = PhoneTransferService.Instance.StopAsync(); // sockets close with the process anyway
+        _wakeupEvent?.Dispose();
         _mutex?.ReleaseMutex();
         base.OnExit(e);
     }
