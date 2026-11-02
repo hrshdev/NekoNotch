@@ -165,6 +165,7 @@ public partial class NotchWindow : Window
 
         BuildEqualizer();
         InitNotchEyes();
+        InitVolumeHud();
         Tabs.LayoutUpdated += (_, _) =>
         {
             if (TabIndicator.Opacity < 0.5 && _expanded && _activeTool != SettingsId) MoveTabIndicator(_activeTool, animate: false);
@@ -434,6 +435,8 @@ public partial class NotchWindow : Window
             _leaveTimer.Start();
             SetEqualizer(false);
             NotchEyes.Visibility = Visibility.Collapsed;
+            _volumeTimer.Stop();
+            VolumePart.Visibility = Visibility.Collapsed;
         }
         if (activate) Activate();
     }
@@ -1462,12 +1465,46 @@ public partial class NotchWindow : Window
         EnqueuePeek(new PeekRequest("power", () => GlyphTile(charging ? AppIcon.Bolt : AppIcon.BatteryFull), title, sub,
             TimeSpan.FromSeconds(3)));
 
+    private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+
+    private void InitVolumeHud()
+    {
+        _volumeTimer.Tick += (_, _) =>
+        {
+            _volumeTimer.Stop();
+            VolumePart.Visibility = Visibility.Collapsed;
+            if (!_expanded)
+            {
+                NotchEyes.Visibility = Visibility.Visible;
+                _width.Target = ActivityWidth();
+                StartAnimation();
+                UpdateActivity();
+            }
+        };
+    }
+
     private void ShowVolumePeek(float level, bool muted)
     {
-        if (!App.Settings.VolumeHud) return;
-        var pct = (int)Math.Round(level * 100);
-        EnqueuePeek(new PeekRequest("volume", () => GlyphTile(muted || pct == 0 ? AppIcon.SpeakerMuted : AppIcon.Speaker),
-            "Volume", muted ? "Muted" : $"{pct}%", TimeSpan.FromSeconds(1.5)));
+        if (!App.Settings.VolumeHud || _expanded) return;
+
+        level = Math.Clamp(level, 0f, 1f);
+        VolumeIcon.Kind = (muted || level <= 0.001f) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
+
+        VolumeFillCol.Width = new GridLength(Math.Max(0.0001, (double)level), GridUnitType.Star);
+        VolumeEmptyCol.Width = new GridLength(Math.Max(0.0001, 1.0 - (double)level), GridUnitType.Star);
+
+        NotchEyes.Visibility = Visibility.Collapsed;
+        MusicPart.Visibility = Visibility.Collapsed;
+        TimerPart.Visibility = Visibility.Collapsed;
+        IdlePart.Visibility = Visibility.Collapsed;
+        ReminderPart.Visibility = Visibility.Collapsed;
+        VolumePart.Visibility = Visibility.Visible;
+
+        _volumeTimer.Stop();
+        _volumeTimer.Start();
+
+        _width.Target = 240;
+        StartAnimation();
     }
 
     private void ShowBluetoothPeek(string device, bool connected)
