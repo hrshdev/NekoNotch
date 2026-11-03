@@ -10,11 +10,11 @@ using OrixNotch.Shell;
 
 namespace OrixNotch.Tools;
 
-/// <summary>Player page: thumbnail on the left, details + neat timeline bar + playback controls on the right.</summary>
+/// <summary>Player page: thumbnail on the left, details + neat timeline bar + playback controls on the right, with split lyrics view.</summary>
 public partial class NowPlayingView : UserControl, IToolView
 {
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
-    private IReadOnlyList<LyricLine>? _lines;
+    private TrackLyrics? _lyrics;
     private string _trackKey = "";
     private int _current = -2;
     private bool _lyricsActive;
@@ -57,31 +57,51 @@ public partial class NowPlayingView : UserControl, IToolView
     private void Tick()
     {
         Service.Tick();
-        if (_lines is null || !_lyricsActive) return;
-        var index = LyricsService.IndexAt(_lines, Service.Position);
+        if (_lyrics is null || !_lyricsActive || !_lyrics.IsSynced) return;
+        var index = LyricsService.IndexAt(_lyrics.Lines, Service.Position);
         if (index != _current) Highlight(index);
     }
 
     private void OnToggleLyrics(object sender, RoutedEventArgs e)
     {
         _lyricsActive = !_lyricsActive;
-        InfoPanel.Visibility = _lyricsActive ? Visibility.Collapsed : Visibility.Visible;
-        LyricsPanel.Visibility = _lyricsActive ? Visibility.Visible : Visibility.Collapsed;
+        SetSplitLayout(_lyricsActive);
         if (_lyricsActive) Tick();
+    }
+
+    private void SetSplitLayout(bool active)
+    {
+        if (active)
+        {
+            PlayerCol.Width = new GridLength(0.92, GridUnitType.Star);
+            LyricsCol.Width = new GridLength(1.18, GridUnitType.Star);
+            LyricsDividerCol.Width = GridLength.Auto;
+            LyricsDivider.Visibility = Visibility.Visible;
+            LyricsPane.Visibility = Visibility.Visible;
+            LyricsToggle.Foreground = (Brush)FindResource("AccentBrush");
+        }
+        else
+        {
+            PlayerCol.Width = new GridLength(1, GridUnitType.Star);
+            LyricsCol.Width = new GridLength(0);
+            LyricsDividerCol.Width = new GridLength(0);
+            LyricsDivider.Visibility = Visibility.Collapsed;
+            LyricsPane.Visibility = Visibility.Collapsed;
+            LyricsToggle.Foreground = (Brush)FindResource("SubTextBrush");
+        }
     }
 
     private async Task LoadLyricsAsync()
     {
         var key = $"{Service.Artist}|{Service.Title}";
-        if (key == _trackKey && _lines is not null) return;
+        if (key == _trackKey && _lyrics is not null) return;
         _trackKey = key;
-        _lines = null;
+        _lyrics = null;
         _current = -2;
         LyricsLines.Children.Clear();
         LyricsToggle.Visibility = Visibility.Collapsed;
+        SetSplitLayout(false);
         _lyricsActive = false;
-        InfoPanel.Visibility = Visibility.Visible;
-        LyricsPanel.Visibility = Visibility.Collapsed;
 
         if (!App.Settings.LyricsEnabled || !Service.HasSession)
         {
@@ -89,16 +109,19 @@ public partial class NowPlayingView : UserControl, IToolView
             return;
         }
 
-        var lines = await LyricsService.GetAsync(Service.Title, Service.Artist, Service.Duration);
+        var lyrics = await LyricsService.GetAsync(Service.Title, Service.Artist, Service.Duration);
         if (key != _trackKey) return;
-        if (lines is null || lines.Count == 0)
+        if (lyrics is null || lyrics.Lines.Count == 0)
         {
             LyricsStatus.Text = "";
             return;
         }
 
-        _lines = lines;
-        foreach (var line in lines)
+        _lyrics = lyrics;
+        LyricsBadgeText.Text = lyrics.IsSynced ? "♪ Synced" : "≡ Plain Lyrics";
+        LyricsBadge.Visibility = Visibility.Visible;
+
+        foreach (var line in lyrics.Lines)
         {
             LyricsLines.Children.Add(new TextBlock
             {
@@ -106,15 +129,14 @@ public partial class NowPlayingView : UserControl, IToolView
                 FontSize = 13.5,
                 FontWeight = FontWeights.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 2),
-                Opacity = 0.35,
+                Margin = new Thickness(0, lyrics.IsSynced ? 2.5 : 4.5, 0, lyrics.IsSynced ? 2.5 : 4.5),
+                Opacity = lyrics.IsSynced ? 0.35 : 0.88,
             });
         }
         LyricsToggle.Visibility = Visibility.Visible;
-        Tick();
     }
 
-    /// <summary>Brightens the current line and glides it to the vertical center.</summary>
+    /// <summary>Brightens the current line and glides it to the vertical center (for time-synced lyrics).</summary>
     private void Highlight(int index)
     {
         _current = index;
@@ -124,7 +146,7 @@ public partial class NowPlayingView : UserControl, IToolView
             var target = i == index ? 1.0 : Math.Abs(i - index) == 1 ? 0.5 : 0.3;
             tb.BeginAnimation(OpacityProperty, new DoubleAnimation(target, TimeSpan.FromMilliseconds(250)));
         }
-        if (index < 0) return;
+        if (index < 0 || index >= LyricsLines.Children.Count) return;
 
         LyricsLines.UpdateLayout();
         var line = (FrameworkElement)LyricsLines.Children[index];

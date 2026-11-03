@@ -6,16 +6,17 @@ using System.Text.RegularExpressions;
 namespace OrixNotch.Services;
 
 public sealed record LyricLine(double Time, string Text);
+public sealed record TrackLyrics(IReadOnlyList<LyricLine> Lines, bool IsSynced);
 
 /// <summary>
 /// Looks up lyrics for the current track with strict title/movie validation:
 /// 1. LRCLIB (https://lrclib.net) for precision time-synced .lrc lyrics.
 /// 2. JioSaavn API for extensive Tamil, Telugu, Hindi and Indian regional songs.
-/// Verifies movie and track titles so that lyrics from another song or movie are NEVER displayed.
+/// Distinguishes between time-synced lyrics and plain text reader lyrics.
 /// </summary>
 public static partial class LyricsService
 {
-    private static readonly Dictionary<string, IReadOnlyList<LyricLine>?> Cache = new();
+    private static readonly Dictionary<string, TrackLyrics?> Cache = new();
 
     [GeneratedRegex(@"^\[(\d+):(\d+(?:\.\d+)?)\](.*)$")]
     private static partial Regex LrcLine();
@@ -75,7 +76,7 @@ public static partial class LyricsService
         return a.Trim(' ', '-', '|', ':', '.', ',');
     }
 
-    public static async Task<IReadOnlyList<LyricLine>?> GetAsync(string title, string artist, double duration)
+    public static async Task<TrackLyrics?> GetAsync(string title, string artist, double duration)
     {
         if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist)) return null;
 
@@ -85,7 +86,7 @@ public static partial class LyricsService
         var key = $"{movie}\u0001{cleanArtist}\u0001{cleanTitle}";
         if (Cache.TryGetValue(key, out var cached)) return cached;
 
-        IReadOnlyList<LyricLine>? result = null;
+        TrackLyrics? result = null;
 
         // 1. Try LRCLIB for time-synced LRC lyrics
         try
@@ -100,7 +101,13 @@ public static partial class LyricsService
             {
                 using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                 if (doc.RootElement.TryGetProperty("syncedLyrics", out var synced) && synced.ValueKind == JsonValueKind.String)
-                    result = Parse(synced.GetString()!);
+                {
+                    var parsed = Parse(synced.GetString()!);
+                    if (parsed is { Count: > 0 })
+                    {
+                        result = new TrackLyrics(parsed, true);
+                    }
+                }
             }
         }
         catch (HttpRequestException)
@@ -113,7 +120,7 @@ public static partial class LyricsService
         }
 
         // 2. Fallback to JioSaavn with strict movie and title matching
-        if (result is null || result.Count == 0)
+        if (result is null || result.Lines.Count == 0)
         {
             result = await GetFromJioSaavnAsync(cleanTitle, movie, cleanArtist, duration);
         }
@@ -122,7 +129,7 @@ public static partial class LyricsService
         return result;
     }
 
-    private static async Task<IReadOnlyList<LyricLine>?> GetFromJioSaavnAsync(string title, string? movie, string? artist, double duration)
+    private static async Task<TrackLyrics?> GetFromJioSaavnAsync(string title, string? movie, string? artist, double duration)
     {
         if (string.IsNullOrWhiteSpace(title)) return null;
 
@@ -214,13 +221,12 @@ public static partial class LyricsService
 
                     if (rawLines.Count == 0) continue;
 
-                    var step = duration > 10 ? (duration * 0.90) / rawLines.Count : 3.5;
                     var list = new List<LyricLine>(rawLines.Count);
                     for (var i = 0; i < rawLines.Count; i++)
                     {
-                        list.Add(new LyricLine(Math.Round(i * step, 1), rawLines[i]));
+                        list.Add(new LyricLine(0, rawLines[i]));
                     }
-                    return list;
+                    return new TrackLyrics(list, false);
                 }
             }
             catch (Exception ex)
