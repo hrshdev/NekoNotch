@@ -171,6 +171,7 @@ public partial class NotchWindow : Window
         BuildEqualizer();
         InitNotchEyes();
         InitVolumeHud();
+        InitMemoryTrimmer();
         Tabs.LayoutUpdated += (_, _) =>
         {
             if (TabIndicator.Opacity < 0.5 && _expanded && _activeTool != SettingsId) MoveTabIndicator(_activeTool, animate: false);
@@ -488,6 +489,14 @@ public partial class NotchWindow : Window
             };
             later.Start();
         }
+
+        var trimLater = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+        trimLater.Tick += (_, _) =>
+        {
+            trimLater.Stop();
+            if (!_expanded) Task.Run(() => Win32.TrimProcessMemory());
+        };
+        trimLater.Start();
     }
 
     private void OnPillMouseEnter(object sender, MouseEventArgs e)
@@ -1531,6 +1540,20 @@ public partial class NotchWindow : Window
                 StartAnimation();
             }
         };
+    }
+
+    private readonly DispatcherTimer _memoryTrimTimer = new() { Interval = TimeSpan.FromSeconds(90) };
+
+    private void InitMemoryTrimmer()
+    {
+        _memoryTrimTimer.Tick += (_, _) =>
+        {
+            if (!_expanded && !_peeking && !_volumeTimer.IsEnabled)
+            {
+                Task.Run(() => Win32.TrimProcessMemory());
+            }
+        };
+        _memoryTrimTimer.Start();
     }
 
     private void ShowVolumePeek(float level, bool muted)

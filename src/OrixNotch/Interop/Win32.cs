@@ -146,4 +146,27 @@ internal static class Win32
 
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetProcessWorkingSetSize(IntPtr proc, IntPtr min, IntPtr max);
+
+    [DllImport("psapi.dll")]
+    public static extern int EmptyWorkingSet(IntPtr hwProc);
+
+    /// <summary>
+    /// Flushes unreferenced memory and trims working set pages back to Windows.
+    /// Runs asynchronously when the notch is idle or collapses.
+    /// </summary>
+    public static void TrimProcessMemory()
+    {
+        try
+        {
+            GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
+            GC.WaitForPendingFinalizers();
+            var handle = System.Diagnostics.Process.GetCurrentProcess().Handle;
+            EmptyWorkingSet(handle);
+            SetProcessWorkingSetSize(handle, (IntPtr)(-1), (IntPtr)(-1));
+        }
+        catch { }
+    }
 }

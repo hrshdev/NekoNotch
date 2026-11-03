@@ -16,6 +16,10 @@
     <Product>NekoNotch</Product>
     <!-- WPF needs the DPI settings in app.manifest; the WinForms analyzer only knows SetHighDpiMode. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
+      <!-- Desktop memory optimizations: Workstation GC (1 unified heap instead of 16 server heaps) -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
   <ItemGroup>
