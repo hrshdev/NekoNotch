@@ -1,3 +1,7 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Net.Http;
+using System.Text.Json;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -124,22 +128,58 @@ public sealed partial class NowPlayingService : ObservableObject
             ImageSource? image = null;
             if (props.Thumbnail is not null)
             {
-                using var stream = await props.Thumbnail.OpenReadAsync();
-                using var input = stream.AsStreamForRead();
-                var buffer = new MemoryStream();
-                await input.CopyToAsync(buffer);
-                buffer.Position = 0;
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.DecodePixelWidth = 300;
-                bmp.StreamSource = buffer;
-                bmp.EndInit();
-                bmp.Freeze();
-                image = bmp;
+                try
+                {
+                    using var stream = await props.Thumbnail.OpenReadAsync();
+                    using var input = stream.AsStreamForRead();
+                    var buffer = new MemoryStream();
+                    await input.CopyToAsync(buffer);
+                    if (buffer.Length > 0)
+                    {
+                        buffer.Position = 0;
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.DecodePixelWidth = 300;
+                        bmp.StreamSource = buffer;
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        image = bmp;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    App.Log(ex);
+                }
             }
+
+            // Fallback: If playing app or website didn't supply thumbnail, use platform's 1st letter (e.g. Y for YouTube, N for Netflix)
+            if (image is null && (!string.IsNullOrWhiteSpace(SourceApp) || !string.IsNullOrWhiteSpace(Title)))
+            {
+                image = GeneratePlatformLetterThumbnail(SourceApp);
+            }
+
             Art = image;
             ArtTint = image is BitmapSource src ? AverageColor(src) : null;
+
+            // Background fetch: try retrieving artwork from iTunes / JioSaavn if app didn't supply one
+            if (props.Thumbnail is null && !string.IsNullOrWhiteSpace(Title) && Title != "Nothing playing")
+            {
+                var curTitle = Title;
+                var curArtist = Artist;
+                _ = Task.Run(async () =>
+                {
+                    var fetched = await FetchOnlineArtworkAsync(curTitle, curArtist);
+                    if (fetched is not null && Title == curTitle)
+                    {
+                        _ui.Invoke(() =>
+                        {
+                            Art = fetched;
+                            ArtTint = fetched is BitmapSource bs ? AverageColor(bs) : null;
+                        });
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -195,6 +235,20 @@ public sealed partial class NowPlayingService : ObservableObject
         var isYouTube = title.Contains("YouTube", StringComparison.OrdinalIgnoreCase) ||
                         sourceApp.Contains("YouTube", StringComparison.OrdinalIgnoreCase) ||
                         aumid.Contains("YouTube", StringComparison.OrdinalIgnoreCase);
+
+        if (!isYouTube && (sourceApp.Contains("Chrome", StringComparison.OrdinalIgnoreCase) ||
+                           sourceApp.Contains("Edge", StringComparison.OrdinalIgnoreCase) ||
+                           sourceApp.Contains("Firefox", StringComparison.OrdinalIgnoreCase) ||
+                           sourceApp.Contains("Web App", StringComparison.OrdinalIgnoreCase) ||
+                           aumid.Contains("Chrome", StringComparison.OrdinalIgnoreCase) ||
+                           aumid.Contains("Edge", StringComparison.OrdinalIgnoreCase)))
+        {
+            var winTitles = GetVisibleWindowTitles();
+            if (winTitles.Any(w => w.Contains("YouTube", StringComparison.OrdinalIgnoreCase)))
+            {
+                isYouTube = true;
+            }
+        }
 
         if (isYouTube)
         {
@@ -494,5 +548,266 @@ public sealed partial class NowPlayingService : ObservableObject
             "microsoft" when aumid.Contains("Zune", StringComparison.OrdinalIgnoreCase) => "Media Player",
             _ => char.ToUpperInvariant(name[0]) + name[1..],
         };
+    }
+
+    private static readonly ConcurrentDictionary<string, BitmapSource> LetterTileCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, ImageSource> ArtworkCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Generates a branded, high-resolution tile showing the platform's first letter (e.g. N for Netflix, Y for YouTube, S for Spotify).</summary>
+    public static BitmapSource GeneratePlatformLetterThumbnail(string platform)
+    {
+        var key = string.IsNullOrWhiteSpace(platform) ? "Music" : platform.Trim();
+        if (LetterTileCache.TryGetValue(key, out var cached)) return cached;
+
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            return dispatcher.Invoke(() => GeneratePlatformLetterThumbnail(platform));
+        }
+
+        var letter = GetPlatformLetter(key);
+        var (c1, c2) = GetPlatformGradient(key);
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            var rect = new Rect(0, 0, 256, 256);
+            var bg = new LinearGradientBrush(c1, c2, new Point(0.5, 0), new Point(0.5, 1));
+            dc.DrawRectangle(bg, null, rect);
+
+            // Subtle top radial gloss
+            var gloss = new RadialGradientBrush(Color.FromArgb(45, 255, 255, 255), Color.FromArgb(0, 255, 255, 255))
+            {
+                Center = new Point(0.5, 0.1),
+                GradientOrigin = new Point(0.5, 0.1),
+                RadiusX = 0.65,
+                RadiusY = 0.55
+            };
+            dc.DrawRectangle(gloss, null, rect);
+
+            // Modern typography for the platform letter
+            var typeface = new Typeface(
+                new FontFamily("Segoe UI Variable Display, Segoe UI, Arial"),
+                FontStyles.Normal,
+                FontWeights.Bold,
+                FontStretches.Normal);
+
+            var shadowText = new FormattedText(
+                letter,
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                136,
+                new SolidColorBrush(Color.FromArgb(70, 0, 0, 0)),
+                96.0);
+
+            var x = (256 - shadowText.Width) / 2;
+            var y = (256 - shadowText.Height) / 2;
+            dc.DrawText(shadowText, new Point(x, y + 3));
+
+            var mainText = new FormattedText(
+                letter,
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                136,
+                Brushes.White,
+                96.0);
+
+            dc.DrawText(mainText, new Point(x, y));
+        }
+
+        var rtb = new RenderTargetBitmap(256, 256, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+
+        var enc = new PngBitmapEncoder();
+        enc.Frames.Add(BitmapFrame.Create(rtb));
+        using var ms = new MemoryStream();
+        enc.Save(ms);
+        ms.Position = 0;
+
+        var bmp = new BitmapImage();
+        bmp.BeginInit();
+        bmp.CacheOption = BitmapCacheOption.OnLoad;
+        bmp.StreamSource = ms;
+        bmp.EndInit();
+        bmp.Freeze();
+
+        LetterTileCache[key] = bmp;
+        return bmp;
+    }
+
+    private static string GetPlatformLetter(string platform)
+    {
+        if (string.IsNullOrWhiteSpace(platform)) return "♪";
+        var p = platform.Trim();
+        if (p.Contains("youtube", StringComparison.OrdinalIgnoreCase)) return "Y";
+        if (p.Contains("netflix", StringComparison.OrdinalIgnoreCase)) return "N";
+        if (p.Contains("spotify", StringComparison.OrdinalIgnoreCase)) return "S";
+        if (p.Contains("apple", StringComparison.OrdinalIgnoreCase)) return "A";
+        if (p.Contains("prime", StringComparison.OrdinalIgnoreCase) || p.Contains("amazon", StringComparison.OrdinalIgnoreCase)) return "P";
+        if (p.Contains("soundcloud", StringComparison.OrdinalIgnoreCase)) return "S";
+        if (p.Contains("twitch", StringComparison.OrdinalIgnoreCase)) return "T";
+        if (p.Contains("deezer", StringComparison.OrdinalIgnoreCase)) return "D";
+        if (p.Contains("tidal", StringComparison.OrdinalIgnoreCase)) return "T";
+        if (p.Contains("vlc", StringComparison.OrdinalIgnoreCase)) return "V";
+
+        for (var i = 0; i < p.Length; i++)
+        {
+            if (char.IsLetter(p[i])) return char.ToUpperInvariant(p[i]).ToString();
+        }
+        return "♪";
+    }
+
+    private static (Color Top, Color Bottom) GetPlatformGradient(string platform)
+    {
+        var p = (platform ?? "").ToLowerInvariant();
+        if (p.Contains("youtube"))
+            return (Color.FromRgb(230, 33, 23), Color.FromRgb(155, 0, 0));
+        if (p.Contains("netflix"))
+            return (Color.FromRgb(229, 9, 20), Color.FromRgb(128, 0, 0));
+        if (p.Contains("spotify"))
+            return (Color.FromRgb(29, 185, 84), Color.FromRgb(15, 102, 42));
+        if (p.Contains("apple") || p.Contains("itunes"))
+            return (Color.FromRgb(252, 60, 68), Color.FromRgb(180, 16, 25));
+        if (p.Contains("prime") || p.Contains("amazon"))
+            return (Color.FromRgb(0, 168, 225), Color.FromRgb(0, 100, 150));
+        if (p.Contains("soundcloud"))
+            return (Color.FromRgb(255, 85, 0), Color.FromRgb(190, 50, 0));
+        if (p.Contains("twitch"))
+            return (Color.FromRgb(145, 70, 255), Color.FromRgb(95, 30, 190));
+        if (p.Contains("deezer"))
+            return (Color.FromRgb(162, 56, 255), Color.FromRgb(100, 20, 180));
+        if (p.Contains("tidal"))
+            return (Color.FromRgb(0, 220, 220), Color.FromRgb(0, 130, 140));
+        if (p.Contains("vlc"))
+            return (Color.FromRgb(255, 120, 0), Color.FromRgb(180, 70, 0));
+        if (p.Contains("edge"))
+            return (Color.FromRgb(0, 120, 215), Color.FromRgb(0, 70, 150));
+        if (p.Contains("chrome"))
+            return (Color.FromRgb(66, 133, 244), Color.FromRgb(30, 80, 180));
+        if (p.Contains("firefox"))
+            return (Color.FromRgb(255, 113, 57), Color.FromRgb(190, 40, 20));
+
+        var hash = Math.Abs(platform?.GetHashCode() ?? 0);
+        var palettes = new (Color, Color)[]
+        {
+            (Color.FromRgb(99, 102, 241), Color.FromRgb(67, 56, 202)),
+            (Color.FromRgb(236, 72, 153), Color.FromRgb(190, 24, 93)),
+            (Color.FromRgb(20, 184, 166), Color.FromRgb(13, 148, 136)),
+            (Color.FromRgb(249, 115, 22), Color.FromRgb(194, 65, 12)),
+            (Color.FromRgb(168, 85, 247), Color.FromRgb(126, 34, 206)),
+            (Color.FromRgb(59, 130, 246), Color.FromRgb(29, 78, 216)),
+        };
+        return palettes[hash % palettes.Length];
+    }
+
+    private static async Task<ImageSource?> FetchOnlineArtworkAsync(string title, string artist)
+    {
+        if (string.IsNullOrWhiteSpace(title) || title == "Nothing playing") return null;
+        var cacheKey = $"{title}|{artist}";
+        if (ArtworkCache.TryGetValue(cacheKey, out var cached)) return cached;
+
+        // 1. Try iTunes Search API (fast, high-res 600x600 artwork)
+        try
+        {
+            var cleanTitle = LyricsService.CleanTitle(title);
+            var cleanArtist = LyricsService.CleanArtist(artist);
+            var movie = LyricsService.ExtractMovie(title);
+            var searchQ = !string.IsNullOrWhiteSpace(movie) ? $"{cleanTitle} {movie}" : $"{cleanTitle} {cleanArtist}";
+            searchQ = searchQ.Trim();
+            if (searchQ.Length >= 2)
+            {
+                var url = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(searchQ)}&entity=song&limit=1";
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.UserAgent.ParseAdd("Mozilla/5.0");
+                using var resp = await Http.Client.SendAsync(req);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("results", out var resArr) && resArr.GetArrayLength() > 0)
+                    {
+                        var item = resArr[0];
+                        if (item.TryGetProperty("artworkUrl100", out var artProp))
+                        {
+                            var artUrl = artProp.GetString()?.Replace("100x100bb", "600x600bb");
+                            if (!string.IsNullOrWhiteSpace(artUrl))
+                            {
+                                var img = await DownloadBitmapAsync(artUrl);
+                                if (img != null)
+                                {
+                                    ArtworkCache[cacheKey] = img;
+                                    return img;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2. Try JioSaavn image (covers Indian/Tamil/Telugu songs)
+        try
+        {
+            var cleanTitle = LyricsService.CleanTitle(title);
+            var movie = LyricsService.ExtractMovie(title);
+            var query = !string.IsNullOrWhiteSpace(movie) ? $"{cleanTitle} {movie}" : cleanTitle;
+            if (query.Length >= 2)
+            {
+                var url = $"https://www.jiosaavn.com/api.php?__call=autocomplete.get&query={Uri.EscapeDataString(query)}&_format=json&ctx=web6dot0";
+                using var resp = await Http.Client.GetAsync(url);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                    if (doc.RootElement.TryGetProperty("songs", out var songs) &&
+                        songs.TryGetProperty("data", out var data) &&
+                        data.GetArrayLength() > 0)
+                    {
+                        var first = data[0];
+                        if (first.TryGetProperty("image", out var imgProp))
+                        {
+                            var imgUrl = imgProp.GetString()?.Replace("50x50.jpg", "500x500.jpg");
+                            if (!string.IsNullOrWhiteSpace(imgUrl))
+                            {
+                                var img = await DownloadBitmapAsync(imgUrl);
+                                if (img != null)
+                                {
+                                    ArtworkCache[cacheKey] = img;
+                                    return img;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return null;
+    }
+
+    private static async Task<BitmapImage?> DownloadBitmapAsync(string url)
+    {
+        try
+        {
+            using var resp = await Http.Client.GetAsync(url);
+            if (!resp.IsSuccessStatusCode) return null;
+            using var stream = await resp.Content.ReadAsStreamAsync();
+            var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.DecodePixelWidth = 300;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
