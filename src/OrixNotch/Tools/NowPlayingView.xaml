@@ -110,7 +110,7 @@
 
                         <!-- Synced Lyrics View (Toggled) -->
                         <Grid x:Name="LyricsPanel" Visibility="Collapsed">
-                            <ScrollViewer x:Name="LyricsScroll" VerticalScrollBarVisibility="Hidden" IsHitTestVisible="False" Height="58">
+                            <ScrollViewer x:Name="LyricsScroll" VerticalScrollBarVisibility="Hidden" IsHitTestVisible="True" Height="58">
                                 <ScrollViewer.OpacityMask>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                         <GradientStop Color="Transparent" Offset="0" />
