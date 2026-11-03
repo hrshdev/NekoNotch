@@ -991,8 +991,9 @@ public partial class NotchWindow : Window
 
         SetEqualizer(!_expanded && music);
 
-        var hasActivity = music || timer || reminder || idle;
-        NotchEyes.Visibility = (_expanded || _peeking || _volumeTimer.IsEnabled || hasActivity)
+        // Notch eyes remain visible during normal music playback and idle;
+        // only hidden when expanded, peeking an alert/notification, or adjusting volume.
+        NotchEyes.Visibility = (_expanded || _peeking || _volumeTimer.IsEnabled)
             ? Visibility.Collapsed
             : Visibility.Visible;
 
