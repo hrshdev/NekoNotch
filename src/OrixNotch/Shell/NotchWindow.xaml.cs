@@ -1506,7 +1506,7 @@ public partial class NotchWindow : Window
         EnqueuePeek(new PeekRequest("power", () => GlyphTile(charging ? AppIcon.Bolt : AppIcon.BatteryFull), title, sub,
             TimeSpan.FromSeconds(3)));
 
-    private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(1.8) };
+    private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(2.0) };
 
     private void InitVolumeHud()
     {
@@ -1542,7 +1542,7 @@ public partial class NotchWindow : Window
         VolumePart.Visibility = Visibility.Visible;
 
         _volumeTimer.Stop();
-        _volumeTimer.Interval = TimeSpan.FromSeconds(1.8);
+        _volumeTimer.Interval = TimeSpan.FromSeconds(2.0);
         _volumeTimer.Start();
 
         _width.Target = VolumeW;
