@@ -112,6 +112,10 @@ public partial class NotchWindow : Window
         _leaveTimer.Tick += (_, _) => CheckLeave();
         _repelTimer.Tick += (_, _) =>
         {
+            if (_volumeTimer.IsEnabled && NotchEyes.Visibility != Visibility.Collapsed)
+            {
+                NotchEyes.Visibility = Visibility.Collapsed;
+            }
             UpdateConceal();
             FollowPointerScreen();
             UpdateNotchEyes();
@@ -867,8 +871,9 @@ public partial class NotchWindow : Window
         if (e.PropertyName is nameof(NowPlayingService.IsPlaying) or nameof(NowPlayingService.HasSession)
             or nameof(NowPlayingService.Title) or nameof(NowPlayingService.Artist) or nameof(NowPlayingService.ArtTint)
             or nameof(PomodoroService.IsRunning) or nameof(CountdownService.IsRunning) or nameof(StopwatchService.IsRunning))
+        {
             UpdateActivity();
-        NotchEyes.Visibility = Visibility.Visible;
+        }
         if (e.PropertyName == nameof(NowPlayingService.Title))
         {
             _trackTimer.Stop(); // art and artist land a moment after the title
@@ -986,6 +991,11 @@ public partial class NotchWindow : Window
 
         SetEqualizer(!_expanded && music);
 
+        var hasActivity = music || timer || reminder || idle;
+        NotchEyes.Visibility = (_expanded || _peeking || _volumeTimer.IsEnabled || hasActivity)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         if (!_expanded && !_peeking)
         {
             _width.Target = ActivityWidth();
@@ -1097,16 +1107,15 @@ public partial class NotchWindow : Window
 
     private void OnIdleChanged()
     {
-        if (_expanded || !IdleActive)
+        if (_expanded || _peeking || _volumeTimer.IsEnabled) return;
+        if (!IdleActive)
         {
-            if (!NotchActivityService.Instance.HasActivity && IdleInfoService.Instance.Items.Count == 0) UpdateActivity();
-        NotchEyes.Visibility = Visibility.Visible;
+            UpdateActivity();
             return;
         }
         if (IdlePart.Visibility != Visibility.Visible)
         {
             UpdateActivity();
-        NotchEyes.Visibility = Visibility.Visible;
             return;
         }
         RenderIdle();
@@ -2072,7 +2081,12 @@ public partial class NotchWindow : Window
 
     private void UpdateNotchEyes()
     {
-        if (_expanded || NotchEyes.Visibility != Visibility.Visible) return;
+        if (_expanded || _peeking || _volumeTimer.IsEnabled || NotchEyes.Visibility != Visibility.Visible)
+        {
+            if (NotchEyes.Visibility != Visibility.Collapsed && (_volumeTimer.IsEnabled || _peeking || _expanded))
+                NotchEyes.Visibility = Visibility.Collapsed;
+            return;
+        }
 
         // Reactive Body Language: Show subtle warm orange blush cheeks when plugged in / charging
         try
