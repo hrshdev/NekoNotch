@@ -277,6 +277,37 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
         if (e.Key == Key.Enter) Add();
     }
 
+    private void OnOpenInGoogleCalendar(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not EventRow row) return;
+        var ev = row.Event;
+        var title = Uri.EscapeDataString(ev.Title);
+        string dates;
+
+        if (TryParseTime(ev.Time, out var startTime))
+        {
+            var startDt = ev.Date.Date.Add(startTime);
+            var endDt = startDt.AddHours(1);
+            dates = $"{startDt:yyyyMMddTHHmmss}/{endDt:yyyyMMddTHHmmss}";
+        }
+        else
+        {
+            var startDt = ev.Date.Date;
+            var endDt = startDt.AddDays(1);
+            dates = $"{startDt:yyyyMMdd}/{endDt:yyyyMMdd}";
+        }
+
+        var url = $"https://calendar.google.com/calendar/render?action=TEMPLATE&text={title}&dates={dates}";
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+    }
+
     private CalendarEvent? _editingEvent;
 
     private void OnEdit(object sender, RoutedEventArgs e)

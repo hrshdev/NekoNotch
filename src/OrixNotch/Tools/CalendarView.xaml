@@ -167,17 +167,22 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Title}" FontSize="13.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         <Border x:Name="NextChip" Grid.Column="1" Background="{DynamicResource AccentSoftBrush}" CornerRadius="8"
                                                 Padding="7,1,7,2" Margin="8,0,2,0" VerticalAlignment="Center" Visibility="Collapsed">
                                             <TextBlock Text="{Binding NextLabel}" FontSize="10.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
                                         </Border>
-                                        <Button x:Name="EditBtn" Grid.Column="2" Style="{StaticResource IconButton}" Width="22" Height="22" Margin="0,0,2,0"
+                                        <Button x:Name="GCalBtn" Grid.Column="2" Style="{StaticResource IconButton}" Width="22" Height="22" Margin="0,0,2,0"
+                                                Foreground="{DynamicResource SubTextBrush}" Click="OnOpenInGoogleCalendar" ToolTip="Add to Google Calendar" Visibility="Hidden">
+                                            <hero:HeroIcon Kind="Link" Width="12" Height="12" />
+                                        </Button>
+                                        <Button x:Name="EditBtn" Grid.Column="3" Style="{StaticResource IconButton}" Width="22" Height="22" Margin="0,0,2,0"
                                                 Foreground="{DynamicResource SubTextBrush}" Click="OnEdit" ToolTip="Edit event" Visibility="Hidden">
                                             <hero:HeroIcon Kind="Pencil" Width="12" Height="12" />
                                         </Button>
-                                        <Button x:Name="Del" Grid.Column="3" Style="{StaticResource IconButton}" Width="22" Height="22"
+                                        <Button x:Name="Del" Grid.Column="4" Style="{StaticResource IconButton}" Width="22" Height="22"
                                                 Foreground="{DynamicResource SubTextBrush}" Click="OnDelete" ToolTip="Delete" Visibility="Hidden">
                                             <hero:HeroIcon Kind="Trash" Width="12" Height="12" />
                                         </Button>
@@ -186,6 +191,7 @@
                             </Grid>
                             <DataTemplate.Triggers>
                                 <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="GCalBtn" Property="Visibility" Value="Visible" />
                                     <Setter TargetName="EditBtn" Property="Visibility" Value="Visible" />
                                     <Setter TargetName="Del" Property="Visibility" Value="Visible" />
                                     <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource TrackBrush}" />
@@ -204,6 +210,7 @@
                                 </DataTrigger>
                                 <!-- Subscribed events are edited in their own calendar app, not here -->
                                 <DataTrigger Binding="{Binding Event.IsSubscribed}" Value="True">
+                                    <Setter TargetName="GCalBtn" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="EditBtn" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="Del" Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
