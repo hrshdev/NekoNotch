@@ -37,6 +37,12 @@ public sealed partial class NowPlayingService : ObservableObject
     [ObservableProperty] private bool _hasSession;
     [ObservableProperty] private double _position;
     [ObservableProperty] private double _duration;
+    private static string? _lastTrackKey;
+    private static string? _lastTrackTitle;
+    private static string? _lastTrackArtist;
+    private static string? _lastSourceApp;
+    private static byte[]? _lastThumbnailBytes;
+
 
     public string PositionText => Format(Position);
     public string DurationText => Format(Duration);
@@ -125,7 +131,7 @@ public sealed partial class NowPlayingService : ObservableObject
             Artist = enhancedArtist;
             if (!string.IsNullOrEmpty(enhancedApp)) SourceApp = enhancedApp;
 
-            ImageSource? image = null;
+            byte[]? currentThumbBytes = null;
             if (props.Thumbnail is not null)
             {
                 try
@@ -136,15 +142,7 @@ public sealed partial class NowPlayingService : ObservableObject
                     await input.CopyToAsync(buffer);
                     if (buffer.Length > 0)
                     {
-                        buffer.Position = 0;
-                        var bmp = new BitmapImage();
-                        bmp.BeginInit();
-                        bmp.CacheOption = BitmapCacheOption.OnLoad;
-                        bmp.DecodePixelWidth = 300;
-                        bmp.StreamSource = buffer;
-                        bmp.EndInit();
-                        bmp.Freeze();
-                        image = bmp;
+                        currentThumbBytes = buffer.ToArray();
                     }
                 }
                 catch (Exception ex)
@@ -153,7 +151,73 @@ public sealed partial class NowPlayingService : ObservableObject
                 }
             }
 
-            // Fallback: If playing app or website didn't supply thumbnail, use platform's 1st letter (e.g. Y for YouTube, N for Netflix)
+            // Check if Chromium/browser passed a stale thumbnail from a previous video/tab
+            // (e.g. user was playing a YouTube video, then switched to Miruro or anime site with no artwork)
+            var currentTrackKey = $"{SourceApp}|{enhancedTitle}|{enhancedArtist}";
+            var isTrackChanged = _lastTrackKey != null && _lastTrackKey != currentTrackKey;
+
+            bool isStaleThumbnail = false;
+            if (currentThumbBytes is not null && _lastThumbnailBytes is not null && isTrackChanged)
+            {
+                if (System.Collections.StructuralComparisons.StructuralEqualityComparer.Equals(currentThumbBytes, _lastThumbnailBytes))
+                {
+                    if (_lastSourceApp != SourceApp || 
+                        (!enhancedTitle.Contains(_lastTrackTitle ?? "___", StringComparison.OrdinalIgnoreCase) && 
+                         !(_lastTrackTitle ?? "___").Contains(enhancedTitle, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        isStaleThumbnail = true;
+                    }
+                }
+            }
+
+            if (SourceApp != "YouTube" && _lastSourceApp == "YouTube" && isTrackChanged && currentThumbBytes is not null)
+            {
+                if (_lastThumbnailBytes is not null && 
+                    System.Collections.StructuralComparisons.StructuralEqualityComparer.Equals(currentThumbBytes, _lastThumbnailBytes))
+                {
+                    isStaleThumbnail = true;
+                }
+            }
+
+            if (isStaleThumbnail)
+            {
+                currentThumbBytes = null;
+            }
+
+            ImageSource? image = null;
+            if (currentThumbBytes is not null && currentThumbBytes.Length > 0)
+            {
+                try
+                {
+                    var ms = new MemoryStream(currentThumbBytes);
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.DecodePixelWidth = 300;
+                    bmp.StreamSource = ms;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    image = bmp;
+
+                    _lastThumbnailBytes = currentThumbBytes;
+                    _lastSourceApp = SourceApp;
+                }
+                catch (Exception ex)
+                {
+                    App.Log(ex);
+                }
+            }
+            else
+            {
+                _lastThumbnailBytes = null;
+                _lastSourceApp = SourceApp;
+            }
+
+            _lastTrackKey = currentTrackKey;
+            _lastTrackTitle = enhancedTitle;
+            _lastTrackArtist = enhancedArtist;
+
+            // Fallback: If playing app or website didn't supply thumbnail, use platform's 1st letter (e.g. M for Miruro, Y for YouTube, N for Netflix)
             if (image is null && (!string.IsNullOrWhiteSpace(SourceApp) || !string.IsNullOrWhiteSpace(Title)))
             {
                 image = GeneratePlatformLetterThumbnail(SourceApp);
@@ -231,6 +295,27 @@ public sealed partial class NowPlayingService : ObservableObject
             return (title, artist, sourceApp);
         }
 
+        // 1.5 Check for web video streaming platforms (Miruro, Crunchyroll, Animepahe, HiAnime, etc.)
+        var isAnimeStream = rawTitle.Contains("Miruro", StringComparison.OrdinalIgnoreCase) ||
+                            rawTitle.Contains("Crunchyroll", StringComparison.OrdinalIgnoreCase) ||
+                            rawTitle.Contains("HiAnime", StringComparison.OrdinalIgnoreCase) ||
+                            rawTitle.Contains("Animepahe", StringComparison.OrdinalIgnoreCase);
+
+        if (isAnimeStream)
+        {
+            if (rawTitle.Contains("Miruro", StringComparison.OrdinalIgnoreCase)) sourceApp = "Miruro";
+            else if (rawTitle.Contains("Crunchyroll", StringComparison.OrdinalIgnoreCase)) sourceApp = "Crunchyroll";
+            else if (rawTitle.Contains("HiAnime", StringComparison.OrdinalIgnoreCase)) sourceApp = "HiAnime";
+            else if (rawTitle.Contains("Animepahe", StringComparison.OrdinalIgnoreCase)) sourceApp = "Animepahe";
+
+            if (!string.IsNullOrWhiteSpace(rawArtist))
+            {
+                title = rawArtist;
+                artist = sourceApp;
+            }
+            return (title, artist, sourceApp);
+        }
+
         // 2. Check for YouTube
         var isYouTube = title.Contains("YouTube", StringComparison.OrdinalIgnoreCase) ||
                         sourceApp.Contains("YouTube", StringComparison.OrdinalIgnoreCase) ||
@@ -244,7 +329,11 @@ public sealed partial class NowPlayingService : ObservableObject
                            aumid.Contains("Edge", StringComparison.OrdinalIgnoreCase)))
         {
             var winTitles = GetVisibleWindowTitles();
-            if (winTitles.Any(w => w.Contains("YouTube", StringComparison.OrdinalIgnoreCase)))
+            // MUST match the specific window playing this media, not any random background YouTube tab!
+            if (winTitles.Any(w => w.Contains("YouTube", StringComparison.OrdinalIgnoreCase) && 
+                                   !string.IsNullOrWhiteSpace(title) && 
+                                   title.Length >= 4 &&
+                                   w.Contains(title, StringComparison.OrdinalIgnoreCase)))
             {
                 isYouTube = true;
             }
@@ -640,6 +729,8 @@ public sealed partial class NowPlayingService : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(platform)) return "♪";
         var p = platform.Trim();
+        if (p.Contains("miruro", StringComparison.OrdinalIgnoreCase)) return "M";
+        if (p.Contains("crunchyroll", StringComparison.OrdinalIgnoreCase)) return "C";
         if (p.Contains("youtube", StringComparison.OrdinalIgnoreCase)) return "Y";
         if (p.Contains("netflix", StringComparison.OrdinalIgnoreCase)) return "N";
         if (p.Contains("spotify", StringComparison.OrdinalIgnoreCase)) return "S";
@@ -661,6 +752,10 @@ public sealed partial class NowPlayingService : ObservableObject
     private static (Color Top, Color Bottom) GetPlatformGradient(string platform)
     {
         var p = (platform ?? "").ToLowerInvariant();
+        if (p.Contains("miruro"))
+            return (Color.FromRgb(108, 92, 231), Color.FromRgb(45, 52, 54));
+        if (p.Contains("crunchyroll"))
+            return (Color.FromRgb(244, 117, 33), Color.FromRgb(180, 70, 10));
         if (p.Contains("youtube"))
             return (Color.FromRgb(230, 33, 23), Color.FromRgb(155, 0, 0));
         if (p.Contains("netflix"))
