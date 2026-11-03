@@ -20,6 +20,29 @@ public partial class NowPlayingView : UserControl, IToolView
     private bool _lyricsActive;
     private static NowPlayingService Service => NowPlayingService.Instance;
 
+    private static readonly LinearGradientBrush SyncedMask = new(
+        new GradientStopCollection
+        {
+            new(Colors.Transparent, 0),
+            new(Colors.Black, 0.10),
+            new(Colors.Black, 0.88),
+            new(Colors.Transparent, 1),
+        }, new Point(0, 0), new Point(0, 1));
+
+    private static readonly LinearGradientBrush PlainMask = new(
+        new GradientStopCollection
+        {
+            new(Colors.Black, 0),
+            new(Colors.Black, 0.90),
+            new(Colors.Transparent, 1),
+        }, new Point(0, 0), new Point(0, 1));
+
+    static NowPlayingView()
+    {
+        SyncedMask.Freeze();
+        PlainMask.Freeze();
+    }
+
     public NowPlayingView()
     {
         InitializeComponent();
@@ -118,8 +141,11 @@ public partial class NowPlayingView : UserControl, IToolView
         }
 
         _lyrics = lyrics;
-        LyricsBadgeText.Text = lyrics.IsSynced ? "♪ Synced" : "≡ Plain Lyrics";
+        var isSynced = lyrics.IsSynced;
+        LyricsBadgeText.Text = isSynced ? "♪ Synced" : "≡ Plain Lyrics";
         LyricsBadge.Visibility = Visibility.Visible;
+        LyricsScroll.OpacityMask = isSynced ? SyncedMask : PlainMask;
+        LyricsScroll.ScrollToTop();
 
         foreach (var line in lyrics.Lines)
         {
@@ -127,13 +153,23 @@ public partial class NowPlayingView : UserControl, IToolView
             {
                 Text = string.IsNullOrEmpty(line.Text) ? "♪" : line.Text,
                 FontSize = 13.5,
-                FontWeight = FontWeights.SemiBold,
+                FontWeight = isSynced ? FontWeights.SemiBold : FontWeights.Normal,
+                LineHeight = 23,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, lyrics.IsSynced ? 2.5 : 4.5, 0, lyrics.IsSynced ? 2.5 : 4.5),
-                Opacity = lyrics.IsSynced ? 0.35 : 0.88,
+                Margin = new Thickness(0, isSynced ? 2.5 : 5.0, 0, isSynced ? 2.5 : 5.0),
+                Foreground = (Brush)FindResource("TextBrush"),
+                Opacity = isSynced ? 0.35 : 0.92,
+                TextAlignment = TextAlignment.Left,
             });
         }
         LyricsToggle.Visibility = Visibility.Visible;
+    }
+
+    private void OnLyricsPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        LyricsScroll.ScrollToVerticalOffset(LyricsScroll.VerticalOffset - (e.Delta * 0.4));
+        e.Handled = true;
     }
 
     /// <summary>Brightens the current line and glides it to the vertical center (for time-synced lyrics).</summary>

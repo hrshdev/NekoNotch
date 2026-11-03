@@ -847,9 +847,12 @@ public partial class NotchWindow : Window
     private bool HasActivity() => NotchActivityService.Instance.HasActivity;
     private bool _reminderPulsing;
 
+    private double VolumeW => Math.Max(280.0, _musicW + 16.0);
+
     /// <summary>Closed-notch width for the current state: compact for timers and reminders, wide for track text.</summary>
     private double ActivityWidth()
     {
+        if (_volumeTimer.IsEnabled) return VolumeW;
         if (EventReminderService.Instance.IsActive) return _timerW;
         var timer = PomodoroService.Instance.IsRunning
             || CountdownService.Instance.IsRunning
@@ -905,6 +908,22 @@ public partial class NotchWindow : Window
 
     private void UpdateActivity()
     {
+        if (_volumeTimer.IsEnabled)
+        {
+            VolumePart.Visibility = Visibility.Visible;
+            MusicPart.Visibility = Visibility.Collapsed;
+            TimerPart.Visibility = Visibility.Collapsed;
+            ReminderPart.Visibility = Visibility.Collapsed;
+            IdlePart.Visibility = Visibility.Collapsed;
+            NotchEyes.Visibility = Visibility.Collapsed;
+            if (!_expanded && !_peeking)
+            {
+                _width.Target = VolumeW;
+                StartAnimation();
+            }
+            return;
+        }
+
         var act = NotchActivityService.Instance;
         act.Refresh();
         var kind = act.Kind;
@@ -1487,7 +1506,7 @@ public partial class NotchWindow : Window
         EnqueuePeek(new PeekRequest("power", () => GlyphTile(charging ? AppIcon.Bolt : AppIcon.BatteryFull), title, sub,
             TimeSpan.FromSeconds(3)));
 
-    private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(1.8) };
 
     private void InitVolumeHud()
     {
@@ -1497,10 +1516,9 @@ public partial class NotchWindow : Window
             VolumePart.Visibility = Visibility.Collapsed;
             if (!_expanded)
             {
-                NotchEyes.Visibility = Visibility.Visible;
+                UpdateActivity();
                 _width.Target = ActivityWidth();
                 StartAnimation();
-                UpdateActivity();
             }
         };
     }
@@ -1508,6 +1526,7 @@ public partial class NotchWindow : Window
     private void ShowVolumePeek(float level, bool muted)
     {
         if (!App.Settings.VolumeHud || _expanded) return;
+        if (_peeking) EndPeek();
 
         level = Math.Clamp(level, 0f, 1f);
         VolumeIcon.Kind = (muted || level <= 0.001f) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
@@ -1523,9 +1542,10 @@ public partial class NotchWindow : Window
         VolumePart.Visibility = Visibility.Visible;
 
         _volumeTimer.Stop();
+        _volumeTimer.Interval = TimeSpan.FromSeconds(1.8);
         _volumeTimer.Start();
 
-        _width.Target = 240;
+        _width.Target = VolumeW;
         StartAnimation();
     }
 

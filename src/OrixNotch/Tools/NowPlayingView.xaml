@@ -145,41 +145,33 @@
                 </Grid>
 
                 <!-- Middle Divider (only visible when split lyrics active) -->
-                <Border x:Name="LyricsDivider" Grid.Column="1" Width="1" Margin="14,4"
+                <Border x:Name="LyricsDivider" Grid.Column="1" Width="1" Margin="12,4"
                         Background="{DynamicResource StrokeBrush}" Opacity="0.5" Visibility="Collapsed" />
 
                 <!-- Right Pane: Dedicated Lyrics View (Split Card) -->
-                <Grid x:Name="LyricsPane" Grid.Column="2" Visibility="Collapsed" Margin="6,0,0,0">
+                <Grid x:Name="LyricsPane" Grid.Column="2" Visibility="Collapsed" Margin="8,0,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <!-- Header: Badge + Close button -->
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Border x:Name="LyricsBadge" CornerRadius="6" Padding="7,2" HorizontalAlignment="Left"
+                    <Grid Grid.Row="0" Margin="4,0,2,8">
+                        <Border x:Name="LyricsBadge" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left"
                                 Background="{DynamicResource Surface2Brush}">
-                            <TextBlock x:Name="LyricsBadgeText" Text="♪ Synced" FontSize="10" FontWeight="SemiBold"
+                            <TextBlock x:Name="LyricsBadgeText" Text="♪ Synced" FontSize="10.5" FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentBrush}" />
                         </Border>
-                        <Button Style="{StaticResource IconButton}" Width="22" Height="22" HorizontalAlignment="Right"
+                        <Button Style="{StaticResource IconButton}" Width="24" Height="24" HorizontalAlignment="Right"
                                 ToolTip="Close Lyrics" Click="OnToggleLyrics" Foreground="{DynamicResource SubTextBrush}">
-                            <hero:HeroIcon Kind="XMark" Width="11" Height="11" />
+                            <hero:HeroIcon Kind="XMark" Width="12" Height="12" />
                         </Button>
                     </Grid>
 
                     <!-- Scrolling Lyrics Sheet -->
                     <ScrollViewer x:Name="LyricsScroll" Grid.Row="1" VerticalScrollBarVisibility="Hidden"
-                                  IsHitTestVisible="True" Height="148">
-                        <ScrollViewer.OpacityMask>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="Transparent" Offset="0" />
-                                <GradientStop Color="Black" Offset="0.08" />
-                                <GradientStop Color="Black" Offset="0.92" />
-                                <GradientStop Color="Transparent" Offset="1" />
-                            </LinearGradientBrush>
-                        </ScrollViewer.OpacityMask>
-                        <StackPanel x:Name="LyricsLines" Margin="4,6" />
+                                  IsHitTestVisible="True" Height="152" PreviewMouseWheel="OnLyricsPreviewMouseWheel">
+                        <StackPanel x:Name="LyricsLines" Margin="4,2,10,12" />
                     </ScrollViewer>
                 </Grid>
             </Grid>
