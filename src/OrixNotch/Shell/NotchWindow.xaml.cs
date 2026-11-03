@@ -385,7 +385,7 @@ public partial class NotchWindow : Window
             _ => (207.0, 38.0), // ≈ a MacBook hardware notch
         };
         _timerW = _idleW + 44;
-        _musicW = _idleW + 36;
+        _musicW = Math.Max(340.0, _idleW + 130.0);
         CollapsedLayer.Height = _collapsedH;
         if (!_expanded)
         {
@@ -1023,21 +1023,17 @@ public partial class NotchWindow : Window
     {
         var items = IdleInfoService.Instance.Items;
         if (items.Count == 0) return _idleW;
-        switch (App.Settings.IdleLayout)
-        {
-            case "Row":
-                IdleLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                IdleRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var sideMax = Math.Max(IdleLeftGroup.DesiredSize.Width, IdleRightGroup.DesiredSize.Width);
-                return Math.Clamp(sideMax * 2 + 56 + 28, _idleW, IdleRowMax);
-            case "Split" when items.Count > 1:
-                return _musicW;
-            default:
-                var current = items[_idleIndex % items.Count];
-                var longest = Math.Max(current.Value.Length,
-                    IdleWidthTemplates.TryGetValue(TemplateKey(current.Id), out var template) ? template.Length : 0);
-                return longest > 9 ? _musicW : _timerW;
-        }
+
+        IdleLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        IdleRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var sideMax = Math.Max(IdleLeftGroup.DesiredSize.Width, IdleRightGroup.DesiredSize.Width);
+
+        // Center eye column (88px) + outer padding (14 left + 14 right = 28px) + inner group margins (8 left + 8 right = 16px)
+        const double centerGap = 88;
+        const double paddingAndMargins = 44;
+
+        var needed = sideMax * 2 + centerGap + paddingAndMargins;
+        return Math.Clamp(Math.Ceiling(needed), _idleW, IdleRowMax);
     }
 
     /// <summary>Rebuilds the idle slots from the latest values (cheap; runs once a second).</summary>

@@ -180,20 +180,20 @@
                     <Grid x:Name="IdlePart" Margin="14,0,14,0" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="52" />
+                            <ColumnDefinition Width="88" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel x:Name="IdleLeftGroup" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <StackPanel x:Name="IdleLeftGroup" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,8,0">
                             <ContentControl x:Name="IdleSlotA" Focusable="False" VerticalAlignment="Center">
                                 <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
                             </ContentControl>
                             <StackPanel x:Name="IdleRowLeft" Orientation="Horizontal" VerticalAlignment="Center" />
                         </StackPanel>
 
-                        <!-- Column 1 (52px) is dedicated empty zone for center NotchEyes: prevents any text overlap -->
+                        <!-- Column 1 (88px) is dedicated empty zone for center NotchEyes: prevents any text or glow overlap -->
 
-                        <StackPanel x:Name="IdleRightGroup" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <StackPanel x:Name="IdleRightGroup" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,2,0">
                             <StackPanel x:Name="IdleRowRight" Orientation="Horizontal" VerticalAlignment="Center" />
                             <ContentControl x:Name="IdleSlotB" Focusable="False" VerticalAlignment="Center">
                                 <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
