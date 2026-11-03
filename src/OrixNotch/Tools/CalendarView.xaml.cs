@@ -277,6 +277,33 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
         if (e.Key == Key.Enter) Add();
     }
 
+    private CalendarEvent? _editingEvent;
+
+    private void OnEdit(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not EventRow row || row.Event.IsSubscribed) return;
+        _editingEvent = row.Event;
+        TitleInput.Text = row.Event.Title;
+        TimeInput.Text = row.Event.Time;
+        AddButton.ToolTip = "Save changes (Enter)";
+        AddIcon.Kind = AppIcon.Check;
+        CancelEditButton.Visibility = Visibility.Visible;
+        TitleInput.Focus();
+        TitleInput.SelectAll();
+    }
+
+    private void OnCancelEdit(object sender, RoutedEventArgs e) => CancelEdit();
+
+    private void CancelEdit()
+    {
+        _editingEvent = null;
+        TitleInput.Clear();
+        TimeInput.Clear();
+        AddButton.ToolTip = "Add event (Enter)";
+        AddIcon.Kind = AppIcon.Plus;
+        CancelEditButton.Visibility = Visibility.Collapsed;
+    }
+
     private void OnAdd(object sender, RoutedEventArgs e) => Add();
 
     private void Add()
@@ -297,17 +324,29 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
             time = $"{t.Hours:00}:{t.Minutes:00}";
         }
 
-        _events.Add(new CalendarEvent { Date = _selected.Date, Time = time, Title = title });
+        if (_editingEvent is not null)
+        {
+            _editingEvent.Title = title;
+            _editingEvent.Time = time;
+            _editingEvent.Date = _selected.Date;
+            CancelEdit();
+        }
+        else
+        {
+            _events.Add(new CalendarEvent { Date = _selected.Date, Time = time, Title = title });
+            TitleInput.Clear();
+            TimeInput.Clear();
+        }
+
         Storage.Save(FileName, _events);
         EventReminderService.Instance.Reload();
-        TitleInput.Clear();
-        TimeInput.Clear();
         Render();
     }
 
     private void OnDelete(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not EventRow row) return;
+        if (row.Event == _editingEvent) CancelEdit();
         _events.Remove(row.Event);
         Storage.Save(FileName, _events);
         EventReminderService.Instance.Reload();
@@ -333,9 +372,17 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
     /// <summary>Esc closes the time picker before it closes the notch.</summary>
     public bool OnEscape()
     {
-        if (TimePicker.Visibility != Visibility.Visible) return false;
-        ClosePicker();
-        return true;
+        if (TimePicker.Visibility == Visibility.Visible)
+        {
+            ClosePicker();
+            return true;
+        }
+        if (_editingEvent is not null)
+        {
+            CancelEdit();
+            return true;
+        }
+        return false;
     }
 
     private void OnTimeInputClick(object sender, MouseButtonEventArgs e)
