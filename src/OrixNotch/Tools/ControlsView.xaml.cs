@@ -46,7 +46,7 @@ public partial class ControlsView : UserControl, IToolView, IEscapeHandler
     {
         if (SubPageView.Visibility == Visibility.Visible)
         {
-            OnBackClick(null!, null!);
+            OnBackToMain(null!, null!);
             return true;
         }
         return false;
