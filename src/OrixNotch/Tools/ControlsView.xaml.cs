@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using OrixNotch.Services;
 using OrixNotch.Shell;
 
@@ -12,7 +13,7 @@ namespace OrixNotch.Tools;
 /// <summary>
 /// Mobile-style Control Center tab: quick toggles for Wi-Fi, Bluetooth, Airplane mode,
 /// Night Light, Battery Saver, DND, plus real-time hardware Brightness and Sound sliders.
-/// Supports in-place sub-page navigation (like Windows 11 Action Center flyouts).
+/// Supports both direct ON/OFF toggling and in-place sub-page navigation.
 /// </summary>
 public partial class ControlsView : UserControl
 {
@@ -37,7 +38,7 @@ public partial class ControlsView : UserControl
         VolumeService.Instance.Changed -= OnVolumeServiceChanged;
     }
 
-    private void RefreshState()
+    private async void RefreshState()
     {
         _updatingFromSystem = true;
         try
@@ -54,11 +55,52 @@ public partial class ControlsView : UserControl
             VolumeValText.Text = muted ? "Muted" : $"{vol}%";
             VolumeMuteIcon.Kind = (muted || vol == 0) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
 
-            // 3. Wi-Fi status subtitle
+            // 3. Wi-Fi state
+            var wifiOn = await SystemControlsService.IsWifiOnAsync();
             var netAvailable = NetworkInterface.GetIsNetworkAvailable();
-            WifiStatusText.Text = netAvailable ? "Connected" : "Disconnected";
+            UpdateToggleVisuals(
+                wifiOn,
+                WifiTileBadge, WifiTileIcon, WifiStatusText,
+                netAvailable ? "Connected" : "On", "Off",
+                WifiSubBadge, WifiSubIcon, WifiSubStatusText,
+                WifiPill, WifiKnob);
 
-            // 4. Battery status subtitle
+            // 4. Bluetooth state
+            var btOn = await SystemControlsService.IsBluetoothOnAsync();
+            UpdateToggleVisuals(
+                btOn,
+                BluetoothTileBadge, BluetoothTileIcon, BluetoothStatusText,
+                "On", "Off",
+                BluetoothSubBadge, BluetoothSubIcon, BluetoothSubStatusText,
+                BluetoothPill, BluetoothKnob);
+
+            // 5. Airplane Mode
+            var airplaneOn = SystemControlsService.IsAirplaneModeOn();
+            UpdateToggleVisuals(
+                airplaneOn,
+                AirplaneTileBadge, AirplaneTileIcon, AirplaneStatusText,
+                "On", "Off",
+                AirplaneSubBadge, AirplaneSubIcon, AirplaneSubStatusText,
+                AirplanePill, AirplaneKnob);
+
+            // 6. Night Light (Screen Warmth)
+            var nightLightOn = SystemControlsService.IsNightLightOn();
+            UpdateToggleVisuals(
+                nightLightOn,
+                NightLightTileBadge, NightLightTileIcon, NightLightStatusText,
+                "Warm", "Off",
+                NightLightSubBadge, NightLightSubIcon, NightLightSubStatusText,
+                NightLightPill, NightLightKnob);
+
+            // 7. Battery Saver
+            var batterySaverOn = SystemControlsService.IsBatterySaverOn();
+            UpdateToggleVisuals(
+                batterySaverOn,
+                BatteryTileBadge, BatteryTileIcon, BatteryStatusText,
+                "Saver On", "Normal",
+                BatterySubBadge, BatterySubIcon, BatterySubStatusText,
+                BatteryPill, BatteryKnob);
+
             try
             {
                 var power = System.Windows.Forms.SystemInformation.PowerStatus;
@@ -66,7 +108,10 @@ public partial class ControlsView : UserControl
                 if (pct >= 0 && pct <= 100)
                 {
                     var isPlugged = power.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online;
-                    BatteryStatusText.Text = isPlugged ? $"{pct}% (AC)" : $"{pct}%";
+                    if (!batterySaverOn)
+                    {
+                        BatteryStatusText.Text = isPlugged ? $"{pct}% (AC)" : $"{pct}%";
+                    }
                     BatteryDetailTitle.Text = $"Battery Level: {pct}%" + (isPlugged ? " (Charging)" : " (On Battery)");
                     BatteryDetailSub.Text = isPlugged
                         ? "Device is plugged in. Click to manage power & sleep timeouts."
@@ -74,12 +119,50 @@ public partial class ControlsView : UserControl
                 }
             }
             catch { }
+
+            // 8. Do Not Disturb
+            var dndOn = SystemControlsService.IsDndOn();
+            UpdateToggleVisuals(
+                dndOn,
+                DndTileBadge, DndTileIcon, DndStatusText,
+                "Silent", "Off",
+                DndSubBadge, DndSubIcon, DndSubStatusText,
+                DndPill, DndKnob);
         }
         catch { }
         finally
         {
             _updatingFromSystem = false;
         }
+    }
+
+    private void UpdateToggleVisuals(
+        bool isOn,
+        Border tileBadge,
+        HeroIcon tileIcon,
+        TextBlock tileText,
+        string onText,
+        string offText,
+        Border? subBadge,
+        HeroIcon? subIcon,
+        TextBlock? subText,
+        Border? pill,
+        Ellipse? knob)
+    {
+        var accentSoft = (Brush)FindResource("AccentSoftBrush");
+        var accent = (Brush)FindResource("AccentBrush");
+        var surface2 = (Brush)FindResource("Surface2Brush");
+        var subTextBrush = (Brush)FindResource("SubTextBrush");
+
+        tileBadge.Background = isOn ? accentSoft : surface2;
+        tileIcon.Foreground = isOn ? accent : subTextBrush;
+        tileText.Text = isOn ? onText : offText;
+
+        if (subBadge != null) subBadge.Background = isOn ? accentSoft : surface2;
+        if (subIcon != null) subIcon.Foreground = isOn ? accent : subTextBrush;
+        if (subText != null) subText.Text = isOn ? onText : offText;
+        if (pill != null) pill.Background = isOn ? accent : surface2;
+        if (knob != null) knob.HorizontalAlignment = isOn ? HorizontalAlignment.Right : HorizontalAlignment.Left;
     }
 
     private void OnVolumeServiceChanged(float level, bool muted)
@@ -127,6 +210,86 @@ public partial class ControlsView : UserControl
         VolumeMuteIcon.Kind = (muted || vol == 0) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
     }
 
+    // ==================== DIRECT TOGGLE HANDLERS (ON / OFF) ====================
+
+    private async void OnToggleWifi(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        WifiStatusText.Text = "Switching...";
+        var next = await SystemControlsService.ToggleWifiAsync();
+        UpdateToggleVisuals(
+            next,
+            WifiTileBadge, WifiTileIcon, WifiStatusText,
+            "On", "Off",
+            WifiSubBadge, WifiSubIcon, WifiSubStatusText,
+            WifiPill, WifiKnob);
+    }
+
+    private async void OnToggleBluetooth(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        BluetoothStatusText.Text = "Switching...";
+        var next = await SystemControlsService.ToggleBluetoothAsync();
+        UpdateToggleVisuals(
+            next,
+            BluetoothTileBadge, BluetoothTileIcon, BluetoothStatusText,
+            "On", "Off",
+            BluetoothSubBadge, BluetoothSubIcon, BluetoothSubStatusText,
+            BluetoothPill, BluetoothKnob);
+        if (SubPageView.Visibility == Visibility.Visible && BluetoothSubPage.Visibility == Visibility.Visible)
+        {
+            RefreshBluetoothDevices();
+        }
+    }
+
+    private void OnToggleAirplane(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        var next = SystemControlsService.ToggleAirplaneMode();
+        UpdateToggleVisuals(
+            next,
+            AirplaneTileBadge, AirplaneTileIcon, AirplaneStatusText,
+            "On", "Off",
+            AirplaneSubBadge, AirplaneSubIcon, AirplaneSubStatusText,
+            AirplanePill, AirplaneKnob);
+    }
+
+    private void OnToggleNightLight(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        var next = SystemControlsService.ToggleNightLight();
+        UpdateToggleVisuals(
+            next,
+            NightLightTileBadge, NightLightTileIcon, NightLightStatusText,
+            "Warm", "Off",
+            NightLightSubBadge, NightLightSubIcon, NightLightSubStatusText,
+            NightLightPill, NightLightKnob);
+    }
+
+    private void OnToggleBatterySaver(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        var next = SystemControlsService.ToggleBatterySaver();
+        UpdateToggleVisuals(
+            next,
+            BatteryTileBadge, BatteryTileIcon, BatteryStatusText,
+            "Saver On", "Normal",
+            BatterySubBadge, BatterySubIcon, BatterySubStatusText,
+            BatteryPill, BatteryKnob);
+    }
+
+    private void OnToggleDnd(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        var next = SystemControlsService.ToggleDnd();
+        UpdateToggleVisuals(
+            next,
+            DndTileBadge, DndTileIcon, DndStatusText,
+            "Silent", "Off",
+            DndSubBadge, DndSubIcon, DndSubStatusText,
+            DndPill, DndKnob);
+    }
+
     // ==================== IN-PLACE NAVIGATION ====================
 
     private void SwitchToSubPage(string title, UIElement subPage, string defaultSettingsUri)
@@ -170,11 +333,13 @@ public partial class ControlsView : UserControl
 
     private void OnOpenWifiSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Wi-Fi Networks", WifiSubPage, "ms-settings:network-wifi");
     }
 
     private void OnOpenBluetoothSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Bluetooth Devices", BluetoothSubPage, "ms-settings:bluetooth");
         RefreshBluetoothDevices();
     }
@@ -216,26 +381,31 @@ public partial class ControlsView : UserControl
 
     private void OnOpenSoundSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Sound Output", SoundSubPage, "ms-settings:sound");
     }
 
     private void OnOpenNightLightSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Display & Brightness", DisplaySubPage, "ms-settings:nightlight");
     }
 
     private void OnOpenBatterySubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Battery & Power", BatterySubPage, "ms-settings:powersleep");
     }
 
     private void OnOpenAirplaneSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Airplane Mode", AirplaneSubPage, "ms-settings:network-airplanemode");
     }
 
     private void OnOpenDndSubPage(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
         SwitchToSubPage("Do Not Disturb", DndSubPage, "ms-settings:quiethours");
     }
 

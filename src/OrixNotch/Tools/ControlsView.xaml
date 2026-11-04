@@ -17,6 +17,22 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Chevron drilldown button inside tile -->
+        <Style x:Key="ChevronButton" TargetType="Border">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Surface2Brush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Subpage action row button -->
         <Style x:Key="ActionRow" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -43,117 +59,129 @@
 
             <!-- Top: 8 Essential Quick Toggles (2 rows x 4 columns) -->
             <UniformGrid Grid.Row="0" Columns="4" Rows="2">
-                <!-- 1. Wi-Fi (Opens in-place Wi-Fi settings) -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenWifiSubPage" ToolTip="Wi-Fi settings &amp; networks">
+                <!-- 1. Wi-Fi (Click body to toggle ON/OFF; click chevron to view networks) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleWifi" ToolTip="Click to toggle Wi-Fi ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="WifiTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="WifiTileIcon" Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Wi-Fi" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                             <TextBlock x:Name="WifiStatusText" Text="Connected" FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenWifiSubPage" ToolTip="Wi-Fi settings &amp; networks">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- 2. Bluetooth (Opens in-place Bluetooth settings) -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenBluetoothSubPage" ToolTip="Bluetooth settings &amp; devices">
+                <!-- 2. Bluetooth (Click body to toggle ON/OFF; click chevron to view devices) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleBluetooth" ToolTip="Click to toggle Bluetooth ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="BluetoothTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="BluetoothTileIcon" Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Bluetooth" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                            <TextBlock Text="Devices" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                            <TextBlock x:Name="BluetoothStatusText" Text="Off" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenBluetoothSubPage" ToolTip="Bluetooth settings &amp; devices">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- 3. Airplane Mode -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenAirplaneSubPage" ToolTip="Airplane mode radios">
+                <!-- 3. Airplane Mode (Click body to toggle ON/OFF; click chevron for settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleAirplane" ToolTip="Click to toggle Airplane Mode ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Rocket" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="AirplaneTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="AirplaneTileIcon" Kind="Rocket" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Airplane" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                            <TextBlock Text="Mode" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                            <TextBlock x:Name="AirplaneStatusText" Text="Off" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenAirplaneSubPage" ToolTip="Airplane mode settings">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- 4. Night Light -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenNightLightSubPage" ToolTip="Night Light &amp; blue-light filter">
+                <!-- 4. Night Light (Click body to toggle warm filter ON/OFF; click chevron for settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleNightLight" ToolTip="Click to toggle Night Light warm filter ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="NightLightTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="NightLightTileIcon" Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Night Light" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                            <TextBlock Text="Warm display" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                            <TextBlock x:Name="NightLightStatusText" Text="Off" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenNightLightSubPage" ToolTip="Night Light display settings">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- 5. Battery Saver -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenBatterySubPage" ToolTip="Battery saver &amp; power options">
+                <!-- 5. Battery Saver (Click body to toggle ON/OFF; click chevron for settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleBatterySaver" ToolTip="Click to toggle Battery Saver ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="BatteryFull" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="BatteryTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="BatteryTileIcon" Kind="BatteryFull" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Battery" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                             <TextBlock x:Name="BatteryStatusText" Text="Power" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenBatterySubPage" ToolTip="Battery &amp; power options">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
-                <!-- 6. Do Not Disturb -->
-                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenDndSubPage" ToolTip="Focus / Do Not Disturb">
+                <!-- 6. Do Not Disturb (Click body to toggle ON/OFF; click chevron for settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleDnd" ToolTip="Click to toggle Do Not Disturb ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="24" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Bell" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="DndTileBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon x:Name="DndTileIcon" Kind="Bell" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
                             <TextBlock Text="Do Not Disturb" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                            <TextBlock Text="Quiet hours" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                            <TextBlock x:Name="DndStatusText" Text="Off" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenDndSubPage" ToolTip="Focus / DND settings">
+                            <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
 
@@ -232,7 +260,7 @@
                                     <hero:HeroIcon x:Name="VolumeMuteIcon" Kind="Speaker" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" />
                                 </Button>
                                 <StackPanel Orientation="Horizontal" Cursor="Hand" MouseLeftButtonUp="OnOpenSoundSubPage" ToolTip="Sound output &amp; devices">
-                                    <TextBlock Text="Volume" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="Volume" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" verticalAlignment="Center" />
                                     <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </StackPanel>
@@ -268,6 +296,27 @@
                 <Grid>
                     <!-- A. Wi-Fi In-Place Sub-Page -->
                     <StackPanel x:Name="WifiSubPage" Visibility="Collapsed">
+                        <!-- Master Wi-Fi ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleWifi" ToolTip="Click to toggle Wi-Fi ON/OFF">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="WifiSubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="WifiSubIcon" Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Wi-Fi Radio" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="WifiSubStatusText" Text="On" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="WifiPill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="WifiKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Right" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnNativeWifiFlyout">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -275,8 +324,8 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                                    <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Show Available Networks" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
@@ -306,6 +355,27 @@
 
                     <!-- B. Bluetooth In-Place Sub-Page -->
                     <StackPanel x:Name="BluetoothSubPage" Visibility="Collapsed">
+                        <!-- Master Bluetooth ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleBluetooth" ToolTip="Click to toggle Bluetooth ON/OFF">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="BluetoothSubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="BluetoothSubIcon" Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Bluetooth Radio" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="BluetoothSubStatusText" Text="Off" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="BluetoothPill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="BluetoothKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnBluetoothSettingsClick">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -385,6 +455,27 @@
 
                     <!-- D. Display & Brightness In-Place Sub-Page -->
                     <StackPanel x:Name="DisplaySubPage" Visibility="Collapsed">
+                        <!-- Master Night Light ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleNightLight" ToolTip="Click to toggle Night Light warm screen filter">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="NightLightSubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="NightLightSubIcon" Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Night Light Filter" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="NightLightSubStatusText" Text="Off" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="NightLightPill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="NightLightKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnNightLightSettingsClick">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -396,7 +487,7 @@
                                     <hero:HeroIcon Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                    <TextBlock Text="Night Light (Warm Filter)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Night Light Schedule Settings" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                                     <TextBlock Text="Adjust blue-light reduction and schedule sunset-to-sunrise" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
                                 </StackPanel>
                                 <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
@@ -423,6 +514,27 @@
 
                     <!-- E. Battery In-Place Sub-Page -->
                     <StackPanel x:Name="BatterySubPage" Visibility="Collapsed">
+                        <!-- Master Battery Saver ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleBatterySaver" ToolTip="Click to toggle Battery Saver energy efficiency mode">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="BatterySubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="BatterySubIcon" Kind="BatteryFull" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Battery Saver Mode" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="BatterySubStatusText" Text="Off" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="BatteryPill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="BatteryKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnPowerSettingsClick">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -444,6 +556,27 @@
 
                     <!-- F. Airplane Mode In-Place Sub-Page -->
                     <StackPanel x:Name="AirplaneSubPage" Visibility="Collapsed">
+                        <!-- Master Airplane Mode ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleAirplane" ToolTip="Click to toggle Airplane Mode">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="AirplaneSubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="AirplaneSubIcon" Kind="Rocket" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Airplane Mode" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="AirplaneSubStatusText" Text="Off" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="AirplanePill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="AirplaneKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnAirplaneSettingsClick">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -465,6 +598,27 @@
 
                     <!-- G. Do Not Disturb (Focus) In-Place Sub-Page -->
                     <StackPanel x:Name="DndSubPage" Visibility="Collapsed">
+                        <!-- Master Do Not Disturb ON / OFF Toggle Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleDnd" ToolTip="Click to toggle Do Not Disturb">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="DndSubBadge" Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon x:Name="DndSubIcon" Kind="Bell" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Do Not Disturb" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="DndSubStatusText" Text="Off" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="2" x:Name="DndPill" Width="40" Height="22" CornerRadius="11" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center" Padding="2">
+                                    <Ellipse x:Name="DndKnob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnDndSettingsClick">
                             <Grid>
                                 <Grid.ColumnDefinitions>
