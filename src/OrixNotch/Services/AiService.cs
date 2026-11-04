@@ -114,7 +114,8 @@ public static class AiService
     private const string BasePrompt =
         "You are a quick assistant living in a small panel at the top of the user's Windows screen. " +
         "Answer concisely: a few sentences or a short list unless the user asks for more. " +
-        "Use fenced code blocks for code or commands.";
+        "Use fenced code blocks for code or commands. " +
+        "When asked about current events, latest news, weather, or live sports scores and match results, use web search to retrieve the latest live data.";
 
     /// <summary>Base instructions plus what the model can't know on its own: who is asking, and when.</summary>
     private static string SystemPrompt
@@ -399,16 +400,32 @@ public static class AiService
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var key = LoadKey(GeminiKeyFile) ?? throw new InvalidOperationException("Add your Gemini API key in Settings → Ask AI.");
-        var body = new
-        {
-            system_instruction = new { parts = new[] { new { text = SystemPrompt } } },
-            contents = conversation.Select(m => new
+        var supportsSearch = !model.StartsWith("gemma", StringComparison.OrdinalIgnoreCase);
+        var body = supportsSearch
+            ? (object)new
             {
-                role = m.FromUser ? "user" : "model",
-                parts = GeminiParts(m),
-            }).ToArray(),
-            generationConfig = new { maxOutputTokens = 4096 },
-        };
+                system_instruction = new { parts = new[] { new { text = SystemPrompt } } },
+                contents = conversation.Select(m => new
+                {
+                    role = m.FromUser ? "user" : "model",
+                    parts = GeminiParts(m),
+                }).ToArray(),
+                tools = new object[]
+                {
+                    new { google_search = new { } }
+                },
+                generationConfig = new { maxOutputTokens = 4096 },
+            }
+            : new
+            {
+                system_instruction = new { parts = new[] { new { text = SystemPrompt } } },
+                contents = conversation.Select(m => new
+                {
+                    role = m.FromUser ? "user" : "model",
+                    parts = GeminiParts(m),
+                }).ToArray(),
+                generationConfig = new { maxOutputTokens = 4096 },
+            };
 
         using var request = new HttpRequestMessage(HttpMethod.Post,
             $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:streamGenerateContent?alt=sse");
@@ -419,6 +436,12 @@ public static class AiService
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            if ((response.StatusCode == System.Net.HttpStatusCode.NotFound || (int)response.StatusCode == 429) && model != "gemini-2.5-flash")
+            {
+                await foreach (var chunk in StreamGeminiAsync(conversation, "gemini-2.5-flash", cancellationToken))
+                    yield return chunk;
+                yield break;
+            }
             throw new HttpRequestException($"Gemini request failed ({(int)response.StatusCode}): {TrimOneLine(error, 300)}");
         }
 
