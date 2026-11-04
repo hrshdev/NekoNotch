@@ -62,10 +62,14 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border x:Name="Tile" Width="82" Height="70" Margin="2" CornerRadius="10" Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="1.5"
                                 Cursor="Hand" ToolTip="{Binding Target}" AllowDrop="True"
                                 PreviewMouseLeftButtonDown="OnTilePreviewMouseDown"
                                 PreviewMouseMove="OnTilePreviewMouseMove"
-                                DragOver="OnTileDragOver" Drop="OnTileDrop"
+                                DragEnter="OnTileDragEnter"
+                                DragLeave="OnTileDragLeave"
+                                DragOver="OnTileDragOver"
+                                Drop="OnTileDrop"
                                 MouseLeftButtonUp="OnRun">
                             <Border.ContextMenu>
                                 <ContextMenu>
@@ -109,6 +113,15 @@
                             </Trigger>
                             <DataTrigger Binding="{Binding HasIcon}" Value="True">
                                 <Setter TargetName="FallbackBadge" Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                                <Setter TargetName="Tile" Property="Opacity" Value="0.35" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource SubTextBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource Surface2Brush}" />
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Tile" Property="BorderThickness" Value="2" />
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>

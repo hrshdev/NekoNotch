@@ -58,12 +58,123 @@ public sealed class ShortcutItem : ObservableObject
     [JsonIgnore]
     public string InitialLetter => string.IsNullOrWhiteSpace(Name) ? "?" : Name[..1].ToUpperInvariant();
 
+    [JsonIgnore]
+    private bool _isDragging;
+
+    [JsonIgnore]
+    public bool IsDragging
+    {
+        get => _isDragging;
+        set => SetProperty(ref _isDragging, value);
+    }
+
+    [JsonIgnore]
+    private bool _isDropTarget;
+
+    [JsonIgnore]
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set => SetProperty(ref _isDropTarget, value);
+    }
+
+
     private ImageSource? ResolveIcon()
     {
         try
         {
-            var resolved = ResolveFullPath(Target);
-            if (!string.IsNullOrEmpty(resolved) && (File.Exists(resolved) || Directory.Exists(resolved)))
+            var target = Target?.Trim() ?? "";
+            var name = Name?.Trim() ?? "";
+
+            // 1. Packaged Windows Apps & URI Protocols
+            if (target.StartsWith("ms-settings:network-wifi", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Wi-Fi", StringComparison.OrdinalIgnoreCase))
+            {
+                var icon = ExtractFromImageres(175);
+                if (icon != null) return icon;
+            }
+            if (target.StartsWith("ms-settings:bluetooth", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Bluetooth", StringComparison.OrdinalIgnoreCase))
+            {
+                var icon = ExtractFromImageres(79);
+                if (icon != null) return icon;
+            }
+            if (target.StartsWith("ms-settings:sound", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Sound", StringComparison.OrdinalIgnoreCase))
+            {
+                var icon = ExtractFromImageres(100);
+                if (icon != null) return icon;
+            }
+            if (target.StartsWith("ms-settings:batterysaver", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Battery", StringComparison.OrdinalIgnoreCase))
+            {
+                var icon = ExtractFromImageres(141);
+                if (icon != null) return icon;
+            }
+            if (target.StartsWith("ms-settings:", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Settings", StringComparison.OrdinalIgnoreCase))
+            {
+                var uwp = ShellItem.AppIcon("windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel");
+                if (uwp != null) return uwp;
+                var icon = ExtractFromImageres(110);
+                if (icon != null) return icon;
+            }
+            if (target.StartsWith("ms-screenclip:", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Snip", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Snipping Tool", StringComparison.OrdinalIgnoreCase))
+            {
+                var uwp = ShellItem.AppIcon("Microsoft.ScreenSketch_8wekyb3d8bbwe!App");
+                if (uwp != null) return uwp;
+            }
+            if (target.Equals("mspaint.exe", StringComparison.OrdinalIgnoreCase) ||
+                target.Equals("mspaint", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Paint", StringComparison.OrdinalIgnoreCase))
+            {
+                var uwp = ShellItem.AppIcon("Microsoft.Paint_8wekyb3d8bbwe!App");
+                if (uwp != null) return uwp;
+            }
+            if (target.Contains("LockWorkStation", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Lock PC", StringComparison.OrdinalIgnoreCase))
+            {
+                var icon = ExtractFromImageres(44);
+                if (icon != null) return icon;
+            }
+            if (target.Equals("wt.exe", StringComparison.OrdinalIgnoreCase) ||
+                target.Equals("wt", StringComparison.OrdinalIgnoreCase))
+            {
+                var uwp = ShellItem.AppIcon("Microsoft.WindowsTerminal_8wekyb3d8bbwe!App");
+                if (uwp != null) return uwp;
+            }
+            if (target.Equals("calc.exe", StringComparison.OrdinalIgnoreCase) ||
+                target.Equals("calc", StringComparison.OrdinalIgnoreCase))
+            {
+                var uwp = ShellItem.AppIcon("Microsoft.WindowsCalculator_8wekyb3d8bbwe!App");
+                if (uwp != null) return uwp;
+            }
+
+            // 2. Directory / Folder icon via SHGetFileInfo
+            var resolved = ResolveFullPath(target);
+            if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
+            {
+                var shfi = new Win32.SHFILEINFO();
+                var res = Win32.SHGetFileInfo(resolved, 0, ref shfi, (uint)Marshal.SizeOf(shfi), Win32.SHGFI_ICON | Win32.SHGFI_LARGEICON);
+                if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
+                {
+                    try
+                    {
+                        var bmp = Imaging.CreateBitmapSourceFromHIcon(shfi.hIcon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                        bmp.Freeze();
+                        return bmp;
+                    }
+                    finally
+                    {
+                        Win32.DestroyIcon(shfi.hIcon);
+                    }
+                }
+            }
+
+            // 3. Regular file / executable icon
+            if (!string.IsNullOrEmpty(resolved) && File.Exists(resolved))
             {
                 using var sysIcon = Drawing.Icon.ExtractAssociatedIcon(resolved);
                 if (sysIcon != null)
@@ -71,6 +182,30 @@ public sealed class ShortcutItem : ObservableObject
                     var bmp = Imaging.CreateBitmapSourceFromHIcon(sysIcon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
                     bmp.Freeze();
                     return bmp;
+                }
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    private static ImageSource? ExtractFromImageres(int index)
+    {
+        try
+        {
+            var count = Win32.ExtractIconEx("imageres.dll", index, out var large, out var small, 1);
+            if (large != IntPtr.Zero)
+            {
+                try
+                {
+                    var bmp = Imaging.CreateBitmapSourceFromHIcon(large, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                    bmp.Freeze();
+                    return bmp;
+                }
+                finally
+                {
+                    Win32.DestroyIcon(large);
+                    if (small != IntPtr.Zero) Win32.DestroyIcon(small);
                 }
             }
         }
@@ -99,6 +234,11 @@ public sealed class ShortcutItem : ObservableObject
         var inWin = Path.Combine(winDir, target);
         if (File.Exists(inWin)) return inWin;
 
+        if (target.Equals("powershell.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("powershell", StringComparison.OrdinalIgnoreCase))
+        {
+            var psPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe");
+            if (File.Exists(psPath)) return psPath;
+        }
         // Common installed applications
         if (target.Equals("chrome.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("chrome", StringComparison.OrdinalIgnoreCase))
         {
