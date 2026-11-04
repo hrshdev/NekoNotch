@@ -408,3 +408,8 @@ public sealed partial class UpdateService : ObservableObject
         [JsonPropertyName("size")] public long? Size { get; set; }
     }
 }
+
+internal static class PackageVersionExtensions
+{
+    public static string ToVersionString(this PackageVersion v) => $"{v.Major}.{v.Minor}.{v.Build}";
+}
