@@ -9,7 +9,7 @@ using OrixNotch.Shell;
 
 namespace OrixNotch.Tools;
 
-/// <summary>Grid of one-click actions (apps, folders, URLs, Windows settings pages).</summary>
+/// <summary>8-column App Launcher grid for quick opening, restoring existing sessions, and managing apps.</summary>
 public partial class ShortcutsView : UserControl, IEscapeHandler
 {
     private readonly ListCollectionView _view;
@@ -40,7 +40,22 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
     private void OnRun(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not ShortcutItem item) return;
-        if (ShortcutsService.Run(item, out var error)) Flash($"Ran {item.Name}");
+        if (ShortcutsService.ActivateOrLaunch(item, forceNewInstance: false, out var error))
+        {
+            Flash($"Opened {item.Name}");
+            NotchWindow.Instance?.Collapse();
+        }
+        else Flash(error ?? "Could not run", bad: true);
+    }
+
+    private void OnRunNewInstance(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not ShortcutItem item) return;
+        if (ShortcutsService.ActivateOrLaunch(item, forceNewInstance: true, out var error))
+        {
+            Flash($"Started {item.Name}");
+            NotchWindow.Instance?.Collapse();
+        }
         else Flash(error ?? "Could not run", bad: true);
     }
 
@@ -61,7 +76,12 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
 
     private void OnDelete(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is ShortcutItem item) Service.Remove(item);
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is ShortcutItem item)
+        {
+            Service.Remove(item);
+            _view.Refresh();
+        }
     }
 
     private void OpenEditor(ShortcutItem? item)
@@ -92,7 +112,7 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
 
     private void OnBrowse(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Choose an app or file", Filter = "Apps and files|*.*" };
+        var dialog = new OpenFileDialog { Title = "Choose an application", Filter = "Applications and shortcuts (*.exe;*.lnk)|*.exe;*.lnk|All files (*.*)|*.*" };
         bool? picked;
         using (NotchWindow.Instance?.HoldOpen())
             picked = NotchWindow.Instance is { } owner ? dialog.ShowDialog(owner) : dialog.ShowDialog();
@@ -108,7 +128,6 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
         var (target, args) = SplitCommand(TargetInput.Text.Trim());
         if (name.Length == 0 || target.Length == 0)
         {
-            // Point at the first missing field instead of silently doing nothing.
             Field.ShowError(name.Length == 0 ? NameInput : TargetInput);
             return;
         }
@@ -128,7 +147,6 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
         EditorPanel.Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>Splits `"C:\path\app.exe" --flag` or `app.exe --flag` into target + arguments.</summary>
     private static (string Target, string Args) SplitCommand(string text)
     {
         if (text.StartsWith('"'))

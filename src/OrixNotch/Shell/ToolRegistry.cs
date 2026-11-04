@@ -37,7 +37,7 @@ public static class ToolRegistry
         new("phone", "Phone", AppIcon.DevicePhone, W, H, () => new PhoneView()),
         new("clipboard", "Clipboard", AppIcon.ClipboardList, W, H, () => new ClipboardView()),
         new("teleprompter", "Teleprompter", AppIcon.Teleprompter, W, H, () => new TeleprompterView()),
-        new("shortcuts", "Shortcuts", AppIcon.Stack, W, H, () => new ShortcutsView()),
+        new("shortcuts", "Shortcuts", AppIcon.Stack, W, 235, () => new ShortcutsView()),
         new("nowplaying", "Now Playing", AppIcon.MusicNote, W, H, () => new NowPlayingView()),
         new("note", "Quick Note", AppIcon.BookOpen, W, H, () => new QuickNoteView()),
         new("todos", "To-Dos", AppIcon.ListBullet, W, H, () => new TodosView()),

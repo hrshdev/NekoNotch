@@ -9,23 +9,24 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- Search bar & Add Button -->
         <Grid Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="Search" Tag="Search shortcuts…" hero:Field.Icon="Magnifier" hero:Field.Clearable="True"
+            <TextBox x:Name="Search" Tag="Search apps &amp; shortcuts…" hero:Field.Icon="Magnifier" hero:Field.Clearable="True"
                      TextChanged="OnSearchChanged" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
                 <TextBlock x:Name="Status" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <Button Style="{StaticResource IconButton}" Width="34" Height="34" ToolTip="New shortcut"
+                <Button Style="{StaticResource IconButton}" Width="34" Height="34" ToolTip="Add new app"
                         Foreground="{DynamicResource SubTextBrush}" Click="OnNew">
                     <hero:HeroIcon Kind="Plus" Width="14" Height="14" />
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!-- Inline editor -->
+        <!-- Inline editor panel for adding / editing an app shortcut -->
         <Border x:Name="EditorPanel" Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="9" Padding="8"
                 Margin="0,0,0,8" Visibility="Collapsed">
             <Grid>
@@ -36,9 +37,9 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="NameInput" Tag="Name" KeyDown="OnEditorKeyDown" />
-                <TextBox x:Name="TargetInput" Grid.Column="1" Margin="6,0" Tag="App, file, folder, URL or ms-settings:…"
-                         ToolTip="App, file, folder, URL or ms-settings:… — quote paths with spaces to add arguments"
+                <TextBox x:Name="NameInput" Tag="App Name" KeyDown="OnEditorKeyDown" />
+                <TextBox x:Name="TargetInput" Grid.Column="1" Margin="6,0" Tag="Path to .exe, app name, URL or folder…"
+                         ToolTip="Full path to .exe, or app command like 'notepad.exe', 'calc.exe', 'code.exe'…"
                          KeyDown="OnEditorKeyDown" />
                 <Button Grid.Column="2" Content="Browse" Height="34" Click="OnBrowse" />
                 <Button Grid.Column="3" Style="{StaticResource AccentButton}" Content="Save" Height="34" Margin="6,0,0,0" Click="OnSave" />
@@ -49,47 +50,62 @@
             </Grid>
         </Border>
 
+        <!-- 8-Column App Launcher Grid -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="List">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="4" VerticalAlignment="Top" />
+                        <UniformGrid Columns="8" VerticalAlignment="Top" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Margin="0,0,6,6" Height="26" Cursor="Hand" Focusable="False" ToolTip="{Binding Target}" Click="OnRun">
-                            <Button.ContextMenu>
+                        <Border x:Name="Tile" Width="82" Height="70" Margin="2" CornerRadius="10" Background="Transparent"
+                                Cursor="Hand" ToolTip="{Binding Target}" MouseLeftButtonUp="OnRun">
+                            <Border.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Open / Bring to Front" Click="OnRun" />
+                                    <MenuItem Header="Open as New Instance" Click="OnRunNewInstance" />
+                                    <Separator />
                                     <MenuItem Header="Edit" Click="OnEdit" />
                                     <MenuItem Header="Delete" Click="OnDelete" />
                                 </ContextMenu>
-                            </Button.ContextMenu>
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" CornerRadius="8" Background="{DynamicResource SurfaceBrush}" Padding="7,0">
-                                        <ContentPresenter VerticalAlignment="Center" />
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Surface2Brush}" />
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="13" Height="13" CornerRadius="6.5" Background="{DynamicResource AccentBrush}">
-                                    <hero:HeroIcon Kind="Play" Width="8" Height="8" Margin="1,0,0,0" Foreground="{DynamicResource OnAccentBrush}"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" Margin="7,0,0,0"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="96" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource TextBrush}" />
-                            </StackPanel>
-                        </Button>
+                            </Border.ContextMenu>
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Grid Width="34" Height="34" HorizontalAlignment="Center">
+                                        <!-- Fallback letter badge when real icon isn't available -->
+                                        <Border x:Name="FallbackBadge" Width="32" Height="32" CornerRadius="8" Background="{DynamicResource Surface2Brush}">
+                                            <TextBlock Text="{Binding InitialLetter}" FontSize="14" FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource AccentBrush}" />
+                                        </Border>
+                                        <!-- Real high-DPI extracted application icon -->
+                                        <Image x:Name="AppIconImg" Source="{Binding Icon}" Width="32" Height="32" Stretch="Uniform"
+                                               RenderOptions.BitmapScalingMode="HighQuality" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="Medium" Margin="0,4,0,0"
+                                               TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="78"
+                                               Foreground="{DynamicResource TextBrush}" />
+                                </StackPanel>
+                                <!-- Quick remove X button on hover -->
+                                <Button x:Name="DeleteQuickBtn" Style="{StaticResource IconButton}" Width="18" Height="18"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"
+                                        Background="{DynamicResource HoverBrush}" Visibility="Collapsed" Click="OnDelete"
+                                        ToolTip="Remove app">
+                                    <hero:HeroIcon Kind="XMark" Width="10" Height="10" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <Trigger SourceName="Tile" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter TargetName="DeleteQuickBtn" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding HasIcon}" Value="True">
+                                <Setter TargetName="FallbackBadge" Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

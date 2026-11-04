@@ -1,15 +1,132 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
+using OrixNotch.Interop;
+using Drawing = System.Drawing;
 
 namespace OrixNotch.Services;
 
-/// <summary>A one-click action: launch an app, file, folder, URL or ms-settings: page.</summary>
-public sealed class ShortcutItem
+/// <summary>A one-click action: launch or restore an app, file, folder, URL or Windows settings page.</summary>
+public sealed class ShortcutItem : ObservableObject
 {
-    public string Name { get; set; } = "";
-    public string Target { get; set; } = "";
-    public string Arguments { get; set; } = "";
+    private string _name = "";
+    public string Name
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
+    }
+
+    private string _target = "";
+    public string Target
+    {
+        get => _target;
+        set
+        {
+            if (SetProperty(ref _target, value))
+            {
+                _icon = null;
+                OnPropertyChanged(nameof(Icon));
+                OnPropertyChanged(nameof(HasIcon));
+                OnPropertyChanged(nameof(InitialLetter));
+            }
+        }
+    }
+
+    private string _arguments = "";
+    public string Arguments
+    {
+        get => _arguments;
+        set => SetProperty(ref _arguments, value);
+    }
+
+    [JsonIgnore]
+    private ImageSource? _icon;
+
+    [JsonIgnore]
+    public ImageSource? Icon => _icon ??= ResolveIcon();
+
+    [JsonIgnore]
+    public bool HasIcon => Icon != null;
+
+    [JsonIgnore]
+    public string InitialLetter => string.IsNullOrWhiteSpace(Name) ? "?" : Name[..1].ToUpperInvariant();
+
+    private ImageSource? ResolveIcon()
+    {
+        try
+        {
+            var resolved = ResolveFullPath(Target);
+            if (!string.IsNullOrEmpty(resolved) && (File.Exists(resolved) || Directory.Exists(resolved)))
+            {
+                using var sysIcon = Drawing.Icon.ExtractAssociatedIcon(resolved);
+                if (sysIcon != null)
+                {
+                    var bmp = Imaging.CreateBitmapSourceFromHIcon(sysIcon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                    bmp.Freeze();
+                    return bmp;
+                }
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public static string ResolveFullPath(string target)
+    {
+        if (string.IsNullOrWhiteSpace(target)) return "";
+        target = Environment.ExpandEnvironmentVariables(target);
+        if (File.Exists(target) || Directory.Exists(target)) return target;
+
+        // Common System32 apps
+        var sys32 = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        var inSys32 = Path.Combine(sys32, target);
+        if (File.Exists(inSys32)) return inSys32;
+        if (!target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            var withExe = Path.Combine(sys32, target + ".exe");
+            if (File.Exists(withExe)) return withExe;
+        }
+
+        // Common Windows root apps (e.g. explorer.exe, regedit.exe)
+        var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var inWin = Path.Combine(winDir, target);
+        if (File.Exists(inWin)) return inWin;
+
+        // Common installed applications
+        if (target.Equals("chrome.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("chrome", StringComparison.OrdinalIgnoreCase))
+        {
+            var chromePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+            if (File.Exists(chromePath)) return chromePath;
+            chromePath = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
+            if (File.Exists(chromePath)) return chromePath;
+        }
+        if (target.Equals("msedge.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("edge", StringComparison.OrdinalIgnoreCase))
+        {
+            var edgePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+            if (File.Exists(edgePath)) return edgePath;
+            edgePath = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
+            if (File.Exists(edgePath)) return edgePath;
+        }
+        if (target.Equals("code.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("code", StringComparison.OrdinalIgnoreCase))
+        {
+            var codePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Microsoft VS Code\Code.exe");
+            if (File.Exists(codePath)) return codePath;
+        }
+        if (target.Equals("wt.exe", StringComparison.OrdinalIgnoreCase) || target.Equals("wt", StringComparison.OrdinalIgnoreCase))
+        {
+            var wtPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\WindowsApps\wt.exe");
+            if (File.Exists(wtPath)) return wtPath;
+        }
+
+        return target;
+    }
 }
 
 public sealed class ShortcutsService
@@ -24,32 +141,64 @@ public sealed class ShortcutsService
     {
         var path = Storage.PathOf(FileName);
         var items = File.Exists(path) ? Storage.Load<List<ShortcutItem>>(FileName) : Defaults();
+        // Upgrade legacy default shortcuts if only the old 12 pills exist
+        if (items.Count == 12 && items.Any(x => x.Name == "Snip screen") && items.Any(x => x.Name == "Lock PC") && !items.Any(x => x.Name == "Chrome" || x.Name == "Explorer"))
+        {
+            items = Defaults();
+        }
         Items = new ObservableCollection<ShortcutItem>(items);
-        if (!File.Exists(path)) Save();
+        if (!File.Exists(path) || (items.Count > 0 && items[0].Name == "Chrome")) Save();
     }
 
-    private static List<ShortcutItem> Defaults() =>
+    public static List<ShortcutItem> Defaults() =>
     [
-        new() { Name = "Snip screen", Target = "ms-screenclip:" },
-        new() { Name = "Lock PC", Target = "rundll32.exe", Arguments = "user32.dll,LockWorkStation" },
-        new() { Name = "Task Manager", Target = "taskmgr.exe" },
-        new() { Name = "Calculator", Target = "calc.exe" },
+        new() { Name = "Chrome", Target = "chrome.exe" },
+        new() { Name = "VS Code", Target = "code.exe" },
+        new() { Name = "Explorer", Target = "explorer.exe" },
+        new() { Name = "Terminal", Target = "wt.exe" },
         new() { Name = "Notepad", Target = "notepad.exe" },
+        new() { Name = "Calculator", Target = "calc.exe" },
+        new() { Name = "Task Manager", Target = "taskmgr.exe" },
+        new() { Name = "Settings", Target = "ms-settings:" },
+        new() { Name = "Edge", Target = "msedge.exe" },
+        new() { Name = "Paint", Target = "mspaint.exe" },
+        new() { Name = "Cmd", Target = "cmd.exe" },
+        new() { Name = "Snip", Target = "ms-screenclip:" },
         new() { Name = "Downloads", Target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads") },
+        new() { Name = "Documents", Target = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) },
         new() { Name = "Bluetooth", Target = "ms-settings:bluetooth" },
         new() { Name = "Wi-Fi", Target = "ms-settings:network-wifi" },
         new() { Name = "Sound", Target = "ms-settings:sound" },
-        new() { Name = "Display", Target = "ms-settings:display" },
-        new() { Name = "Focus", Target = "ms-settings:quiethours" },
-        new() { Name = "Battery", Target = "ms-settings:batterysaver" },
+        new() { Name = "Control Panel", Target = "control.exe" },
+        new() { Name = "Lock PC", Target = "rundll32.exe", Arguments = "user32.dll,LockWorkStation" },
+        new() { Name = "Battery", Target = "ms-settings:batterysaver" }
     ];
 
-    public static bool Run(ShortcutItem item, out string? error)
+    public static bool Run(ShortcutItem item, out string? error) => ActivateOrLaunch(item, forceNewInstance: false, out error);
+
+    public static bool ActivateOrLaunch(ShortcutItem item, bool forceNewInstance, out string? error)
     {
         error = null;
         try
         {
-            Process.Start(new ProcessStartInfo(item.Target, item.Arguments ?? "") { UseShellExecute = true });
+            if (!forceNewInstance)
+            {
+                // Attempt to find and restore existing window session first
+                if (TryActivateExisting(item))
+                {
+                    return true;
+                }
+            }
+
+            // Launch fresh instance if not running or forced
+            var resolved = ShortcutItem.ResolveFullPath(item.Target);
+            var psi = new ProcessStartInfo
+            {
+                FileName = string.IsNullOrEmpty(resolved) ? item.Target : resolved,
+                Arguments = item.Arguments ?? "",
+                UseShellExecute = true
+            };
+            Process.Start(psi);
             return true;
         }
         catch (Exception ex)
@@ -57,6 +206,93 @@ public sealed class ShortcutsService
             error = ex.Message;
             return false;
         }
+    }
+
+    private static bool TryActivateExisting(ShortcutItem item)
+    {
+        try
+        {
+            var target = item.Target;
+            if (string.IsNullOrWhiteSpace(target)) return false;
+
+            if (target.Contains("rundll32", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("ms-screenclip:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var fileName = Path.GetFileNameWithoutExtension(target);
+            if (!string.IsNullOrWhiteSpace(fileName)) candidates.Add(fileName);
+            if (!string.IsNullOrWhiteSpace(item.Name)) candidates.Add(item.Name);
+
+            // Special application process mappings
+            if (fileName.Equals("calc", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add("CalculatorApp");
+                candidates.Add("Calculator");
+            }
+            else if (fileName.Equals("wt", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add("WindowsTerminal");
+            }
+            else if (fileName.Equals("code", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add("Code");
+            }
+
+            var running = Process.GetProcesses();
+            foreach (var name in candidates)
+            {
+                foreach (var proc in running)
+                {
+                    try
+                    {
+                        if (proc.ProcessName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrEmpty(proc.MainWindowTitle) && proc.MainWindowTitle.Contains(name, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            var hWnd = proc.MainWindowHandle;
+                            if (hWnd != IntPtr.Zero && Win32.IsWindowVisible(hWnd))
+                            {
+                                BringToFront(hWnd);
+                                return true;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private const int SwRestore = 9;
+    private const int SwShow = 5;
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
+    private static void BringToFront(IntPtr hWnd)
+    {
+        try
+        {
+            if (IsIconic(hWnd)) ShowWindow(hWnd, SwRestore);
+            else ShowWindow(hWnd, SwShow);
+            SetForegroundWindow(hWnd);
+            SwitchToThisWindow(hWnd, true);
+        }
+        catch { }
     }
 
     public void Add(ShortcutItem item)
