@@ -270,9 +270,9 @@
                                 <TextBlock Text="Brightness" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                                 <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
-                            <TextBlock x:Name="BrightnessValText" Text="67%" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                            <TextBlock x:Name="BrightnessValText" Text="--" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
                         </Grid>
-                        <Slider x:Name="BrightnessSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="67" ValueChanged="OnBrightnessChanged" />
+                        <Slider x:Name="BrightnessSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="0" ValueChanged="OnBrightnessChanged" />
                     </Grid>
                 </Border>
 
@@ -293,9 +293,9 @@
                                     <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </StackPanel>
-                            <TextBlock x:Name="VolumeValText" Text="50%" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                            <TextBlock x:Name="VolumeValText" Text="--" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
                         </Grid>
-                        <Slider x:Name="VolumeSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" ValueChanged="OnVolumeChanged" />
+                        <Slider x:Name="VolumeSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="0" ValueChanged="OnVolumeChanged" />
                     </Grid>
                 </Border>
             </Grid>

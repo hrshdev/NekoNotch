@@ -16,16 +16,40 @@ namespace OrixNotch.Tools;
 /// Supports direct ON/OFF toggling and in-place sub-page navigation with full Wi-Fi
 /// (scan, connect, disconnect, forget) and Bluetooth (add, connect, remove) functionality.
 /// </summary>
-public partial class ControlsView : UserControl
+public partial class ControlsView : UserControl, IToolView, IEscapeHandler
 {
-    private bool _updatingFromSystem;
+    private bool _updatingFromSystem = true;
     private string _activeSettingsUri = "ms-settings:";
 
     public ControlsView()
     {
+        _updatingFromSystem = true;
         InitializeComponent();
+        RefreshVolumeNow();
+        RefreshBrightnessNow();
+        _updatingFromSystem = false;
+
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+    }
+
+    public void OnShown()
+    {
+        RefreshState();
+    }
+
+    public void OnHidden()
+    {
+    }
+
+    public bool OnEscape()
+    {
+        if (SubPageView.Visibility == Visibility.Visible)
+        {
+            OnBackClick(null!, null!);
+            return true;
+        }
+        return false;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -57,17 +81,11 @@ public partial class ControlsView : UserControl
         _updatingFromSystem = true;
         try
         {
-            // 1. Initialise brightness slider
-            var brightness = BrightnessService.GetBrightness();
-            BrightnessSlider.Value = brightness;
-            BrightnessValText.Text = $"{brightness}%";
+            // 1. Initialise real-time PC volume & mute icon
+            RefreshVolumeNow();
 
-            // 2. Initialise volume slider & mute icon
-            var vol = (int)Math.Round(VolumeService.Instance.GetLevel() * 100);
-            var muted = VolumeService.Instance.IsMuted();
-            VolumeSlider.Value = vol;
-            VolumeValText.Text = muted ? "Muted" : $"{vol}%";
-            VolumeMuteIcon.Kind = (muted || vol == 0) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
+            // 2. Initialise real-time PC hardware brightness
+            RefreshBrightnessNow();
 
             // 3. Wi-Fi state
             var wifiOn = await SystemControlsService.IsWifiOnAsync();
@@ -180,6 +198,45 @@ public partial class ControlsView : UserControl
         if (subText != null) subText.Text = isOn ? onText : offText;
         if (pill != null) pill.Background = isOn ? accent : surface2;
         if (knob != null) knob.HorizontalAlignment = isOn ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+    }
+
+    private void RefreshVolumeNow()
+    {
+        _updatingFromSystem = true;
+        try
+        {
+            var vol = (int)Math.Round(VolumeService.Instance.GetLevel() * 100);
+            var muted = VolumeService.Instance.IsMuted();
+            VolumeSlider.Value = vol;
+            VolumeValText.Text = muted ? "Muted" : $"{vol}%";
+            VolumeMuteIcon.Kind = (muted || vol == 0) ? AppIcon.SpeakerMuted : AppIcon.Speaker;
+        }
+        catch { }
+        finally
+        {
+            _updatingFromSystem = false;
+        }
+    }
+
+    private void RefreshBrightnessNow()
+    {
+        Task.Run(() =>
+        {
+            var b = BrightnessService.GetBrightness();
+            Dispatcher.BeginInvoke(() =>
+            {
+                _updatingFromSystem = true;
+                try
+                {
+                    BrightnessSlider.Value = b;
+                    BrightnessValText.Text = $"{b}%";
+                }
+                finally
+                {
+                    _updatingFromSystem = false;
+                }
+            });
+        });
     }
 
     private void OnVolumeServiceChanged(float level, bool muted)
