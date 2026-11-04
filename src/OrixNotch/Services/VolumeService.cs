@@ -103,6 +103,46 @@ public sealed class VolumeService
         }
     }
 
+    public float GetLevel()
+    {
+        if (_endpoint is null) Start();
+        if (_endpoint is not null && _endpoint.GetMasterVolumeLevelScalar(out var level) == 0)
+        {
+            return Math.Clamp(level, 0f, 1f);
+        }
+        return 0.5f;
+    }
+
+    public bool IsMuted()
+    {
+        if (_endpoint is null) Start();
+        if (_endpoint is not null && _endpoint.GetMute(out var muted) == 0)
+        {
+            return muted;
+        }
+        return false;
+    }
+
+    public void SetLevel(float level)
+    {
+        if (_endpoint is null) Start();
+        if (_endpoint is not null)
+        {
+            var ctx = Guid.NewGuid();
+            _endpoint.SetMasterVolumeLevelScalar(Math.Clamp(level, 0f, 1f), ref ctx);
+        }
+    }
+
+    public void ToggleMute()
+    {
+        if (_endpoint is null) Start();
+        if (_endpoint is not null && _endpoint.GetMute(out var muted) == 0)
+        {
+            var ctx = Guid.NewGuid();
+            _endpoint.SetMute(!muted, ref ctx);
+        }
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0 && App.Settings.VolumeHud && _endpoint is not null)
