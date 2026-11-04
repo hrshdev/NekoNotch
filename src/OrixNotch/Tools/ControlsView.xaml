@@ -46,6 +46,35 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Inline pill buttons for Connect / Disconnect / Forget -->
+        <Style x:Key="InlinePillButton" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="InlinePillAccentButton" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="2,0,2,0">
@@ -74,7 +103,7 @@
                             <TextBlock Text="Wi-Fi" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                             <TextBlock x:Name="WifiStatusText" Text="Connected" FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenWifiSubPage" ToolTip="Wi-Fi settings &amp; networks">
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenWifiSubPage" ToolTip="Wi-Fi networks &amp; settings">
                             <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </Grid>
@@ -95,13 +124,13 @@
                             <TextBlock Text="Bluetooth" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                             <TextBlock x:Name="BluetoothStatusText" Text="Off" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenBluetoothSubPage" ToolTip="Bluetooth settings &amp; devices">
+                        <Border Grid.Column="2" Style="{StaticResource ChevronButton}" MouseLeftButtonUp="OnOpenBluetoothSubPage" ToolTip="Bluetooth devices &amp; settings">
                             <hero:HeroIcon Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </Grid>
                 </Border>
 
-                <!-- 3. Airplane Mode (Click body to toggle ON/OFF; click chevron for settings) -->
+                <!-- 3. Airplane Mode -->
                 <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleAirplane" ToolTip="Click to toggle Airplane Mode ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -122,7 +151,7 @@
                     </Grid>
                 </Border>
 
-                <!-- 4. Night Light (Click body to toggle warm filter ON/OFF; click chevron for settings) -->
+                <!-- 4. Night Light -->
                 <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleNightLight" ToolTip="Click to toggle Night Light warm filter ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -143,7 +172,7 @@
                     </Grid>
                 </Border>
 
-                <!-- 5. Battery Saver (Click body to toggle ON/OFF; click chevron for settings) -->
+                <!-- 5. Battery Saver -->
                 <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleBatterySaver" ToolTip="Click to toggle Battery Saver ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -164,7 +193,7 @@
                     </Grid>
                 </Border>
 
-                <!-- 6. Do Not Disturb (Click body to toggle ON/OFF; click chevron for settings) -->
+                <!-- 6. Do Not Disturb -->
                 <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnToggleDnd" ToolTip="Click to toggle Do Not Disturb ON/OFF">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -247,7 +276,7 @@
                     </Grid>
                 </Border>
 
-                <!-- Sound Volume Slider Card (Clicking header opens Sound subpage) -->
+                <!-- Sound Volume Slider Card -->
                 <Border Grid.Column="2" Style="{StaticResource Card}" Padding="12,9">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -294,7 +323,7 @@
             <!-- Sub-Page Contents Container -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <Grid>
-                    <!-- A. Wi-Fi In-Place Sub-Page -->
+                    <!-- ==================== A. Wi-Fi In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="WifiSubPage" Visibility="Collapsed">
                         <!-- Master Wi-Fi ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleWifi" ToolTip="Click to toggle Wi-Fi ON/OFF">
@@ -317,6 +346,28 @@
                             </Grid>
                         </Border>
 
+                        <!-- Active Connected Wi-Fi Card (Visible when connected) -->
+                        <Border x:Name="WifiConnectedCard" Style="{StaticResource ActionRow}" Visibility="Collapsed" Background="{DynamicResource AccentSoftBrush}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock x:Name="WifiConnectedSsidText" Text="eduroam" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Connected, Secured" FontSize="10.5" Foreground="#4ADE80" />
+                                </StackPanel>
+                                <Border Grid.Column="2" Style="{StaticResource InlinePillButton}" MouseLeftButtonUp="OnDisconnectActiveWifi" ToolTip="Disconnect from network">
+                                    <TextBlock Text="Disconnect" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Scan Available Networks button (Native flyout) -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnNativeWifiFlyout">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -325,35 +376,60 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                                    <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <hero:HeroIcon Kind="Signal" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                    <TextBlock Text="Show Available Networks" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                                    <TextBlock Text="Connect to Wi-Fi, view SSID signal &amp; security" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                    <TextBlock Text="Scan &amp; Join Nearby Networks" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Open Windows network selector to join new Wi-Fi with password" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
                                 </StackPanel>
                                 <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
-                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnWifiSettingsClick">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="34" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                                    <hero:HeroIcon Kind="Gear" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                    <TextBlock Text="Network &amp; Internet Settings" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                                    <TextBlock Text="Manage known networks, IP configuration, proxy" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                                </StackPanel>
-                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
+
+                        <!-- Saved Networks Section Header -->
+                        <Grid Margin="4,6,0,6">
+                            <TextBlock x:Name="WifiProfilesHeader" Text="SAVED WI-FI NETWORKS" Style="{StaticResource Caps}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            <TextBlock Text="Click to connect or forget" FontSize="10" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <!-- Saved Profiles List -->
+                        <ItemsControl x:Name="WifiProfilesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ActionRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <hero:HeroIcon Kind="Wifi" Width="14" Height="14" Foreground="{Binding StatusBrush}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding Ssid}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="{Binding StatusBrush}" Visibility="{Binding StatusVisibility}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Connect Button (if not connected) -->
+                                                <Border Style="{StaticResource InlinePillAccentButton}" Visibility="{Binding ConnectVisibility}" MouseLeftButtonUp="OnConnectProfileClick" ToolTip="Connect to this network">
+                                                    <TextBlock Text="Connect" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                                                </Border>
+                                                <!-- Disconnect Button (if connected) -->
+                                                <Border Style="{StaticResource InlinePillButton}" Visibility="{Binding DisconnectVisibility}" MouseLeftButtonUp="OnDisconnectActiveWifi" ToolTip="Disconnect from network">
+                                                    <TextBlock Text="Disconnect" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                                </Border>
+                                                <!-- Forget Button -->
+                                                <Border Style="{StaticResource InlinePillButton}" MouseLeftButtonUp="OnForgetProfileClick" ToolTip="Forget (delete) this network">
+                                                    <hero:HeroIcon Kind="Trash" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
 
-                    <!-- B. Bluetooth In-Place Sub-Page -->
+                    <!-- ==================== B. Bluetooth In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="BluetoothSubPage" Visibility="Collapsed">
                         <!-- Master Bluetooth ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleBluetooth" ToolTip="Click to toggle Bluetooth ON/OFF">
@@ -376,7 +452,8 @@
                             </Grid>
                         </Border>
 
-                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnBluetoothSettingsClick">
+                        <!-- Add Bluetooth Device Row -->
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnAddBluetoothDeviceClick" ToolTip="Pair and connect new Bluetooth device">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="34" />
@@ -384,17 +461,23 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                                    <hero:HeroIcon Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <hero:HeroIcon Kind="Plus" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
                                     <TextBlock Text="Add a Bluetooth Device" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
                                     <TextBlock Text="Pair audio headsets, mice, keyboards, controllers" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
                                 </StackPanel>
-                                <hero:HeroIcon Grid.Column="2" Kind="Plus" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
+
                         <!-- Paired devices list header -->
-                        <TextBlock Text="PAIRED DEVICES" Style="{StaticResource Caps}" Margin="4,6,0,6" />
+                        <Grid Margin="4,6,0,6">
+                            <TextBlock x:Name="BluetoothDevicesHeader" Text="PAIRED DEVICES" Style="{StaticResource Caps}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            <TextBlock Text="Click to connect, disconnect, or remove" FontSize="10" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <!-- Paired Devices List -->
                         <ItemsControl x:Name="BluetoothDeviceList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -405,9 +488,21 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <hero:HeroIcon Kind="DevicePhone" Width="14" Height="14" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" FontWeight="Medium" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="11" Foreground="{Binding StatusBrush}" VerticalAlignment="Center" />
+                                            <hero:HeroIcon Kind="DevicePhone" Width="14" Height="14" Foreground="{Binding StatusBrush}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="{Binding StatusBrush}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Connect / Disconnect Action Button -->
+                                                <Border Style="{StaticResource InlinePillButton}" MouseLeftButtonUp="OnToggleBluetoothDeviceClick" ToolTip="Connect or disconnect this device">
+                                                    <TextBlock Text="{Binding ActionButtonText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                                </Border>
+                                                <!-- Remove (Unpair) Button -->
+                                                <Border Style="{StaticResource InlinePillButton}" MouseLeftButtonUp="OnRemoveBluetoothDeviceClick" ToolTip="Remove (unpair) this device">
+                                                    <hero:HeroIcon Kind="Trash" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" />
+                                                </Border>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -415,7 +510,7 @@
                         </ItemsControl>
                     </StackPanel>
 
-                    <!-- C. Sound Output In-Place Sub-Page -->
+                    <!-- ==================== C. Sound Output In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="SoundSubPage" Visibility="Collapsed">
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnSoundSettingsClick">
                             <Grid>
@@ -453,9 +548,8 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- D. Display & Brightness In-Place Sub-Page -->
+                    <!-- ==================== D. Display & Brightness In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="DisplaySubPage" Visibility="Collapsed">
-                        <!-- Master Night Light ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleNightLight" ToolTip="Click to toggle Night Light warm screen filter">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -512,9 +606,8 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- E. Battery In-Place Sub-Page -->
+                    <!-- ==================== E. Battery In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="BatterySubPage" Visibility="Collapsed">
-                        <!-- Master Battery Saver ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleBatterySaver" ToolTip="Click to toggle Battery Saver energy efficiency mode">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -554,9 +647,8 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- F. Airplane Mode In-Place Sub-Page -->
+                    <!-- ==================== F. Airplane Mode In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="AirplaneSubPage" Visibility="Collapsed">
-                        <!-- Master Airplane Mode ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleAirplane" ToolTip="Click to toggle Airplane Mode">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -596,9 +688,8 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- G. Do Not Disturb (Focus) In-Place Sub-Page -->
+                    <!-- ==================== G. Do Not Disturb (Focus) In-Place Sub-Page ==================== -->
                     <StackPanel x:Name="DndSubPage" Visibility="Collapsed">
-                        <!-- Master Do Not Disturb ON / OFF Toggle Row -->
                         <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnToggleDnd" ToolTip="Click to toggle Do Not Disturb">
                             <Grid>
                                 <Grid.ColumnDefinitions>

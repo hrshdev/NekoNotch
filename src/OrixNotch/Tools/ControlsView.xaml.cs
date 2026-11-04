@@ -13,7 +13,8 @@ namespace OrixNotch.Tools;
 /// <summary>
 /// Mobile-style Control Center tab: quick toggles for Wi-Fi, Bluetooth, Airplane mode,
 /// Night Light, Battery Saver, DND, plus real-time hardware Brightness and Sound sliders.
-/// Supports both direct ON/OFF toggling and in-place sub-page navigation.
+/// Supports direct ON/OFF toggling and in-place sub-page navigation with full Wi-Fi
+/// (scan, connect, disconnect, forget) and Bluetooth (add, connect, remove) functionality.
 /// </summary>
 public partial class ControlsView : UserControl
 {
@@ -31,11 +32,24 @@ public partial class ControlsView : UserControl
     {
         RefreshState();
         VolumeService.Instance.Changed += OnVolumeServiceChanged;
+        BluetoothWatcher.Instance.Changed += OnBluetoothWatcherChanged;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         VolumeService.Instance.Changed -= OnVolumeServiceChanged;
+        BluetoothWatcher.Instance.Changed -= OnBluetoothWatcherChanged;
+    }
+
+    private void OnBluetoothWatcherChanged(string name, bool connected)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (SubPageView.Visibility == Visibility.Visible && BluetoothSubPage.Visibility == Visibility.Visible)
+            {
+                RefreshBluetoothDevices();
+            }
+        });
     }
 
     private async void RefreshState()
@@ -57,11 +71,14 @@ public partial class ControlsView : UserControl
 
             // 3. Wi-Fi state
             var wifiOn = await SystemControlsService.IsWifiOnAsync();
+            var connectedSsid = NativeWifiService.GetConnectedSsid();
             var netAvailable = NetworkInterface.GetIsNetworkAvailable();
+            var wifiSubtitle = !string.IsNullOrEmpty(connectedSsid) ? connectedSsid : (netAvailable ? "Connected" : "On");
+
             UpdateToggleVisuals(
                 wifiOn,
                 WifiTileBadge, WifiTileIcon, WifiStatusText,
-                netAvailable ? "Connected" : "On", "Off",
+                wifiSubtitle, "Off",
                 WifiSubBadge, WifiSubIcon, WifiSubStatusText,
                 WifiPill, WifiKnob);
 
@@ -223,6 +240,11 @@ public partial class ControlsView : UserControl
             "On", "Off",
             WifiSubBadge, WifiSubIcon, WifiSubStatusText,
             WifiPill, WifiKnob);
+
+        if (SubPageView.Visibility == Visibility.Visible && WifiSubPage.Visibility == Visibility.Visible)
+        {
+            RefreshWifiProfiles();
+        }
     }
 
     private async void OnToggleBluetooth(object sender, MouseButtonEventArgs e)
@@ -236,6 +258,7 @@ public partial class ControlsView : UserControl
             "On", "Off",
             BluetoothSubBadge, BluetoothSubIcon, BluetoothSubStatusText,
             BluetoothPill, BluetoothKnob);
+
         if (SubPageView.Visibility == Visibility.Visible && BluetoothSubPage.Visibility == Visibility.Visible)
         {
             RefreshBluetoothDevices();
@@ -335,6 +358,75 @@ public partial class ControlsView : UserControl
     {
         e.Handled = true;
         SwitchToSubPage("Wi-Fi Networks", WifiSubPage, "ms-settings:network-wifi");
+        RefreshWifiProfiles();
+    }
+
+    private void RefreshWifiProfiles()
+    {
+        try
+        {
+            var connectedSsid = NativeWifiService.GetConnectedSsid();
+            if (!string.IsNullOrEmpty(connectedSsid))
+            {
+                WifiConnectedCard.Visibility = Visibility.Visible;
+                WifiConnectedSsidText.Text = connectedSsid;
+            }
+            else
+            {
+                WifiConnectedCard.Visibility = Visibility.Collapsed;
+            }
+
+            var profiles = NativeWifiService.GetSavedProfiles();
+            WifiProfilesHeader.Text = $"SAVED NETWORKS ({profiles.Count})";
+
+            var items = new List<WifiProfileItem>();
+            foreach (var prof in profiles)
+            {
+                var isConn = !string.IsNullOrEmpty(connectedSsid) && string.Equals(prof, connectedSsid, StringComparison.OrdinalIgnoreCase);
+                items.Add(new WifiProfileItem
+                {
+                    Ssid = prof,
+                    IsConnected = isConn
+                });
+            }
+
+            // Put connected network at top if present
+            items.Sort((a, b) => b.IsConnected.CompareTo(a.IsConnected));
+            WifiProfilesList.ItemsSource = items;
+        }
+        catch { }
+    }
+
+    private async void OnConnectProfileClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is WifiProfileItem item)
+        {
+            NativeWifiService.Connect(item.Ssid);
+            await Task.Delay(1200);
+            RefreshWifiProfiles();
+            RefreshState();
+        }
+    }
+
+    private async void OnDisconnectActiveWifi(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        NativeWifiService.Disconnect();
+        await Task.Delay(1000);
+        RefreshWifiProfiles();
+        RefreshState();
+    }
+
+    private void OnForgetProfileClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is WifiProfileItem item)
+        {
+            NativeWifiService.ForgetProfile(item.Ssid);
+            RefreshWifiProfiles();
+            RefreshState();
+        }
     }
 
     private void OnOpenBluetoothSubPage(object sender, MouseButtonEventArgs e)
@@ -349,24 +441,28 @@ public partial class ControlsView : UserControl
         try
         {
             var devices = BluetoothWatcher.Instance.Devices;
-            var list = new List<BluetoothDeviceViewModel>();
+            BluetoothDevicesHeader.Text = $"PAIRED DEVICES ({devices.Count})";
 
+            var list = new List<BluetoothDeviceItem>();
             if (devices == null || devices.Count == 0)
             {
-                list.Add(new BluetoothDeviceViewModel
+                list.Add(new BluetoothDeviceItem
                 {
                     Name = "No paired devices found",
-                    StatusText = "Pair new",
-                    StatusBrush = new SolidColorBrush(Color.FromArgb(160, 160, 160, 160))
+                    StatusText = "Add device",
+                    StatusBrush = new SolidColorBrush(Color.FromArgb(160, 160, 160, 160)),
+                    IsConnected = false
                 });
             }
             else
             {
                 foreach (var d in devices)
                 {
-                    list.Add(new BluetoothDeviceViewModel
+                    list.Add(new BluetoothDeviceItem
                     {
+                        Id = d.Id,
                         Name = string.IsNullOrWhiteSpace(d.Name) ? "Bluetooth Device" : d.Name,
+                        IsConnected = d.Connected,
                         StatusText = d.Connected ? "Connected" : "Paired",
                         StatusBrush = d.Connected
                             ? new SolidColorBrush(Color.FromRgb(74, 222, 128)) // soft green
@@ -377,6 +473,49 @@ public partial class ControlsView : UserControl
             BluetoothDeviceList.ItemsSource = list;
         }
         catch { }
+    }
+
+    private void OnAddBluetoothDeviceClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            Process.Start(new ProcessStartInfo("ms-settings:bluetooth-adddevice") { UseShellExecute = true });
+        }
+        catch
+        {
+            try { Process.Start(new ProcessStartInfo("ms-settings:bluetooth") { UseShellExecute = true }); } catch { }
+        }
+    }
+
+    private async void OnToggleBluetoothDeviceClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is BluetoothDeviceItem item && !string.IsNullOrEmpty(item.Id))
+        {
+            if (item.IsConnected)
+            {
+                // To disconnect, launch settings or unpair
+                try { Process.Start(new ProcessStartInfo("ms-settings:bluetooth") { UseShellExecute = true }); } catch { }
+            }
+            else
+            {
+                await BluetoothWatcher.ConnectDeviceAsync(item.Id);
+                await Task.Delay(1000);
+                RefreshBluetoothDevices();
+            }
+        }
+    }
+
+    private async void OnRemoveBluetoothDeviceClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is BluetoothDeviceItem item && !string.IsNullOrEmpty(item.Id))
+        {
+            await BluetoothWatcher.UnpairDeviceAsync(item.Id);
+            await Task.Delay(500);
+            RefreshBluetoothDevices();
+        }
     }
 
     private void OnOpenSoundSubPage(object sender, MouseButtonEventArgs e)
@@ -486,9 +625,23 @@ public partial class ControlsView : UserControl
     }
 }
 
-public class BluetoothDeviceViewModel
+public class WifiProfileItem
 {
+    public string Ssid { get; set; } = "";
+    public bool IsConnected { get; set; }
+    public string StatusText => IsConnected ? "Connected" : "";
+    public Brush StatusBrush => IsConnected ? new SolidColorBrush(Color.FromRgb(74, 222, 128)) : new SolidColorBrush(Color.FromArgb(160, 160, 160, 160));
+    public Visibility StatusVisibility => IsConnected ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ConnectVisibility => IsConnected ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility DisconnectVisibility => IsConnected ? Visibility.Visible : Visibility.Collapsed;
+}
+
+public class BluetoothDeviceItem
+{
+    public string Id { get; set; } = "";
     public string Name { get; set; } = "";
+    public bool IsConnected { get; set; }
     public string StatusText { get; set; } = "";
     public Brush StatusBrush { get; set; } = Brushes.Gray;
+    public string ActionButtonText => IsConnected ? "Disconnect" : "Connect";
 }

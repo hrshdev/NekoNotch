@@ -6,7 +6,7 @@ namespace OrixNotch.Services;
 
 /// <summary>
 /// Paired Bluetooth devices (classic and LE) connecting or disconnecting: headphones, mice, controllers.
-/// Each device's first report is its starting state; only later changes are raised (on the UI thread).
+/// Exposes live devices with device IDs and programmatic unpair/connect capability.
 /// </summary>
 public sealed class BluetoothWatcher
 {
@@ -19,7 +19,8 @@ public sealed class BluetoothWatcher
     private readonly Dictionary<string, (string Name, bool Connected)> _devices = new();
     private readonly List<DeviceWatcher> _watchers = new();
 
-    public IReadOnlyList<(string Name, bool Connected)> Devices => _devices.Values.ToList();
+    public IReadOnlyList<(string Id, string Name, bool Connected)> Devices =>
+        _devices.Select(kvp => (kvp.Key, kvp.Value.Name, kvp.Value.Connected)).ToList();
 
     public void Start()
     {
@@ -52,6 +53,55 @@ public sealed class BluetoothWatcher
         {
             App.Log(ex); // no Bluetooth radio or service
         }
+    }
+
+    public static async Task<bool> UnpairDeviceAsync(string id)
+    {
+        try
+        {
+            var device = await DeviceInformation.CreateFromIdAsync(id);
+            if (device != null && device.Pairing != null)
+            {
+                var res = await device.Pairing.UnpairAsync();
+                return res.Status == DeviceUnpairingResultStatus.Success;
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+        return false;
+    }
+
+    public static async Task<bool> ConnectDeviceAsync(string id)
+    {
+        try
+        {
+            // For Bluetooth LE devices:
+            try
+            {
+                using var ble = await BluetoothLEDevice.FromIdAsync(id);
+                if (ble != null)
+                {
+                    var gatt = await ble.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+                    return gatt.Status == Windows.Devices.Bluetooth.GenericAttributeProfile.GattCommunicationStatus.Success;
+                }
+            }
+            catch { }
+
+            // For Classic Bluetooth devices:
+            using var bt = await BluetoothDevice.FromIdAsync(id);
+            if (bt != null)
+            {
+                var rfcomm = await bt.GetRfcommServicesAsync(BluetoothCacheMode.Uncached);
+                return rfcomm.Services.Count > 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+        return false;
     }
 
     private void OnUpdated(string id, bool connected)
