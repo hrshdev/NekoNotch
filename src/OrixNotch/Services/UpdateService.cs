@@ -21,21 +21,18 @@ public enum UpdateStatus
     UpToDate,
     Available,
     Downloading,
+    Installing,
     Failed,
 }
 
 /// <summary>
-/// Tells the user when a newer OrixNotch is out. The Microsoft Store build asks the Store (and installs
-/// through Windows' own update dialog, downloading quietly first where Windows allows). The MSI install
-/// downloads the new setup in the background and runs it (it closes, upgrades and restarts the app);
-/// the portable exe opens the release page.
-/// Checks a couple of minutes after launch and then daily, while <see cref="AppSettings.CheckForUpdates"/> is on.
+/// Checks for newer NekoNotch versions and handles notifications and automated seamless updates.
 /// </summary>
 public sealed partial class UpdateService : ObservableObject
 {
     private const string ReleasesApi = "https://api.github.com/repos/hrshdev/orixNotch";
-    private static readonly TimeSpan FirstCheck = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan Every = TimeSpan.FromHours(4);
+    private static readonly TimeSpan FirstCheck = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan Every = TimeSpan.FromHours(2);
 
     public static UpdateService Instance { get; } = new();
 
@@ -43,19 +40,47 @@ public sealed partial class UpdateService : ObservableObject
     private StoreContext? _store;
     private IReadOnlyList<StorePackageUpdate>? _storeUpdates;
     private string? _releaseUrl;
+    private GitHubAsset? _exeAsset;
     private GitHubAsset? _msiAsset;
-    private Task<string?>? _msiDownload; // path of the downloaded setup, or null if it failed
-    private string? _msiFor;              // version that download is for
 
     [ObservableProperty] private UpdateStatus _status;
-    /// <summary>The newer version, e.g. "0.7.0" (the Store doesn't say, so its builds show "new version").</summary>
     [ObservableProperty] private string _latestVersion = "";
     [ObservableProperty] private DateTime? _checkedAt;
 
-    /// <summary>An automatic check found a version the user hasn't been told about yet.</summary>
+    /// <summary>Fired when an update is available (for notch peek notification).</summary>
     public event Action<string>? Available;
 
-    public static string CurrentVersion => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    /// <summary>Fired when an update download starts or progresses.</summary>
+    public event Action<string>? Downloading;
+
+    /// <summary>Fired when an update is ready and restarting.</summary>
+    public event Action<string>? ReadyToRestart;
+
+    public static string CurrentVersion
+    {
+        get
+        {
+            try
+            {
+                var path = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    var fvi = FileVersionInfo.GetVersionInfo(path);
+                    if (!string.IsNullOrEmpty(fvi.ProductVersion))
+                    {
+                        var pv = fvi.ProductVersion.Split('+')[0].Trim();
+                        if (Version.TryParse(pv, out var v)) return v.ToString(3);
+                    }
+                    if (!string.IsNullOrEmpty(fvi.FileVersion))
+                    {
+                        if (Version.TryParse(fvi.FileVersion, out var v)) return v.ToString(3);
+                    }
+                }
+            }
+            catch { }
+            return typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.9.0";
+        }
+    }
 
     private UpdateService()
     {
@@ -66,12 +91,10 @@ public sealed partial class UpdateService : ObservableObject
         };
     }
 
-    /// <summary>Starts (or stops) the background checks to match the setting.</summary>
     public void Start()
     {
         _timer.Stop();
         if (!App.Settings.CheckForUpdates) return;
-        // ORIXNOTCH_UPDATE_DELAY (seconds) lets tests see the first check without waiting.
         _timer.Interval = int.TryParse(Environment.GetEnvironmentVariable("ORIXNOTCH_UPDATE_DELAY"), out var s) && s > 0
             ? TimeSpan.FromSeconds(s)
             : FirstCheck;
@@ -80,26 +103,37 @@ public sealed partial class UpdateService : ObservableObject
 
     public async Task CheckAsync(bool userAsked)
     {
-        if (Status == UpdateStatus.Checking) return;
+        if (Status is UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Installing) return;
         Status = UpdateStatus.Checking;
         try
         {
             var found = StartupService.IsPackaged ? await CheckStoreAsync() : await CheckGitHubAsync();
             CheckedAt = DateTime.Now;
             Status = found ? UpdateStatus.Available : UpdateStatus.UpToDate;
-            if (found && !userAsked && StartMsiDownload() is { } download) await download; // announce once it can install
-            else if (found) _ = StartMsiDownload();
-            if (found && !userAsked) NotifyOnce();
+
+            if (found)
+            {
+                if (App.Settings.AutoInstallUpdates)
+                {
+                    // Automatic update: notify user via notch and download/apply
+                    Available?.Invoke(LatestVersion);
+                    _ = InstallAsync(silent: true);
+                }
+                else
+                {
+                    // Notify user so they can click to install
+                    if (!userAsked) NotifyOnce();
+                    else Available?.Invoke(LatestVersion);
+                }
+            }
         }
         catch (Exception ex)
         {
-            // Offline, rate-limited, or a sideloaded package the Store doesn't know.
             App.Log(ex);
             Status = UpdateStatus.Failed;
         }
     }
 
-    /// <summary>Each version is announced once; after that it waits on the About page.</summary>
     private void NotifyOnce()
     {
         var key = StartupService.IsPackaged ? "store:" + string.Join(",", _storeUpdates!.Select(u => u.Package.Id.Version.ToVersionString())) : LatestVersion;
@@ -112,10 +146,17 @@ public sealed partial class UpdateService : ObservableObject
     private async Task<bool> CheckGitHubAsync()
     {
         var api = Environment.GetEnvironmentVariable("ORIXNOTCH_UPDATE_BASE") is { Length: > 0 } b ? b.TrimEnd('/') : ReleasesApi;
-        var release = await Http.Client.GetFromJsonAsync<GitHubRelease>(api + "/releases/latest");
+        using var req = new HttpRequestMessage(HttpMethod.Get, api + "/releases/latest");
+        req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) NekoNotch/" + CurrentVersion);
+        using var resp = await Http.Client.SendAsync(req);
+        if (!resp.IsSuccessStatusCode) return false;
+
+        var release = await resp.Content.ReadFromJsonAsync<GitHubRelease>();
         if (release?.TagName is not { Length: > 0 } tag) return false;
         if (!Version.TryParse(tag.TrimStart('v', 'V'), out var latest) || !Version.TryParse(CurrentVersion, out var current)) return false;
+
         _releaseUrl = release.HtmlUrl;
+        _exeAsset = release.Assets?.FirstOrDefault(a => a.Name?.Equals("NekoNotch.exe", StringComparison.OrdinalIgnoreCase) == true);
         _msiAsset = release.Assets?.FirstOrDefault(a => a.Name?.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) == true);
         LatestVersion = latest.ToString(3);
         return latest > current;
@@ -129,7 +170,6 @@ public sealed partial class UpdateService : ObservableObject
         LatestVersion = _storeUpdates[0].Package.Id.Version.ToVersionString();
         try
         {
-            // Fetch it now (no dialog; respects metered and Store settings) so installing later is quick.
             if (_store.CanSilentlyDownloadStorePackageUpdates)
                 await _store.TrySilentDownloadStorePackageUpdatesAsync(_storeUpdates);
         }
@@ -140,7 +180,6 @@ public sealed partial class UpdateService : ObservableObject
         return true;
     }
 
-    /// <summary>A desktop app's Store dialogs need a window to sit on.</summary>
     private static StoreContext CreateStoreContext()
     {
         var context = StoreContext.GetDefault();
@@ -149,8 +188,7 @@ public sealed partial class UpdateService : ObservableObject
         return context;
     }
 
-    /// <summary>Store: Windows downloads and installs (the app restarts). MSI: runs the new setup. Portable: opens the release page.</summary>
-    public async Task InstallAsync()
+    public async Task InstallAsync(bool silent = false)
     {
         if (StartupService.IsPackaged)
         {
@@ -169,123 +207,129 @@ public sealed partial class UpdateService : ObservableObject
             Open($"ms-windows-store://pdp/?PFN={Package.Current.Id.FamilyName}");
             return;
         }
-        if (StartMsiDownload() is { } download)
+
+        // Direct self-update for standalone NekoNotch.exe
+        var currentExe = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
+        if (_exeAsset is not null && File.Exists(currentExe))
         {
             Status = UpdateStatus.Downloading;
-            var msi = await download;
-            Status = UpdateStatus.Available;
+            Downloading?.Invoke(LatestVersion);
+
+            var dir = Path.GetDirectoryName(currentExe)!;
+            var newExePath = Path.Combine(dir, "NekoNotch.exe.new");
+            var downloaded = await DownloadExeAsync(_exeAsset, newExePath);
+            if (downloaded)
+            {
+                Status = UpdateStatus.Installing;
+                ReadyToRestart?.Invoke(LatestVersion);
+                ApplyExeUpdateAndRestart(currentExe, newExePath);
+                return;
+            }
+            Status = UpdateStatus.Failed;
+        }
+
+        // MSI update if installed via MSI
+        if (IsMsiInstall && _msiAsset is not null)
+        {
+            Status = UpdateStatus.Downloading;
+            Downloading?.Invoke(LatestVersion);
+            var msi = await DownloadMsiAsync(_msiAsset, LatestVersion);
             if (msi is not null)
             {
-                try
-                {
-                    // Upgrades in place via msiexec and automatically restarts NekoNotch
-                    var exePath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = "cmd.exe",
-                        Arguments = $"/c start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
-                        CreateNoWindow = true,
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden
-                    };
-                    Process.Start(psi);
-                    Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    App.Log(ex);
-                }
+                Status = UpdateStatus.Installing;
+                ApplyMsiUpdateAndRestart(msi, currentExe);
+                return;
             }
+            Status = UpdateStatus.Failed;
         }
-        Open(_releaseUrl ?? "https://github.com/hrshdev/orixNotch/releases/latest");
-    }
 
-    /// <summary>Starts (or reuses) the background download of the latest setup; MSI installs only.</summary>
-    private Task<string?>? StartMsiDownload()
-    {
-        if (StartupService.IsPackaged || _msiAsset is null || !IsMsiInstall) return null;
-        var failed = _msiDownload is { IsCompleted: true, Result: null };
-        if (_msiDownload is null || _msiFor != LatestVersion || failed)
+        if (!silent)
         {
-            _msiFor = LatestVersion;
-            _msiDownload = DownloadAsync(_msiAsset, LatestVersion);
+            Open(_releaseUrl ?? "https://github.com/hrshdev/orixNotch/releases/latest");
         }
-        return _msiDownload;
     }
 
-    /// <summary>Running from the folder the MSI installed to (it records it in HKCU\Software\OrixNotch).</summary>
     private static bool IsMsiInstall { get; } = DetectMsiInstall();
 
     private static bool DetectMsiInstall()
     {
         try
         {
-            var dir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\NekoNotch", "InstallDir", null) as string ?? Registry.GetValue(@"HKEY_CURRENT_USER\Software\OrixNotch", "InstallDir", null) as string;
+            var dir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\NekoNotch", "InstallDir", null) as string 
+                   ?? Registry.GetValue(@"HKEY_CURRENT_USER\Software\OrixNotch", "InstallDir", null) as string;
             if (dir == null) return false;
             static string Norm(string p) => Path.GetFullPath(p).TrimEnd('\\');
             return string.Equals(Norm(dir), Norm(AppContext.BaseDirectory), StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception)
+        catch
         {
             return false;
         }
     }
 
-    // Own client: the shared one gives up after 12 s, too short for a ~70 MB setup.
     private static readonly HttpClient Download = CreateDownloadClient();
 
     private static HttpClient CreateDownloadClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("OrixNotch/" + CurrentVersion);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) NekoNotch/" + CurrentVersion);
         return client;
     }
 
-    /// <summary>Downloads the setup to %TEMP%, checked against the SHA-256 GitHub lists for it. Null on any failure.</summary>
-    private static async Task<string?> DownloadAsync(GitHubAsset asset, string version)
+    private static async Task<bool> DownloadExeAsync(GitHubAsset asset, string destinationPath)
     {
         try
         {
-            // Only GitHub's download host (or the test server standing in for its API).
-            var testHost = Uri.TryCreate(Environment.GetEnvironmentVariable("ORIXNOTCH_UPDATE_BASE"), UriKind.Absolute, out var b) ? b.Host : null;
-            if (!Uri.TryCreate(asset.Url, UriKind.Absolute, out var uri)
-                || !(uri.Scheme == Uri.UriSchemeHttps && uri.Host == "github.com" || uri.Host == testHost))
-                return null;
+            var url = asset.Url;
+            if (string.IsNullOrWhiteSpace(url)) return false;
 
-            var dir = Path.Combine(Path.GetTempPath(), "OrixNotch-update");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, $"OrixNotch-{version}-setup.msi");
-            // Setups for older versions (already installed, or skipped) aren't needed any more.
-            foreach (var old in Directory.EnumerateFiles(dir).Where(f => !f.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+            var part = destinationPath + ".part";
+            if (File.Exists(part)) File.Delete(part);
+
+            using var response = await Download.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            await using (var file = File.Create(part))
             {
-                try
-                {
-                    File.Delete(old);
-                }
-                catch (IOException)
-                {
-                    // still open (msiexec mid-install): next time
-                }
-            }
-            var part = path + ".part";
-            using (var response = await Download.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead))
-            {
-                response.EnsureSuccessStatusCode();
-                await using var file = File.Create(part);
                 await response.Content.CopyToAsync(file);
             }
-            if (asset.Digest is { } digest && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+
+            var info = new FileInfo(part);
+            if (info.Length < 10 * 1024 * 1024)
             {
-                string hash;
-                await using (var read = File.OpenRead(part))
-                    hash = Convert.ToHexString(await SHA256.HashDataAsync(read));
-                if (!hash.Equals(digest[7..], StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Delete(part);
-                    return null;
-                }
+                File.Delete(part);
+                return false;
             }
+
+            File.Move(part, destinationPath, overwrite: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+            return false;
+        }
+    }
+
+    private static async Task<string?> DownloadMsiAsync(GitHubAsset asset, string version)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(asset.Url)) return null;
+
+            var dir = Path.Combine(Path.GetTempPath(), "NekoNotch-update");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, $"NekoNotch-{version}-setup.msi");
+            var part = path + ".part";
+
+            using var response = await Download.GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            await using (var file = File.Create(part))
+            {
+                await response.Content.CopyToAsync(file);
+            }
+
             File.Move(part, path, overwrite: true);
             return path;
         }
@@ -293,6 +337,48 @@ public sealed partial class UpdateService : ObservableObject
         {
             App.Log(ex);
             return null;
+        }
+    }
+
+    private static void ApplyExeUpdateAndRestart(string currentExe, string newExePath)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c timeout /t 1 /nobreak >nul & move /y \"{newExePath}\" \"{currentExe}\" & start \"\" \"{currentExe}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            Process.Start(psi);
+            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+    }
+
+    private static void ApplyMsiUpdateAndRestart(string msi, string exePath)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            Process.Start(psi);
+            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
         }
     }
 
@@ -319,11 +405,6 @@ public sealed partial class UpdateService : ObservableObject
     {
         [JsonPropertyName("name")] public string? Name { get; set; }
         [JsonPropertyName("browser_download_url")] public string? Url { get; set; }
-        [JsonPropertyName("digest")] public string? Digest { get; set; } // "sha256:…" on newer releases
+        [JsonPropertyName("size")] public long? Size { get; set; }
     }
-}
-
-internal static class PackageVersionExtensions
-{
-    public static string ToVersionString(this PackageVersion v) => $"{v.Major}.{v.Minor}.{v.Build}";
 }

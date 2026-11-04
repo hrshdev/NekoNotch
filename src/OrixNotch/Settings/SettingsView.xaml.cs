@@ -1019,6 +1019,9 @@ public partial class SettingsView : UserControl, IToolView
         details.Children.Add(InfoRow("Updates", StartupService.IsPackaged ? "From the Microsoft Store" : "From GitHub releases",
             Toggle(S.CheckForUpdates, v => { S.CheckForUpdates = v; Save(false); UpdateService.Instance.Start(); })));
         details.Children.Add(Divider());
+        details.Children.Add(InfoRow("Auto-update", "Automatically download and apply updates",
+            Toggle(S.AutoInstallUpdates, v => { S.AutoInstallUpdates = v; Save(false); })));
+        details.Children.Add(Divider());
         details.Children.Add(InfoRow("Data folder", "Settings, notes, history and keys", OpenButton(Storage.Root)));
         var log = Storage.PathOf("error.log");
         if (System.IO.File.Exists(log))
@@ -1124,6 +1127,7 @@ public partial class SettingsView : UserControl, IToolView
             {
                 UpdateStatus.Checking => ("Checking…", AppIcon.Refresh, false),
                 UpdateStatus.Downloading => ("Downloading…", AppIcon.ArrowDown, false),
+                UpdateStatus.Installing => ("Installing…", AppIcon.ArrowDown, false),
                 UpdateStatus.UpToDate => ("Up to date", AppIcon.Check, false),
                 UpdateStatus.Available => (updates.LatestVersion.Length > 0 ? $"Install {updates.LatestVersion}" : "Install update", AppIcon.ArrowDown, true),
                 UpdateStatus.Failed => ("Couldn't check", AppIcon.Refresh, false),
@@ -1131,7 +1135,7 @@ public partial class SettingsView : UserControl, IToolView
             };
             label.Text = text;
             icon.Kind = kind;
-            button.IsEnabled = updates.Status is not (UpdateStatus.Checking or UpdateStatus.Downloading);
+            button.IsEnabled = updates.Status is not (UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Installing);
             if (accent) button.SetResourceReference(StyleProperty, "AccentButton");
             else button.ClearValue(StyleProperty);
             button.ToolTip = updates.CheckedAt is { } at ? $"Version {UpdateService.CurrentVersion} · checked {at:t}" : $"Version {UpdateService.CurrentVersion}";

@@ -87,6 +87,7 @@ public sealed class AppSettings
 
     /// <summary>Look for a newer version (Microsoft Store or GitHub releases) and say so once per version.</summary>
     public bool CheckForUpdates { get; set; } = true;
+    public bool AutoInstallUpdates { get; set; } = true;
     public string? UpdateNotified { get; set; }
 
     public string ThemeScheme { get; set; } = "midnight";

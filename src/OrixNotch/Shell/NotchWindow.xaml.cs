@@ -153,6 +153,8 @@ public partial class NotchWindow : Window
         AiLimitWatcher.Instance.Reconfigure();
         PhoneTransferService.Instance.Received += ShowPhoneReceivedPeek;
         UpdateService.Instance.Available += ShowUpdatePeek;
+        UpdateService.Instance.Downloading += ShowUpdateDownloadingPeek;
+        UpdateService.Instance.ReadyToRestart += ShowUpdateReadyPeek;
         PowerWatcher.Instance.Alert += ShowPowerPeek;
         VolumeService.Instance.Changed += ShowVolumePeek;
         BluetoothWatcher.Instance.Changed += ShowBluetoothPeek;
@@ -1516,9 +1518,26 @@ public partial class NotchWindow : Window
 
     private void ShowUpdatePeek(string version)
     {
-        var sub = version.Length > 0 ? $"NekoNotch {version} · click to install" : "A new version is ready · click to install";
-        EnqueuePeek(new PeekRequest("update", () => GlyphTile(AppIcon.ArrowDown), "Update available", sub,
-            TimeSpan.FromSeconds(8), OnClick: () => _ = UpdateService.Instance.InstallAsync()));
+        var sub = version.Length > 0 ? $"NekoNotch v{version} is ready • Click to install" : "A new version is ready • Click to install";
+        EnqueuePeek(new PeekRequest("update", () => GlyphTile(AppIcon.ArrowDown), "Update Available", sub,
+            TimeSpan.FromSeconds(10), OnClick: () =>
+            {
+                ShowUpdateDownloadingPeek(version);
+                _ = UpdateService.Instance.InstallAsync();
+            }));
+    }
+
+    private void ShowUpdateDownloadingPeek(string version)
+    {
+        var sub = version.Length > 0 ? $"Downloading v{version} in background..." : "Downloading update in background...";
+        EnqueuePeek(new PeekRequest("update", () => GlyphTile(AppIcon.Refresh), "Updating NekoNotch", sub,
+            TimeSpan.FromSeconds(10)));
+    }
+
+    private void ShowUpdateReadyPeek(string version)
+    {
+        EnqueuePeek(new PeekRequest("update", () => GlyphTile(AppIcon.Check), "Update Ready", "Restarting NekoNotch to apply...",
+            TimeSpan.FromSeconds(3)));
     }
 
     private void ShowPowerPeek(string title, string sub, bool charging) =>
