@@ -50,8 +50,9 @@
             </Grid>
         </Border>
 
-        <!-- 8-Column App Launcher Grid -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <!-- 8-Column App Launcher Grid with Drag & Drop Rearrange + Explorer File Drop -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" AllowDrop="True"
+                      DragOver="OnScrollDragOver" Drop="OnScrollDrop">
             <ItemsControl x:Name="List">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -61,7 +62,11 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border x:Name="Tile" Width="82" Height="70" Margin="2" CornerRadius="10" Background="Transparent"
-                                Cursor="Hand" ToolTip="{Binding Target}" MouseLeftButtonUp="OnRun">
+                                Cursor="Hand" ToolTip="{Binding Target}" AllowDrop="True"
+                                PreviewMouseLeftButtonDown="OnTilePreviewMouseDown"
+                                PreviewMouseMove="OnTilePreviewMouseMove"
+                                DragOver="OnTileDragOver" Drop="OnTileDrop"
+                                MouseLeftButtonUp="OnRun">
                             <Border.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Open / Bring to Front" Click="OnRun" />

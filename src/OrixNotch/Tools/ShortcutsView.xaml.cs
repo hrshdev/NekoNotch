@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -9,13 +11,16 @@ using OrixNotch.Shell;
 
 namespace OrixNotch.Tools;
 
-/// <summary>8-column App Launcher grid for quick opening, restoring existing sessions, and managing apps.</summary>
+/// <summary>8-column App Launcher grid with drag &amp; drop rearranging, session activation, and custom app management.</summary>
 public partial class ShortcutsView : UserControl, IEscapeHandler
 {
     private readonly ListCollectionView _view;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private ShortcutItem? _editing;
     private static ShortcutsService Service => ShortcutsService.Instance;
+
+    private Point _dragStartPoint;
+    private bool _isDraggingItem;
 
     public ShortcutsView()
     {
@@ -37,8 +42,106 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
 
     private void OnSearchChanged(object sender, TextChangedEventArgs e) => _view.Refresh();
 
+    private void OnTilePreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            _dragStartPoint = e.GetPosition(this);
+            _isDraggingItem = false;
+        }
+    }
+
+    private void OnTilePreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _isDraggingItem) return;
+
+        var currentPoint = e.GetPosition(this);
+        var diff = _dragStartPoint - currentPoint;
+
+        if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ShortcutItem item)
+            {
+                _isDraggingItem = true;
+                var dragData = new DataObject("ShortcutItem", item);
+                DragDrop.DoDragDrop(fe, dragData, DragDropEffects.Move);
+                _isDraggingItem = false;
+            }
+        }
+    }
+
+    private void OnTileDragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent("ShortcutItem"))
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+        else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+    }
+
+    private void OnTileDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent("ShortcutItem"))
+        {
+            var sourceItem = e.Data.GetData("ShortcutItem") as ShortcutItem;
+            var targetItem = (sender as FrameworkElement)?.DataContext as ShortcutItem;
+
+            if (sourceItem != null && targetItem != null && sourceItem != targetItem)
+            {
+                var oldIdx = Service.Items.IndexOf(sourceItem);
+                var newIdx = Service.Items.IndexOf(targetItem);
+                if (oldIdx >= 0 && newIdx >= 0)
+                {
+                    Service.Items.Move(oldIdx, newIdx);
+                    Service.Save();
+                    _view.Refresh();
+                }
+            }
+            e.Handled = true;
+        }
+        else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            OnScrollDrop(sender, e);
+        }
+    }
+
+    private void OnScrollDragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+    }
+
+    private void OnScrollDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files != null && files.Length > 0)
+            {
+                foreach (var file in files)
+                {
+                    var name = Path.GetFileNameWithoutExtension(file);
+                    Service.Add(new ShortcutItem { Name = name, Target = file });
+                }
+                _view.Refresh();
+                Flash($"Added {files.Length} app(s)");
+            }
+            e.Handled = true;
+        }
+    }
+
     private void OnRun(object sender, RoutedEventArgs e)
     {
+        if (_isDraggingItem) return;
         if ((sender as FrameworkElement)?.DataContext is not ShortcutItem item) return;
         if (ShortcutsService.ActivateOrLaunch(item, forceNewInstance: false, out var error))
         {
@@ -119,7 +222,7 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
         if (picked != true) return;
         TargetInput.Text = dialog.FileName;
         if (string.IsNullOrWhiteSpace(NameInput.Text))
-            NameInput.Text = System.IO.Path.GetFileNameWithoutExtension(dialog.FileName);
+            NameInput.Text = Path.GetFileNameWithoutExtension(dialog.FileName);
     }
 
     private void OnSave(object sender, RoutedEventArgs e)
@@ -154,7 +257,7 @@ public partial class ShortcutsView : UserControl, IEscapeHandler
             var end = text.IndexOf('"', 1);
             if (end > 0) return (text[1..end], text[(end + 1)..].Trim());
         }
-        if (System.IO.File.Exists(text) || System.IO.Directory.Exists(text) || text.Contains("://") || text.EndsWith(':'))
+        if (File.Exists(text) || Directory.Exists(text) || text.Contains("://") || text.EndsWith(':'))
             return (text, "");
         var space = text.IndexOf(' ');
         return space > 0 ? (text[..space], text[(space + 1)..].Trim()) : (text, "");
