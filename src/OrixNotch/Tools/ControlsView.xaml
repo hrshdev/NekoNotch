@@ -260,7 +260,7 @@
                                     <hero:HeroIcon x:Name="VolumeMuteIcon" Kind="Speaker" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" />
                                 </Button>
                                 <StackPanel Orientation="Horizontal" Cursor="Hand" MouseLeftButtonUp="OnOpenSoundSubPage" ToolTip="Sound output &amp; devices">
-                                    <TextBlock Text="Volume" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" verticalAlignment="Center" />
+                                    <TextBlock Text="Volume" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                                     <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </StackPanel>
