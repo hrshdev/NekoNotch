@@ -2127,20 +2127,42 @@ public partial class NotchWindow : Window
         catch { }
 
         if (!Win32.GetCursorPos(out var pt)) return;
+        if (PresentationSource.FromVisual(NotchEyes) is null) return;
 
-        // Notch pill center coordinates
-        var notchCenterX = Left + Width / 2.0;
-        var notchCenterY = Top + 16.0;
+        Point localCursor;
+        try
+        {
+            localCursor = NotchEyes.PointFromScreen(new Point(pt.X, pt.Y));
+        }
+        catch
+        {
+            return;
+        }
 
-        var dx = pt.X - notchCenterX;
-        var dy = pt.Y - notchCenterY;
+        var eyeCenterX = NotchEyes.ActualWidth > 0 ? NotchEyes.ActualWidth / 2.0 : 25.0;
+        var eyeCenterY = NotchEyes.ActualHeight > 0 ? NotchEyes.ActualHeight / 2.0 : 16.0;
 
-        // Smoothly turn/shift only the inner pupil lenses inside the white eye sockets
-        var targetX = Math.Clamp(dx / 50.0, -2.5, 2.5);
-        var targetY = Math.Clamp(dy / 50.0, -2.2, 2.2);
+        var dx = localCursor.X - eyeCenterX;
+        var dy = localCursor.Y - eyeCenterY;
 
-        _curEyeX += (targetX - _curEyeX) * 0.25;
-        _curEyeY += (targetY - _curEyeY) * 0.25;
+        var dist = Math.Sqrt(dx * dx + dy * dy);
+        double targetX, targetY;
+        if (dist > 0.001)
+        {
+            var angle = Math.Atan2(dy, dx);
+            // Gaze sensitivity: reaches full deflection smoothly when cursor is ~180 DIPs away
+            var gaze = Math.Min(1.0, Math.Pow(dist / 180.0, 0.75));
+            targetX = Math.Cos(angle) * (gaze * 2.5);
+            targetY = Math.Sin(angle) * (gaze * 2.1);
+        }
+        else
+        {
+            targetX = 0;
+            targetY = 0;
+        }
+
+        _curEyeX += (targetX - _curEyeX) * 0.28;
+        _curEyeY += (targetY - _curEyeY) * 0.28;
 
         LeftPupilShift.X = _curEyeX;
         LeftPupilShift.Y = _curEyeY;
