@@ -226,14 +226,15 @@ public sealed partial class NowPlayingService : ObservableObject
             Art = image;
             ArtTint = image is BitmapSource src ? AverageColor(src) : null;
 
-            // Background fetch: try retrieving artwork from iTunes / JioSaavn if app didn't supply one
+            // Background fetch: try retrieving artwork from online sources if app didn't supply one
             if (props.Thumbnail is null && !string.IsNullOrWhiteSpace(Title) && Title != "Nothing playing")
             {
                 var curTitle = Title;
                 var curArtist = Artist;
+                var curApp = SourceApp;
                 _ = Task.Run(async () =>
                 {
-                    var fetched = await FetchOnlineArtworkAsync(curTitle, curArtist);
+                    var fetched = await FetchOnlineArtworkAsync(curTitle, curArtist, curApp);
                     if (fetched is not null && Title == curTitle)
                     {
                         _ui.Invoke(() =>
@@ -796,13 +797,106 @@ public sealed partial class NowPlayingService : ObservableObject
         return palettes[hash % palettes.Length];
     }
 
-    private static async Task<ImageSource?> FetchOnlineArtworkAsync(string title, string artist)
+    private static bool IsVideoPlatform(string? sourceApp)
+    {
+        if (string.IsNullOrWhiteSpace(sourceApp)) return false;
+        var s = sourceApp.ToLowerInvariant();
+        return s.Contains("netflix") ||
+               s.Contains("prime") ||
+               s.Contains("disney") ||
+               s.Contains("hulu") ||
+               s.Contains("twitch") ||
+               s.Contains("crunchyroll") ||
+               s.Contains("miruro") ||
+               s.Contains("hbo") ||
+               s.Contains("vlc") ||
+               s.Contains("potplayer") ||
+               s.Contains("media player") ||
+               (s.Contains("youtube") && !s.Contains("music"));
+    }
+
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "from", "the", "and", "for", "with", "in", "on", "at", "of", "to", "a", "an", "by", "or"
+    };
+
+    private static bool TitlesMatch(string query, string candidate)
+    {
+        if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(candidate)) return false;
+        var qNorm = NormalizeTitleForMatch(query);
+        var cNorm = NormalizeTitleForMatch(candidate);
+        if (qNorm.Equals(cNorm, StringComparison.OrdinalIgnoreCase)) return true;
+        if (qNorm.StartsWith(cNorm, StringComparison.OrdinalIgnoreCase) || cNorm.StartsWith(qNorm, StringComparison.OrdinalIgnoreCase)) return true;
+
+        var qWords = qNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                          .Where(w => w.Length > 1 && !StopWords.Contains(w)).ToList();
+        var cWords = cNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                          .Where(w => w.Length > 1 && !StopWords.Contains(w)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (qWords.Count == 0 || cWords.Count == 0) return false;
+        var matchCount = qWords.Count(w => cWords.Contains(w));
+        return (double)matchCount / qWords.Count >= 0.75;
+    }
+
+    private static string NormalizeTitleForMatch(string str)
+    {
+        var s = Regex.Replace(str, @"\([^\)]*\)", "");
+        s = Regex.Replace(s, @"\[[^\]]*\]", "");
+        s = Regex.Replace(s, @"[^a-zA-Z0-9\s]", " ");
+        return Regex.Replace(s, @"\s+", " ").Trim().ToLowerInvariant();
+    }
+
+    private static async Task<ImageSource?> FetchOnlineArtworkAsync(string title, string artist, string? sourceApp = null)
     {
         if (string.IsNullOrWhiteSpace(title) || title == "Nothing playing") return null;
-        var cacheKey = $"{title}|{artist}";
+        var cacheKey = $"{sourceApp}|{title}|{artist}";
         if (ArtworkCache.TryGetValue(cacheKey, out var cached)) return cached;
 
-        // 1. Try iTunes Search API (fast, high-res 600x600 artwork)
+        // 1. If it's a TV show or movie (Netflix, Prime, Disney, etc.), search TVmaze for the show poster!
+        if (IsVideoPlatform(sourceApp))
+        {
+            try
+            {
+                var cleanTitle = LyricsService.CleanTitle(title);
+                var url = $"https://api.tvmaze.com/singlesearch/shows?q={Uri.EscapeDataString(cleanTitle)}";
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.UserAgent.ParseAdd("Mozilla/5.0");
+                using var resp = await Http.Client.SendAsync(req);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("name", out var nameProp))
+                    {
+                        var showName = nameProp.GetString() ?? "";
+                        if (TitlesMatch(cleanTitle, showName))
+                        {
+                            string? imgUrl = null;
+                            if (root.TryGetProperty("image", out var imgObj))
+                            {
+                                if (imgObj.TryGetProperty("original", out var orig)) imgUrl = orig.GetString();
+                                else if (imgObj.TryGetProperty("medium", out var med)) imgUrl = med.GetString();
+                            }
+                            if (!string.IsNullOrWhiteSpace(imgUrl))
+                            {
+                                var img = await DownloadBitmapAsync(imgUrl);
+                                if (img != null)
+                                {
+                                    ArtworkCache[cacheKey] = img;
+                                    return img;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // For video platforms, NEVER fall through to music song databases!
+            return null;
+        }
+
+        // 2. Music sources: Try iTunes Search API
         try
         {
             var cleanTitle = LyricsService.CleanTitle(title);
@@ -822,16 +916,20 @@ public sealed partial class NowPlayingService : ObservableObject
                     if (doc.RootElement.TryGetProperty("results", out var resArr) && resArr.GetArrayLength() > 0)
                     {
                         var item = resArr[0];
-                        if (item.TryGetProperty("artworkUrl100", out var artProp))
+                        var trackName = item.TryGetProperty("trackName", out var tn) ? tn.GetString() ?? "" : "";
+                        if (TitlesMatch(cleanTitle, trackName))
                         {
-                            var artUrl = artProp.GetString()?.Replace("100x100bb", "600x600bb");
-                            if (!string.IsNullOrWhiteSpace(artUrl))
+                            if (item.TryGetProperty("artworkUrl100", out var artProp))
                             {
-                                var img = await DownloadBitmapAsync(artUrl);
-                                if (img != null)
+                                var artUrl = artProp.GetString()?.Replace("100x100bb", "600x600bb");
+                                if (!string.IsNullOrWhiteSpace(artUrl))
                                 {
-                                    ArtworkCache[cacheKey] = img;
-                                    return img;
+                                    var img = await DownloadBitmapAsync(artUrl);
+                                    if (img != null)
+                                    {
+                                        ArtworkCache[cacheKey] = img;
+                                        return img;
+                                    }
                                 }
                             }
                         }
@@ -841,7 +939,7 @@ public sealed partial class NowPlayingService : ObservableObject
         }
         catch { }
 
-        // 2. Try JioSaavn image (covers Indian/Tamil/Telugu songs)
+        // 3. Try JioSaavn image (covers Indian/Tamil/Telugu songs)
         try
         {
             var cleanTitle = LyricsService.CleanTitle(title);
@@ -859,16 +957,20 @@ public sealed partial class NowPlayingService : ObservableObject
                         data.GetArrayLength() > 0)
                     {
                         var first = data[0];
-                        if (first.TryGetProperty("image", out var imgProp))
+                        var songTitle = first.TryGetProperty("title", out var st) ? System.Net.WebUtility.HtmlDecode(st.GetString() ?? "") : "";
+                        if (TitlesMatch(cleanTitle, songTitle))
                         {
-                            var imgUrl = imgProp.GetString()?.Replace("50x50.jpg", "500x500.jpg");
-                            if (!string.IsNullOrWhiteSpace(imgUrl))
+                            if (first.TryGetProperty("image", out var imgProp))
                             {
-                                var img = await DownloadBitmapAsync(imgUrl);
-                                if (img != null)
+                                var imgUrl = imgProp.GetString()?.Replace("50x50.jpg", "500x500.jpg");
+                                if (!string.IsNullOrWhiteSpace(imgUrl))
                                 {
-                                    ArtworkCache[cacheKey] = img;
-                                    return img;
+                                    var img = await DownloadBitmapAsync(imgUrl);
+                                    if (img != null)
+                                    {
+                                        ArtworkCache[cacheKey] = img;
+                                        return img;
+                                    }
                                 }
                             }
                         }
