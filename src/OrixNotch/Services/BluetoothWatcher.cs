@@ -63,7 +63,7 @@ public sealed class BluetoothWatcher
             if (device != null && device.Pairing != null)
             {
                 var res = await device.Pairing.UnpairAsync();
-                return res.Status == DeviceUnpairingResultStatus.Success;
+                return res.Status is DeviceUnpairingResultStatus.Unpaired or DeviceUnpairingResultStatus.AlreadyUnpaired;
             }
         }
         catch (Exception ex)
