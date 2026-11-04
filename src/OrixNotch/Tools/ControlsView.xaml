@@ -3,11 +3,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:hero="clr-namespace:OrixNotch.Shell">
     <UserControl.Resources>
+        <!-- Card style for main quick toggles -->
         <Style x:Key="ControlTile" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Padding" Value="9,8" />
             <Setter Property="Margin" Value="3,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Surface2Brush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Subpage action row button -->
+        <Style x:Key="ActionRow" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,0,0,6" />
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -18,196 +33,458 @@
     </UserControl.Resources>
 
     <Grid Margin="2,0,2,0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="8" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        <!-- ==================== 1. MAIN CONTROLS VIEW ==================== -->
+        <Grid x:Name="MainView" Visibility="Visible">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- Top: 8 Essential Quick Toggles (2 rows x 4 columns) -->
-        <UniformGrid Grid.Row="0" Columns="4" Rows="2">
-            <!-- 1. Wi-Fi -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnWifiClick" ToolTip="Open Wi-Fi Network Connections">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Wifi" Width="16" Height="16" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Wi-Fi" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock x:Name="WifiStatusText" Text="Networks" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 2. Bluetooth -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnBluetoothClick" ToolTip="Open Bluetooth &amp; Devices">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Bluetooth" Width="16" Height="16" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Bluetooth" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Devices" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 3. Airplane Mode -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnAirplaneClick" ToolTip="Open Airplane Mode Settings">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Rocket" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Airplane Mode" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Radios" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 4. Night Light -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnNightLightClick" ToolTip="Open Night Light / Warm Display Settings">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Moon" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Night Light" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Blue filter" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 5. Battery Saver -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnBatterySaverClick" ToolTip="Open Battery Saver Settings">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="BatteryFull" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Battery Saver" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Energy mode" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 6. Do Not Disturb -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnDndClick" ToolTip="Open Focus / Quiet Hours Settings">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Bell" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Do Not Disturb" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Focus mode" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 7. Snip Screen -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnSnipClick" ToolTip="Instant Screen Snip (Area Screenshot)">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="Photo" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Snip Screen" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Capture area" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- 8. Lock PC -->
-            <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnLockClick" ToolTip="Lock Screen Immediately">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
-                        <hero:HeroIcon Kind="User" Width="16" Height="16" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <TextBlock Text="Lock PC" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
-                        <TextBlock Text="Lock screen" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </UniformGrid>
-
-        <!-- Bottom: Dual Hardware Sliders (Brightness & Sound) -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Brightness Slider Card -->
-            <Border Style="{StaticResource Card}" Padding="14,10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <hero:HeroIcon Kind="Sun" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Brightness" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+            <!-- Top: 8 Essential Quick Toggles (2 rows x 4 columns) -->
+            <UniformGrid Grid.Row="0" Columns="4" Rows="2">
+                <!-- 1. Wi-Fi (Opens in-place Wi-Fi settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenWifiSubPage" ToolTip="Wi-Fi settings &amp; networks">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Wi-Fi" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock x:Name="WifiStatusText" Text="Connected" FontSize="10" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <TextBlock x:Name="BrightnessValText" Text="67%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
-                    <Slider x:Name="BrightnessSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="67" ValueChanged="OnBrightnessChanged" />
-                </Grid>
-            </Border>
+                </Border>
 
-            <!-- Sound Volume Slider Card -->
-            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="14,10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource IconButton}" Width="20" Height="20" Margin="0,0,6,0" Click="OnMuteToggle" ToolTip="Toggle Mute">
-                                <hero:HeroIcon x:Name="VolumeMuteIcon" Kind="Speaker" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" />
-                            </Button>
-                            <TextBlock Text="Volume" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                <!-- 2. Bluetooth (Opens in-place Bluetooth settings) -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenBluetoothSubPage" ToolTip="Bluetooth settings &amp; devices">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Bluetooth" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Devices" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
                         </StackPanel>
-                        <TextBlock x:Name="VolumeValText" Text="50%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
-                    <Slider x:Name="VolumeSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" ValueChanged="OnVolumeChanged" />
+                </Border>
+
+                <!-- 3. Airplane Mode -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenAirplaneSubPage" ToolTip="Airplane mode radios">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Rocket" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Airplane" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Mode" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 4. Night Light -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenNightLightSubPage" ToolTip="Night Light &amp; blue-light filter">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Night Light" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Warm display" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 5. Battery Saver -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenBatterySubPage" ToolTip="Battery saver &amp; power options">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="BatteryFull" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Battery" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock x:Name="BatteryStatusText" Text="Power" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 6. Do Not Disturb -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnOpenDndSubPage" ToolTip="Focus / Do Not Disturb">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Bell" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Do Not Disturb" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Quiet hours" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                        <hero:HeroIcon Grid.Column="2" Kind="ChevronRight" Width="11" Height="11" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 7. Snip Screen -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnSnipClick" ToolTip="Capture screenshot area">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="Photo" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Snip Screen" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Area capture" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 8. Lock PC -->
+                <Border Style="{StaticResource ControlTile}" MouseLeftButtonUp="OnLockClick" ToolTip="Lock screen immediately">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                            <hero:HeroIcon Kind="User" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="7,0,0,0">
+                            <TextBlock Text="Lock PC" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                            <TextBlock Text="Lock screen" FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </UniformGrid>
+
+            <!-- Bottom: Dual Hardware Sliders (Brightness & Sound) -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Brightness Slider Card -->
+                <Border Style="{StaticResource Card}" Padding="12,9">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonUp="OnOpenNightLightSubPage" ToolTip="Display settings">
+                                <hero:HeroIcon Kind="Sun" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Brightness" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock x:Name="BrightnessValText" Text="67%" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <Slider x:Name="BrightnessSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="67" ValueChanged="OnBrightnessChanged" />
+                    </Grid>
+                </Border>
+
+                <!-- Sound Volume Slider Card (Clicking header opens Sound subpage) -->
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="12,9">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource IconButton}" Width="20" Height="20" Margin="0,0,4,0" Click="OnMuteToggle" ToolTip="Toggle Mute">
+                                    <hero:HeroIcon x:Name="VolumeMuteIcon" Kind="Speaker" Width="14" Height="14" Foreground="{DynamicResource AccentBrush}" />
+                                </Button>
+                                <StackPanel Orientation="Horizontal" Cursor="Hand" MouseLeftButtonUp="OnOpenSoundSubPage" ToolTip="Sound output &amp; devices">
+                                    <TextBlock Text="Volume" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                                    <hero:HeroIcon Kind="ChevronRight" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock x:Name="VolumeValText" Text="50%" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <Slider x:Name="VolumeSlider" Grid.Row="1" Minimum="0" Maximum="100" Value="50" ValueChanged="OnVolumeChanged" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+
+        <!-- ==================== 2. IN-PLACE SUB-PAGE VIEW ==================== -->
+        <Grid x:Name="SubPageView" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="34" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Top Header: Back Button + Title + Windows Settings shortcut -->
+            <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Button Style="{StaticResource IconButton}" Width="30" Height="30" HorizontalAlignment="Left" Click="OnBackToMain" ToolTip="Back to Controls">
+                    <hero:HeroIcon Kind="ChevronLeft" Width="16" Height="16" />
+                </Button>
+                <TextBlock x:Name="SubPageTitle" Text="Settings" FontSize="13.5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
+                <Button Style="{StaticResource IconButton}" Width="30" Height="30" HorizontalAlignment="Right" Click="OnOpenFullSettings" ToolTip="Open Windows Settings">
+                    <hero:HeroIcon Kind="Gear" Width="14" Height="14" Foreground="{DynamicResource SubTextBrush}" />
+                </Button>
+            </Grid>
+
+            <!-- Sub-Page Contents Container -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <!-- A. Wi-Fi In-Place Sub-Page -->
+                    <StackPanel x:Name="WifiSubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnNativeWifiFlyout">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Wifi" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Show Available Networks" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Connect to Wi-Fi, view SSID signal &amp; security" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnWifiSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Gear" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Network &amp; Internet Settings" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Manage known networks, IP configuration, proxy" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- B. Bluetooth In-Place Sub-Page -->
+                    <StackPanel x:Name="BluetoothSubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnBluetoothSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Bluetooth" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Add a Bluetooth Device" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Pair audio headsets, mice, keyboards, controllers" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="Plus" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <!-- Paired devices list header -->
+                        <TextBlock Text="PAIRED DEVICES" Style="{StaticResource Caps}" Margin="4,6,0,6" />
+                        <ItemsControl x:Name="BluetoothDeviceList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ActionRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <hero:HeroIcon Kind="DevicePhone" Width="14" Height="14" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" FontWeight="Medium" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="11" Foreground="{Binding StatusBrush}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- C. Sound Output In-Place Sub-Page -->
+                    <StackPanel x:Name="SoundSubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnSoundSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Speaker" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Manage Audio Output Devices" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Choose playback device (Speakers, Headphones, HDMI)" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnVolumeMixerClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Adjust" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="App Volume Mixer" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Control independent sound volume per running app" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- D. Display & Brightness In-Place Sub-Page -->
+                    <StackPanel x:Name="DisplaySubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnNightLightSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Moon" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Night Light (Warm Filter)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Adjust blue-light reduction and schedule sunset-to-sunrise" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnDisplaySettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Monitor" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Display Resolution &amp; Scaling" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Manage refresh rate, multi-monitors, and HDR" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- E. Battery In-Place Sub-Page -->
+                    <StackPanel x:Name="BatterySubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnPowerSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="BatteryFull" Width="15" Height="15" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock x:Name="BatteryDetailTitle" Text="Battery Health &amp; Power" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock x:Name="BatteryDetailSub" Text="View battery drain graph, sleep timeouts, and energy profile" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- F. Airplane Mode In-Place Sub-Page -->
+                    <StackPanel x:Name="AirplaneSubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnAirplaneSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Rocket" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Wireless Radios &amp; Airplane Mode" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Stop all wireless communication simultaneously" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- G. Do Not Disturb (Focus) In-Place Sub-Page -->
+                    <StackPanel x:Name="DndSubPage" Visibility="Collapsed">
+                        <Border Style="{StaticResource ActionRow}" MouseLeftButtonUp="OnDndSettingsClick">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource Surface2Brush}" VerticalAlignment="Center">
+                                    <hero:HeroIcon Kind="Bell" Width="15" Height="15" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Focus Assist &amp; Notification Rules" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="Choose priority list, silence apps, or enable automatic rules" FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" />
+                                </StackPanel>
+                                <hero:HeroIcon Grid.Column="2" Kind="ArrowRight" Width="12" Height="12" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                 </Grid>
-            </Border>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

@@ -19,6 +19,8 @@ public sealed class BluetoothWatcher
     private readonly Dictionary<string, (string Name, bool Connected)> _devices = new();
     private readonly List<DeviceWatcher> _watchers = new();
 
+    public IReadOnlyList<(string Name, bool Connected)> Devices => _devices.Values.ToList();
+
     public void Start()
     {
         if (_watchers.Count > 0) return;
