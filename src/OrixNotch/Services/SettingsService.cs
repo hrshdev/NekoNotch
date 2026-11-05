@@ -28,7 +28,7 @@ public sealed class AppSettings
     /// <summary>Leave the notch out of screenshots, recordings and screen sharing.</summary>
     public bool HideFromCapture { get; set; }
     public bool PowerAlerts { get; set; } = true;  // charger in/out, low battery
-    public int SettingsVersion { get; set; } = 2;
+    public int SettingsVersion { get; set; }
     public bool VolumeHud { get; set; } = true;     // on: show on notch & suppress native Windows flyout
     public bool BluetoothAlerts { get; set; } = true;
     public bool DownloadAlerts { get; set; } = true;
