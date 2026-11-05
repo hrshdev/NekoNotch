@@ -324,8 +324,9 @@ public sealed partial class SportsService : ObservableObject
             var comp1 = competitors[0];
             var comp2 = competitors[1];
 
-            var home = comp1.TryGetProperty("homeAway", out var ha) && ha.GetString() == "home" ? comp1 : comp2;
-            var away = home == comp1 ? comp2 : comp1;
+            var isComp1Home = comp1.TryGetProperty("homeAway", out var ha) && ha.GetString() == "home";
+            var home = isComp1Home ? comp1 : comp2;
+            var away = isComp1Home ? comp2 : comp1;
 
             var homeTeam = home.GetProperty("team");
             var awayTeam = away.GetProperty("team");

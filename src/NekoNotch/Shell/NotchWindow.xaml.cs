@@ -2976,7 +2976,7 @@ public partial class NotchWindow : Window
             To = 1.0,
             Duration = TimeSpan.FromMilliseconds(250)
         });
-        MochiPupils.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation
+        NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation
         {
             From = 1.0,
             To = 0.0,
@@ -3015,7 +3015,7 @@ public partial class NotchWindow : Window
 
             SportsEventPill.Visibility = Visibility.Collapsed;
             HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(400) });
-            MochiPupils.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(400) });
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(400) });
             LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
             RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
 
