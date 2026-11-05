@@ -471,6 +471,8 @@ public partial class SettingsView : UserControl, IToolView
             Toggle(S.PowerAlerts, v => { S.PowerAlerts = v; Save(false); }));
         Row("Volume on the notch", "Show the volume level on the notch and suppress the native Windows volume pop-up.",
             Toggle(S.VolumeHud, v => { S.VolumeHud = v; Save(false); }));
+        Row("Brightness on the notch", "Show the display brightness level on the notch when adjusted via keyboard keys or sliders.",
+            Toggle(S.BrightnessHud, v => { S.BrightnessHud = v; Save(false); }));
         Row("Bluetooth devices", "Show on the notch when paired headphones, a mouse or other Bluetooth device connects or disconnects.",
             Toggle(S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(false); }));
         Row("Finished downloads", "Show on the notch when a browser download finishes in your Downloads folder. Click to show the file.",

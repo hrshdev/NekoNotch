@@ -30,6 +30,7 @@ public sealed class AppSettings
     public bool PowerAlerts { get; set; } = true;  // charger in/out, low battery
     public int SettingsVersion { get; set; }
     public bool VolumeHud { get; set; } = true;     // on: show on notch & suppress native Windows flyout
+    public bool BrightnessHud { get; set; } = true; // on: show brightness HUD on notch when adjusted
     public bool BluetoothAlerts { get; set; } = true;
     public bool DownloadAlerts { get; set; } = true;
     public bool TrackPeek { get; set; }            // a short alert with the new song when the track changes
@@ -152,10 +153,11 @@ public static class SettingsService
     private static AppSettings LoadSettings()
     {
         var s = Storage.Load<AppSettings>(FileName);
-        if (s.SettingsVersion < 2)
+        if (s.SettingsVersion < 3)
         {
             s.VolumeHud = true;
-            s.SettingsVersion = 2;
+            s.BrightnessHud = true;
+            s.SettingsVersion = 3;
             Storage.Save(FileName, s);
         }
         return s;

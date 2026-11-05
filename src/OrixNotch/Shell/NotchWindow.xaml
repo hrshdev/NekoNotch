@@ -54,6 +54,28 @@
                         </Grid>
                     </Grid>
 
+                    <!-- Brightness HUD: Sleek Sun Icon + Horizontal Progress Capsule -->
+                    <Grid x:Name="BrightnessPart" Margin="16,0,18,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <hero:HeroIcon x:Name="BrightnessIcon" Kind="Sun" Width="15" Height="15" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
+                        <Grid Grid.Column="1" Height="8" VerticalAlignment="Center">
+                            <Border Background="#363636" CornerRadius="4" />
+                            <Border CornerRadius="4" ClipToBounds="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition x:Name="BrightnessFillCol" Width="0*" />
+                                        <ColumnDefinition x:Name="BrightnessEmptyCol" Width="1*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="4" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
                     <!-- Coucou Mochi Desktop Pet: Soft squircle body, warm espresso tracking pill eyes, rosy blush, organic breathing -->
                     <Grid x:Name="NotchEyes" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
                         <Grid.RenderTransform>

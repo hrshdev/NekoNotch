@@ -112,7 +112,7 @@ public partial class NotchWindow : Window
         _leaveTimer.Tick += (_, _) => CheckLeave();
         _repelTimer.Tick += (_, _) =>
         {
-            if (_volumeTimer.IsEnabled && NotchEyes.Visibility != Visibility.Collapsed)
+            if ((_volumeTimer.IsEnabled || _brightnessTimer.IsEnabled) && NotchEyes.Visibility != Visibility.Collapsed)
             {
                 NotchEyes.Visibility = Visibility.Collapsed;
             }
@@ -157,6 +157,7 @@ public partial class NotchWindow : Window
         UpdateService.Instance.ReadyToRestart += ShowUpdateReadyPeek;
         PowerWatcher.Instance.Alert += ShowPowerPeek;
         VolumeService.Instance.Changed += ShowVolumePeek;
+        BrightnessService.Changed += ShowBrightnessPeek;
         BluetoothWatcher.Instance.Changed += ShowBluetoothPeek;
         DownloadWatcher.Instance.Finished += ShowDownloadPeek;
         NotificationHistory.Instance.Start();
@@ -173,6 +174,7 @@ public partial class NotchWindow : Window
         BuildEqualizer();
         InitNotchEyes();
         InitVolumeHud();
+        InitBrightnessHud();
         InitMemoryTrimmer();
         Tabs.LayoutUpdated += (_, _) =>
         {
@@ -208,6 +210,7 @@ public partial class NotchWindow : Window
         ApplyGlass();
         ApplyCaptureAffinity();
         try { VolumeService.Instance.Start(); } catch (Exception err) { App.Log(err); }
+        try { BrightnessService.Start(); } catch (Exception err) { App.Log(err); }
         try { BluetoothWatcher.Instance.Start(); } catch (Exception err) { App.Log(err); }
         try { DownloadWatcher.Instance.Start(); } catch (Exception err) { App.Log(err); }
         ForegroundAppWatcher.Instance.Changed += OnForegroundAppChanged;
@@ -444,7 +447,9 @@ public partial class NotchWindow : Window
             SetEqualizer(false);
             NotchEyes.Visibility = Visibility.Collapsed;
             _volumeTimer.Stop();
+            _brightnessTimer.Stop();
             VolumePart.Visibility = Visibility.Collapsed;
+            BrightnessPart.Visibility = Visibility.Collapsed;
         }
         if (activate) Activate();
     }
@@ -863,10 +868,12 @@ public partial class NotchWindow : Window
     private bool _reminderPulsing;
 
     private double VolumeW => Math.Max(280.0, _musicW + 16.0);
+    private double BrightnessW => VolumeW;
 
     /// <summary>Closed-notch width for the current state: compact for timers and reminders, wide for track text.</summary>
     private double ActivityWidth()
     {
+        if (_brightnessTimer.IsEnabled) return BrightnessW;
         if (_volumeTimer.IsEnabled) return VolumeW;
         if (EventReminderService.Instance.IsActive) return _timerW;
         var timer = PomodoroService.Instance.IsRunning
@@ -924,9 +931,26 @@ public partial class NotchWindow : Window
 
     private void UpdateActivity()
     {
+        if (_brightnessTimer.IsEnabled)
+        {
+            BrightnessPart.Visibility = Visibility.Visible;
+            VolumePart.Visibility = Visibility.Collapsed;
+            MusicPart.Visibility = Visibility.Collapsed;
+            TimerPart.Visibility = Visibility.Collapsed;
+            ReminderPart.Visibility = Visibility.Collapsed;
+            IdlePart.Visibility = Visibility.Collapsed;
+            NotchEyes.Visibility = Visibility.Collapsed;
+            if (!_expanded && !_peeking)
+            {
+                _width.Target = BrightnessW;
+                StartAnimation();
+            }
+            return;
+        }
         if (_volumeTimer.IsEnabled)
         {
             VolumePart.Visibility = Visibility.Visible;
+            BrightnessPart.Visibility = Visibility.Collapsed;
             MusicPart.Visibility = Visibility.Collapsed;
             TimerPart.Visibility = Visibility.Collapsed;
             ReminderPart.Visibility = Visibility.Collapsed;
@@ -1004,7 +1028,7 @@ public partial class NotchWindow : Window
 
         // Notch eyes remain visible during normal music playback and idle;
         // only hidden when expanded, peeking an alert/notification, or adjusting volume.
-        NotchEyes.Visibility = (_expanded || _peeking || _volumeTimer.IsEnabled)
+        NotchEyes.Visibility = (_expanded || _peeking || _volumeTimer.IsEnabled || _brightnessTimer.IsEnabled)
             ? Visibility.Collapsed
             : Visibility.Visible;
 
@@ -1545,6 +1569,7 @@ public partial class NotchWindow : Window
             TimeSpan.FromSeconds(3)));
 
     private readonly DispatcherTimer _volumeTimer = new() { Interval = TimeSpan.FromSeconds(2.0) };
+    private readonly DispatcherTimer _brightnessTimer = new() { Interval = TimeSpan.FromSeconds(2.0) };
 
     private void InitVolumeHud()
     {
@@ -1552,7 +1577,22 @@ public partial class NotchWindow : Window
         {
             _volumeTimer.Stop();
             VolumePart.Visibility = Visibility.Collapsed;
-            if (!_expanded)
+            if (!_expanded && !_brightnessTimer.IsEnabled)
+            {
+                UpdateActivity();
+                _width.Target = ActivityWidth();
+                StartAnimation();
+            }
+        };
+    }
+
+    private void InitBrightnessHud()
+    {
+        _brightnessTimer.Tick += (_, _) =>
+        {
+            _brightnessTimer.Stop();
+            BrightnessPart.Visibility = Visibility.Collapsed;
+            if (!_expanded && !_volumeTimer.IsEnabled)
             {
                 UpdateActivity();
                 _width.Target = ActivityWidth();
@@ -1567,7 +1607,7 @@ public partial class NotchWindow : Window
     {
         _memoryTrimTimer.Tick += (_, _) =>
         {
-            if (!_expanded && !_peeking && !_volumeTimer.IsEnabled)
+            if (!_expanded && !_peeking && !_volumeTimer.IsEnabled && !_brightnessTimer.IsEnabled)
             {
                 Task.Run(() => Win32.TrimProcessMemory());
             }
@@ -1586,6 +1626,8 @@ public partial class NotchWindow : Window
         VolumeFillCol.Width = new GridLength(Math.Max(0.0001, (double)level), GridUnitType.Star);
         VolumeEmptyCol.Width = new GridLength(Math.Max(0.0001, 1.0 - (double)level), GridUnitType.Star);
 
+        _brightnessTimer.Stop();
+        BrightnessPart.Visibility = Visibility.Collapsed;
         NotchEyes.Visibility = Visibility.Collapsed;
         MusicPart.Visibility = Visibility.Collapsed;
         TimerPart.Visibility = Visibility.Collapsed;
@@ -1598,6 +1640,34 @@ public partial class NotchWindow : Window
         _volumeTimer.Start();
 
         _width.Target = VolumeW;
+        StartAnimation();
+    }
+
+    private void ShowBrightnessPeek(int level)
+    {
+        if (!App.Settings.BrightnessHud || _expanded) return;
+        if (_peeking) EndPeek();
+
+        level = Math.Clamp(level, 0, 100);
+        var norm = level / 100.0;
+
+        BrightnessFillCol.Width = new GridLength(Math.Max(0.0001, norm), GridUnitType.Star);
+        BrightnessEmptyCol.Width = new GridLength(Math.Max(0.0001, 1.0 - norm), GridUnitType.Star);
+
+        _volumeTimer.Stop();
+        VolumePart.Visibility = Visibility.Collapsed;
+        NotchEyes.Visibility = Visibility.Collapsed;
+        MusicPart.Visibility = Visibility.Collapsed;
+        TimerPart.Visibility = Visibility.Collapsed;
+        IdlePart.Visibility = Visibility.Collapsed;
+        ReminderPart.Visibility = Visibility.Collapsed;
+        BrightnessPart.Visibility = Visibility.Visible;
+
+        _brightnessTimer.Stop();
+        _brightnessTimer.Interval = TimeSpan.FromSeconds(2.0);
+        _brightnessTimer.Start();
+
+        _width.Target = BrightnessW;
         StartAnimation();
     }
 
@@ -2146,9 +2216,9 @@ public partial class NotchWindow : Window
 
     private void UpdateNotchEyes()
     {
-        if (_expanded || _peeking || _volumeTimer.IsEnabled || NotchEyes.Visibility != Visibility.Visible)
+        if (_expanded || _peeking || _volumeTimer.IsEnabled || _brightnessTimer.IsEnabled || NotchEyes.Visibility != Visibility.Visible)
         {
-            if (NotchEyes.Visibility != Visibility.Collapsed && (_volumeTimer.IsEnabled || _peeking || _expanded))
+            if (NotchEyes.Visibility != Visibility.Collapsed && (_volumeTimer.IsEnabled || _brightnessTimer.IsEnabled || _peeking || _expanded))
                 NotchEyes.Visibility = Visibility.Collapsed;
             return;
         }
