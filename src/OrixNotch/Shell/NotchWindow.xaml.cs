@@ -2151,9 +2151,15 @@ public partial class NotchWindow : Window
 
     // ---------------------------------------------------------------- Neko / Anime Notch Eyes
     private readonly DispatcherTimer _blinkTimer = new();
+    private readonly DispatcherTimer _yawnTimer = new();
     private readonly Random _eyeRng = new();
     private double _curEyeX, _curEyeY;
     private bool _blinking;
+    private bool _isYawning;
+    private bool _isPetting;
+    private bool _isSleeping;
+    private DateTime _lastActivityTime = DateTime.UtcNow;
+    private Win32.POINT _lastCursorPt;
     private const double ConstantBlinkIntervalSec = 3.5;
 
     private void InitNotchEyes()
@@ -2162,6 +2168,15 @@ public partial class NotchWindow : Window
         _blinkTimer.Tick += (_, _) => TriggerEyeBlink();
         _blinkTimer.Start();
 
+        _yawnTimer.Interval = TimeSpan.FromSeconds(_eyeRng.Next(35, 60));
+        _yawnTimer.Tick += (_, _) => TriggerYawn();
+        _yawnTimer.Start();
+
+        StartIdleBreathing();
+    }
+
+    private void StartIdleBreathing()
+    {
         // Coucou Mochi organic idle breathing animation
         var breatheY = new DoubleAnimation
         {
@@ -2185,9 +2200,122 @@ public partial class NotchWindow : Window
         PetBreatheScale.BeginAnimation(ScaleTransform.ScaleXProperty, breatheX);
     }
 
+    private void TriggerYawn()
+    {
+        if (_isYawning || _isPetting || _blinking || _expanded || NotchEyes.Visibility != Visibility.Visible) return;
+        _isYawning = true;
+
+        // 1. Stretch body up
+        var stretchY = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 1.18,
+            Duration = TimeSpan.FromMilliseconds(700),
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut }
+        };
+        var stretchX = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 0.94,
+            Duration = TimeSpan.FromMilliseconds(700),
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        // 2. Open cute yawning mouth
+        var mouthOpen = new DoubleAnimation
+        {
+            From = 0.0,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(550),
+            EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut }
+        };
+        var mouthFade = new DoubleAnimation
+        {
+            From = 0.0,
+            To = 0.95,
+            Duration = TimeSpan.FromMilliseconds(400)
+        };
+
+        // 3. Eyes squint into sleepy happy crescents
+        var eyesFadeOut = new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(300) };
+        var happyFadeIn = new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(300) };
+
+        // 4. Cheeks blush warmly during yawn
+        LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.85, Duration = TimeSpan.FromMilliseconds(500) });
+        RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.85, Duration = TimeSpan.FromMilliseconds(500) });
+
+        NormalEyes.BeginAnimation(UIElement.OpacityProperty, eyesFadeOut);
+        HappyEyes.BeginAnimation(UIElement.OpacityProperty, happyFadeIn);
+        PetMouth.BeginAnimation(UIElement.OpacityProperty, mouthFade);
+        PetMouthScale.BeginAnimation(ScaleTransform.ScaleXProperty, mouthOpen);
+        PetMouthScale.BeginAnimation(ScaleTransform.ScaleYProperty, mouthOpen);
+
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, stretchY);
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleXProperty, stretchX);
+
+        // Hold yawn, then exhale and relax
+        var relaxTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1300) };
+        relaxTimer.Tick += (_, _) =>
+        {
+            relaxTimer.Stop();
+
+            // Body exhales back to normal
+            var exhaleY = new DoubleAnimation
+            {
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(700),
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            var exhaleX = new DoubleAnimation
+            {
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(700),
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            // Close mouth
+            var mouthClose = new DoubleAnimation
+            {
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(450),
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseIn }
+            };
+            var mouthCloseFade = new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(400) };
+
+            PetMouth.BeginAnimation(UIElement.OpacityProperty, mouthCloseFade);
+            PetMouthScale.BeginAnimation(ScaleTransform.ScaleXProperty, mouthClose);
+            PetMouthScale.BeginAnimation(ScaleTransform.ScaleYProperty, mouthClose);
+
+            exhaleY.Completed += (_, _) =>
+            {
+                StartIdleBreathing();
+
+                // Eyes open back up with a slow relaxed double-blink
+                var eyesFadeIn = new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(350) };
+                var happyFadeOut = new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(350) };
+
+                eyesFadeIn.Completed += (_, _) =>
+                {
+                    _isYawning = false;
+                    TriggerEyeBlink();
+                    _yawnTimer.Interval = TimeSpan.FromSeconds(_eyeRng.Next(45, 75));
+                };
+
+                NormalEyes.BeginAnimation(UIElement.OpacityProperty, eyesFadeIn);
+                HappyEyes.BeginAnimation(UIElement.OpacityProperty, happyFadeOut);
+                LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
+                RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
+            };
+
+            PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, exhaleY);
+            PetBreatheScale.BeginAnimation(ScaleTransform.ScaleXProperty, exhaleX);
+        };
+        relaxTimer.Start();
+    }
+
     private void TriggerEyeBlink()
     {
-        if (_blinking || _expanded || NotchEyes.Visibility != Visibility.Visible) return;
+        if (_blinking || _isYawning || _expanded || NotchEyes.Visibility != Visibility.Visible) return;
         _blinking = true;
 
         // Eyelid closes smoothly down to bottom
@@ -2215,7 +2343,6 @@ public partial class NotchWindow : Window
                 _blinking = false;
                 LeftEyeScale.ScaleY = 1.0;
                 RightEyeScale.ScaleY = 1.0;
-                // Always reset to the exact same interval (no random jitter)
                 _blinkTimer.Interval = TimeSpan.FromSeconds(ConstantBlinkIntervalSec);
             };
             LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, openAnim);
@@ -2240,8 +2367,8 @@ public partial class NotchWindow : Window
         {
             var ps = System.Windows.Forms.SystemInformation.PowerStatus;
             var isPlugged = ps.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online;
-            var targetBlush = isPlugged ? 0.75 : 0.0;
-            if (Math.Abs(LeftBlush.Opacity - targetBlush) > 0.03)
+            var targetBlush = isPlugged ? 0.75 : (_isPetting || _isYawning ? 0.85 : 0.45);
+            if (Math.Abs(LeftBlush.Opacity - targetBlush) > 0.03 && !_isPetting && !_isYawning)
             {
                 LeftBlush.Opacity += (targetBlush - LeftBlush.Opacity) * 0.1;
                 RightBlush.Opacity = LeftBlush.Opacity;
@@ -2262,18 +2389,84 @@ public partial class NotchWindow : Window
             return;
         }
 
-        var eyeCenterX = NotchEyes.ActualWidth > 0 ? NotchEyes.ActualWidth / 2.0 : 25.0;
-        var eyeCenterY = NotchEyes.ActualHeight > 0 ? NotchEyes.ActualHeight / 2.0 : 16.0;
+        var eyeCenterX = NotchEyes.ActualWidth > 0 ? NotchEyes.ActualWidth / 2.0 : 19.0;
+        var eyeCenterY = NotchEyes.ActualHeight > 0 ? NotchEyes.ActualHeight / 2.0 : 12.0;
 
         var dx = localCursor.X - eyeCenterX;
         var dy = localCursor.Y - eyeCenterY;
-
         var dist = Math.Sqrt(dx * dx + dy * dy);
+
+        // Petting / Happy Reaction when cursor hovers directly over Mochi pet
+        var isHovering = dist < 24.0;
+        if (isHovering && !_isPetting && !_isYawning)
+        {
+            _isPetting = true;
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(180) });
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(180) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.90, Duration = TimeSpan.FromMilliseconds(200) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.90, Duration = TimeSpan.FromMilliseconds(200) });
+
+            // Cute happy purr jiggle
+            var purr = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 1.07,
+                Duration = TimeSpan.FromMilliseconds(180),
+                AutoReverse = true,
+                RepeatBehavior = new RepeatBehavior(2),
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, purr);
+        }
+        else if (!isHovering && _isPetting && !_isYawning)
+        {
+            _isPetting = false;
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(220) });
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(220) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(300) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(300) });
+            StartIdleBreathing();
+        }
+
+        // Dozing Off / Sleepy check (after 120s of mouse inactivity)
+        if (Math.Abs(pt.X - _lastCursorPt.X) > 4 || Math.Abs(pt.Y - _lastCursorPt.Y) > 4)
+        {
+            _lastActivityTime = DateTime.UtcNow;
+            _lastCursorPt = pt;
+            if (_isSleeping)
+            {
+                _isSleeping = false;
+                var wakeAnim = new DoubleAnimation
+                {
+                    From = 0.35,
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(180),
+                    EasingFunction = new BackEase { Amplitude = 0.2, EasingMode = EasingMode.EaseOut }
+                };
+                LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, wakeAnim);
+                RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, wakeAnim);
+                TriggerEyeBlink();
+            }
+        }
+        else if (!_isSleeping && !_isYawning && !_isPetting && (DateTime.UtcNow - _lastActivityTime).TotalSeconds > 120)
+        {
+            _isSleeping = true;
+            var sleepAnim = new DoubleAnimation
+            {
+                To = 0.35,
+                Duration = TimeSpan.FromMilliseconds(1200),
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, sleepAnim);
+            RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, sleepAnim);
+        }
+
+        if (_isYawning || _isPetting || _isSleeping) return;
+
         double targetX, targetY;
         if (dist > 0.001)
         {
             var angle = Math.Atan2(dy, dx);
-            // Gaze sensitivity: reaches full deflection smoothly when cursor is ~180 DIPs away
             var gaze = Math.Min(1.0, Math.Pow(dist / 180.0, 0.75));
             targetX = Math.Cos(angle) * (gaze * 1.5);
             targetY = Math.Sin(angle) * (gaze * 1.2);

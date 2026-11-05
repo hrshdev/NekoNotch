@@ -127,8 +127,16 @@
                                     <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
 
+                                <!-- Cute Yawning Mouth -->
+                                <Border x:Name="PetMouth" Width="3.2" Height="4.2" CornerRadius="1.6" Background="#C4566A"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6.2,0,0" Opacity="0.0">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="PetMouthScale" ScaleX="0.0" ScaleY="0.0" CenterX="1.6" CenterY="2.1" />
+                                    </Border.RenderTransform>
+                                </Border>
+
                                 <!-- Mochi Expressive Tracking Eyes (Round) -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0">
+                                <StackPanel x:Name="NormalEyes" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0">
                                     <!-- Left Eye -->
                                     <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.5">
                                         <Grid.RenderTransform>
@@ -160,6 +168,12 @@
                                                      HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.2,0,0" />
                                         </Border>
                                     </Grid>
+                                </StackPanel>
+
+                                <!-- Happy Smiling Squint Eyes (^ ^ / ⌒ ⌒ for petting & yawning) -->
+                                <StackPanel x:Name="HappyEyes" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0" Opacity="0.0" IsHitTestVisible="False">
+                                    <Path Data="M 0,4.5 Q 3.5,0.5 7,4.5" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="3.5,0" />
+                                    <Path Data="M 0,4.5 Q 3.5,0.5 7,4.5" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="3.5,0" />
                                 </StackPanel>
                             </Grid>
                         </Border>
