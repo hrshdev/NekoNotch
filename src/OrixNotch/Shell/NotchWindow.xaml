@@ -117,13 +117,13 @@
                                     </Border.Background>
                                 </Border>
 
-                                <!-- Rosy Blush Cheeks (Coucou rgba(255,120,150,0.5)) -->
-                                <Ellipse x:Name="LeftBlush" Width="3.2" Height="2.4" Fill="#FF7896" Opacity="0.45"
-                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4.5,2.5,0,0">
+                                <!-- Rosy Blush Cheeks (lower on cheeks, clear of round eyes) -->
+                                <Ellipse x:Name="LeftBlush" Width="3.2" Height="2.2" Fill="#FF7896" Opacity="0.45"
+                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4.2,5.5,0,0">
                                     <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse x:Name="RightBlush" Width="3.2" Height="2.4" Fill="#FF7896" Opacity="0.45"
-                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,2.5,4.5,0">
+                                <Ellipse x:Name="RightBlush" Width="3.2" Height="2.2" Fill="#FF7896" Opacity="0.45"
+                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5.5,4.2,0">
                                     <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
 

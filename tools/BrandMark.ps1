@@ -54,13 +54,13 @@ function Draw-MochiPetGraphic([System.Windows.Media.DrawingContext]$dc, [double]
     $glossCenter = New-Object System.Windows.Point($cx, ($y + $targetHeight * 0.18))
     $dc.DrawEllipse($glossBrush, $null, $glossCenter, ($targetWidth * 0.35), ($targetHeight * 0.22))
 
-    # Rosy Blush Cheeks (reduced compact width, delicate Coucou pink #FF7896)
+    # Rosy Blush Cheeks (lowered on cheeks, clear of round eyes)
     $blushBrush = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromArgb(115, 255, 120, 150))
     $blushRx = $targetWidth * (1.6 / 38.0)
-    $blushRy = $targetHeight * (1.2 / 24.0)
-    $blushY = $y + $targetHeight * 0.58
-    $leftBlushPt = New-Object System.Windows.Point(($x + $targetWidth * 0.14), $blushY)
-    $rightBlushPt = New-Object System.Windows.Point(($x + $targetWidth * 0.86), $blushY)
+    $blushRy = $targetHeight * (1.1 / 24.0)
+    $blushY = $y + $targetHeight * 0.70
+    $leftBlushPt = New-Object System.Windows.Point(($x + $targetWidth * 0.13), $blushY)
+    $rightBlushPt = New-Object System.Windows.Point(($x + $targetWidth * 0.87), $blushY)
     $dc.DrawEllipse($blushBrush, $null, $leftBlushPt, $blushRx, $blushRy)
     $dc.DrawEllipse($blushBrush, $null, $rightBlushPt, $blushRx, $blushRy)
 

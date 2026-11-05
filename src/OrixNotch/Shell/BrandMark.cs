@@ -83,12 +83,12 @@ public class BrandMark : Control
         // Top specular gloss highlight
         dc.DrawEllipse(GlossBrush, null, new Point(cx, y + targetHeight * 0.18), targetWidth * 0.35, targetHeight * 0.22);
 
-        // Rosy Blush Cheeks (compact width)
+        // Rosy Blush Cheeks (lowered on cheeks, clear of round eyes)
         var blushRx = targetWidth * (1.6 / 38.0);
-        var blushRy = targetHeight * (1.2 / 24.0);
-        var blushY = y + targetHeight * 0.58;
-        dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.14, blushY), blushRx, blushRy);
-        dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.86, blushY), blushRx, blushRy);
+        var blushRy = targetHeight * (1.1 / 24.0);
+        var blushY = y + targetHeight * 0.70;
+        dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.13, blushY), blushRx, blushRy);
+        dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.87, blushY), blushRx, blushRy);
 
         // Round ink eyes (circular)
         var eyeSize = targetHeight * (7.0 / 24.0);

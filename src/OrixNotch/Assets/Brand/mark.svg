@@ -15,9 +15,9 @@
   <rect x="12" y="26" width="76" height="48" rx="16" ry="16" fill="url(#mochiGrad)" stroke="#B0B2B8" stroke-width="1.2"/>
   <!-- Gloss highlight -->
   <ellipse cx="50" cy="32" rx="26" ry="7" fill="url(#mochiGloss)"/>
-  <!-- Rosy Blush Cheeks (compact width) -->
-  <ellipse cx="20.5" cy="53.5" rx="3.2" ry="2.4" fill="#FF7896" opacity="0.45"/>
-  <ellipse cx="79.5" cy="53.5" rx="3.2" ry="2.4" fill="#FF7896" opacity="0.45"/>
+  <!-- Rosy Blush Cheeks (lowered on cheeks, clear of round eyes) -->
+  <ellipse cx="20" cy="59" rx="3.2" ry="2.2" fill="#FF7896" opacity="0.45"/>
+  <ellipse cx="80" cy="59" rx="3.2" ry="2.2" fill="#FF7896" opacity="0.45"/>
   <!-- Left Eye Round Circle -->
   <circle cx="41.5" cy="49" r="7.0" fill="#1A1412"/>
   <circle cx="39.8" cy="47.3" r="2.0" fill="#FFFFFF"/>
