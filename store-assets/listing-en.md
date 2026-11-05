@@ -3,10 +3,10 @@
 Matches Submission 1 of the MSIX product (9PM8RN7CGSWC). Update "What's new" per release.
 
 ## Product name
-OrixNotch
+NekoNotch
 
 ## Description
-OrixNotch — Your Screen, Smarter.
+NekoNotch — Your Screen, Smarter.
 
 A dynamic-island style toolbox for Windows. A small pill sits at the top-center of your screen — hover it, click it, or press Ctrl+Alt+N and it springs open into a panel of everyday tools: Now Playing, Calendar with reminders, To-Dos, Quick Note, Clipboard history, File Shelf, Pomodoro and timers, Weather, System Monitor, Stocks, Unit Converter, Emoji picker and Ask AI.
 
@@ -41,15 +41,15 @@ dynamic island · notch · clipboard history · calendar reminders · pomodoro t
 01-hero, 02-alerts, 03-music, 04-calendar, 05-ask-ai, 06-phone, 07-shelf-clipboard, 08-focus, 09-out-of-your-way, 10-themes (made by marketing/store-shots/Make-StoreShots.ps1) · Box art: BoxArt-1080.png · Poster: Poster-720x1080.png
 
 ## Copyright and trademark info
-Copyright © 2026. All rights reserved. OrixNotch and the OrixNotch logo are trademarks of Abu Nayim Faisal.
+Copyright © 2026. All rights reserved. NekoNotch and the NekoNotch logo are trademarks of Abu Nayim Faisal.
 
 ## Developed by
 Abu Nayim Faisal
 
 ## Applicable license terms
-OrixNotch License v1.0
+NekoNotch License v1.0
 
-You are granted a non-exclusive, non-transferable license to install and use OrixNotch on Windows devices associated with your Microsoft account.
+You are granted a non-exclusive, non-transferable license to install and use NekoNotch on Windows devices associated with your Microsoft account.
 
 1. The software is provided "as is", without warranty of any kind.
 2. You may not reverse-engineer, decompile, or redistribute the software except as permitted by the Microsoft Store terms.
@@ -60,4 +60,4 @@ You are granted a non-exclusive, non-transferable license to install and use Ori
 Bundled third-party components retain their own licenses: Inter typeface (SIL Open Font License 1.1) and Heroicons (MIT License).
 
 ## runFullTrust justification (Submission options, max 500 chars)
-OrixNotch is a WPF (.NET 8) desktop app packaged as MSIX, so it needs runFullTrust to run. It shows a topmost overlay window at the top of the screen that expands into a tools panel. Win32 APIs are used for the overlay window and hover tracking, the Ctrl+Alt+N hotkey, tray icon, clipboard history, drag-and-drop, media controls, CPU/memory/network stats and run-at-login (StartupTask). No services, drivers or elevation; all data stays local.
+NekoNotch is a WPF (.NET 8) desktop app packaged as MSIX, so it needs runFullTrust to run. It shows a topmost overlay window at the top of the screen that expands into a tools panel. Win32 APIs are used for the overlay window and hover tracking, the Ctrl+Alt+N hotkey, tray icon, clipboard history, drag-and-drop, media controls, CPU/memory/network stats and run-at-login (StartupTask). No services, drivers or elevation; all data stays local.

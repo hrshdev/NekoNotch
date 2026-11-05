@@ -1,7 +1,7 @@
 # Shared helpers for the packaging scripts (dot-source: . "$PSScriptRoot/Common.ps1").
 
 $script:RepoRoot = Split-Path $PSScriptRoot -Parent
-$script:ProjectDir = Join-Path $RepoRoot "src/OrixNotch"
+$script:ProjectDir = Join-Path $RepoRoot "src/NekoNotch"
 
 # The app version: -Version if given (CI passes the tag), otherwise <Version> from the csproj.
 # Always x.y.z — MSI and MSIX derive their own formats from it.
@@ -11,7 +11,7 @@ function Get-AppVersion([string]$Override) {
         if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version must be x.y.z (got '$Override')" }
         return $v
     }
-    $csproj = Get-Content (Join-Path $ProjectDir "OrixNotch.csproj") -Raw
+    $csproj = Get-Content (Join-Path $ProjectDir "NekoNotch.csproj") -Raw
     if ($csproj -notmatch "<Version>(\d+\.\d+\.\d+)</Version>") { throw "Version not found in csproj" }
     return $Matches[1]
 }
@@ -41,16 +41,16 @@ function Get-WindowsSdkBin {
 }
 
 # Authenticode-signs files when a code-signing certificate is available:
-# env ORIXNOTCH_SIGN_PFX (path to .pfx) + ORIXNOTCH_SIGN_PASSWORD. Without one, files stay unsigned.
+# env NEKONOTCH_SIGN_PFX (path to .pfx) + NEKONOTCH_SIGN_PASSWORD. Without one, files stay unsigned.
 function Invoke-CodeSign([string[]]$Files) {
-    $pfx = $env:ORIXNOTCH_SIGN_PFX
+    $pfx = $env:NEKONOTCH_SIGN_PFX
     if (-not $pfx -or -not (Test-Path $pfx)) {
         Write-Host "No signing certificate configured — leaving unsigned: $($Files -join ', ')"
         return
     }
     $signtool = Join-Path (Get-WindowsSdkBin) "signtool.exe"
     foreach ($f in $Files) {
-        & $signtool sign /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /f $pfx /p $env:ORIXNOTCH_SIGN_PASSWORD $f
+        & $signtool sign /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /f $pfx /p $env:NEKONOTCH_SIGN_PASSWORD $f
         if ($LASTEXITCODE -ne 0) { throw "signtool failed for $f" }
     }
 }

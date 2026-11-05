@@ -25,7 +25,7 @@ $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:Pro
 if (-not $chrome) { throw "Chrome or Edge is needed to render the posters." }
 
 $sizes = [ordered]@{ square = "1080,1080"; portrait = "1080,1350"; story = "1080,1920"; landscape = "1600,900" }
-$profileDir = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-social-chrome"
+$profileDir = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-social-chrome"
 $posters = Get-ChildItem "$here/posters" -Filter "*.html" | Where-Object { -not $Only -or $_.BaseName -eq $Only } | Sort-Object Name
 
 foreach ($size in $sizes.Keys) {

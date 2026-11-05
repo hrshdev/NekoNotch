@@ -1,7 +1,7 @@
-# Push a tag vX.Y.Z (matching <Version> in OrixNotch.csproj) to publish a GitHub Release with:
-#   OrixNotch-X.Y.Z-setup.msi        per-user installer (no admin), opens at login, auto-starts after install
-#   OrixNotch-X.Y.Z-portable.exe     single self-contained exe, no install
-#   OrixNotch-X.Y.Z-store.msix       package for Microsoft Store upload (store.yml picks it up)
+# Push a tag vX.Y.Z (matching <Version> in NekoNotch.csproj) to publish a GitHub Release with:
+#   NekoNotch-X.Y.Z-setup.msi        per-user installer (no admin), opens at login, auto-starts after install
+#   NekoNotch-X.Y.Z-portable.exe     single self-contained exe, no install
+#   NekoNotch-X.Y.Z-store.msix       package for Microsoft Store upload (store.yml picks it up)
 #   SHA256SUMS.txt
 # Tags with a suffix (v1.2.0-beta.1) become pre-releases. See docs/RELEASING.md.
 name: Release
@@ -30,9 +30,9 @@ jobs:
           $tag = "${{ github.ref_name }}"
           if ($tag -notmatch '^v(\d+\.\d+\.\d+)(-[0-9A-Za-z.-]+)?$') { throw "Tag '$tag' is not vX.Y.Z[-suffix]" }
           $version = $Matches[1]
-          $csproj = Get-Content src/OrixNotch/OrixNotch.csproj -Raw
+          $csproj = Get-Content src/NekoNotch/NekoNotch.csproj -Raw
           if ($csproj -notmatch "<Version>$([regex]::Escape($version))</Version>") {
-            throw "Tag $tag doesn't match <Version> in src/OrixNotch/OrixNotch.csproj. Bump the csproj first (tools/Bump-Version.ps1)."
+            throw "Tag $tag doesn't match <Version> in src/NekoNotch/NekoNotch.csproj. Bump the csproj first (tools/Bump-Version.ps1)."
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           $prerelease = if ($tag.Contains('-')) { 'true' } else { 'false' }
@@ -68,9 +68,9 @@ jobs:
           $v = "${{ steps.version.outputs.version }}"
           New-Item -ItemType Directory dist -Force | Out-Null
           ./packaging/Build-Exe.ps1 -Version $v
-          Copy-Item publish/exe/OrixNotch.exe "dist/NekoNotch-$v-portable.exe"
-          ./packaging/Build-Msi.ps1 -Version $v -OutFile "$PWD/dist/OrixNotch-$v-setup.msi"
-          $msix = @{ Version = $v; OutFile = "$PWD/dist/OrixNotch-$v-store.msix" }
+          Copy-Item publish/exe/NekoNotch.exe "dist/NekoNotch-$v-portable.exe"
+          ./packaging/Build-Msi.ps1 -Version $v -OutFile "$PWD/dist/NekoNotch-$v-setup.msi"
+          $msix = @{ Version = $v; OutFile = "$PWD/dist/NekoNotch-$v-store.msix" }
           if ($env:STORE_IDENTITY_NAME) {
             $msix.IdentityName = $env:STORE_IDENTITY_NAME
             $msix.Publisher = $env:STORE_PUBLISHER
@@ -93,9 +93,9 @@ jobs:
           generate_release_notes: true
           body: |
             ## Install
-            - **`NekoNotch-${{ steps.version.outputs.version }}-setup.msi`** — recommended. Installs for your user only (no admin), starts OrixNotch right away and opens it at login (turn off in Settings → General → Open at login). Silent: `msiexec /i NekoNotch-${{ steps.version.outputs.version }}-setup.msi /qn LAUNCHAPP=0`.
+            - **`NekoNotch-${{ steps.version.outputs.version }}-setup.msi`** — recommended. Installs for your user only (no admin), starts NekoNotch right away and opens it at login (turn off in Settings → General → Open at login). Silent: `msiexec /i NekoNotch-${{ steps.version.outputs.version }}-setup.msi /qn LAUNCHAPP=0`.
             - **`NekoNotch-${{ steps.version.outputs.version }}-portable.exe`** — no install, run from anywhere.
-            - `OrixNotch-${{ steps.version.outputs.version }}-store.msix` is the Microsoft Store upload package (the Store signs it); it can't be installed by double-clicking.
+            - `NekoNotch-${{ steps.version.outputs.version }}-store.msix` is the Microsoft Store upload package (the Store signs it); it can't be installed by double-clicking.
             - Windows 10 (2004) or later, x64. Checksums in `SHA256SUMS.txt`.
 
   # Upload to the Microsoft Store (draft submission) once the Store app is configured; see docs/RELEASING.md.

@@ -1,5 +1,5 @@
 # The NekoNotch mark, shared by tools/Export-BrandIcon.ps1 and store-assets/Export-StoreArt.ps1.
-# Source of truth: src/OrixNotch/Assets/Brand/mark.svg (the designer's file; the app's BrandMark reads it too).
+# Source of truth: src/NekoNotch/Assets/Brand/mark.svg (the designer's file; the app's BrandMark reads it too).
 # Drawn with WPF so vector rendering is pixel-perfect across all resolutions. Dot-source it: . (Join-Path $repoRoot "tools/BrandMark.ps1")
 
 Add-Type -AssemblyName PresentationCore, WindowsBase, PresentationFramework
@@ -86,7 +86,7 @@ function Draw-MochiPetGraphic([System.Windows.Media.DrawingContext]$dc, [double]
 }
 
 function Get-BrandMarkGeometry([string]$RepoRoot) {
-    [xml]$svg = Get-Content -Raw (Join-Path $RepoRoot "src/OrixNotch/Assets/Brand/mark.svg")
+    [xml]$svg = Get-Content -Raw (Join-Path $RepoRoot "src/NekoNotch/Assets/Brand/mark.svg")
     $group = New-Object System.Windows.Media.GeometryGroup
     $group.FillRule = [System.Windows.Media.FillRule]::EvenOdd
     if ($svg.svg.path) {

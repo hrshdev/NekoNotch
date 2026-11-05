@@ -6,7 +6,7 @@ Edit copy in `posters/*.html`, layout in `posters/social.css`. Say "free"; don't
 
 ## Suggested captions
 
-1. **01-island** — Your Windows deserves a Dynamic Island. 🏝️ OrixNotch puts music, AI, files and timers in a notch at the top of your screen. Free on the Microsoft Store.
+1. **01-island** — Your Windows deserves a Dynamic Island. 🏝️ NekoNotch puts music, AI, files and timers in a notch at the top of your screen. Free on the Microsoft Store.
 2. **02-music** — Skip the alt-tab. See what's playing, skip tracks and read synced lyrics right from the top of your screen. Free.
 3. **03-alerts** — Downloads done, AirPods connected, battery low — glance up, then back to work. No pop-up spam.
 4. **04-phone** — Photo from your phone to your PC in one scan. No app, no cable, no cloud. It never leaves your Wi-Fi.

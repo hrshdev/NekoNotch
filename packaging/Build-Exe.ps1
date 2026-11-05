@@ -1,4 +1,4 @@
-# Builds the portable OrixNotch.exe (self-contained single file, no install).
+# Builds the portable NekoNotch.exe (self-contained single file, no install).
 # Run from repo root:  pwsh packaging/Build-Exe.ps1 [-Version 1.2.3]
 param([string]$Version, [string]$OutDir)
 

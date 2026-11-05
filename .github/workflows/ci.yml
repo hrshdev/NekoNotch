@@ -44,8 +44,8 @@ jobs:
 
       - name: Build
         run: |
-          dotnet restore OrixNotch.sln
-          dotnet build OrixNotch.sln -c Release --no-restore -p:Version=${{ env.APP_VERSION }}
+          dotnet restore NekoNotch.sln
+          dotnet build NekoNotch.sln -c Release --no-restore -p:Version=${{ env.APP_VERSION }}
 
       - name: Install WiX
         run: |

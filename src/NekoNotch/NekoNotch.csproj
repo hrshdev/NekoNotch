@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>NekoNotch</AssemblyName>
+    <RootNamespace>NekoNotch</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Brand\NekoNotch.ico</ApplicationIcon>
+    <Version>0.9.0</Version>
+    <Product>NekoNotch</Product>
+    <!-- WPF needs the DPI settings in app.manifest; the WinForms analyzer only knows SetHighDpiMode. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+      <!-- Desktop memory optimizations: Workstation GC (1 unified heap instead of 16 server heaps) -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms is only used for the tray icon and Screen; keep its names out of global scope. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\emoji-test.txt" />
+    <EmbeddedResource Include="Resources\phone.html" />
+    <Resource Include="Fonts\*.ttf" />
+    <Resource Include="Fonts\*.CompositeFont" />
+    <Resource Include="Assets\Brand\NekoNotch.ico" />
+    <Resource Include="Assets\Brand\logo-512.png" />
+    <Resource Include="Assets\Brand\mark.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Kestrel for Phone transfer (browser page on the LAN). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.53.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

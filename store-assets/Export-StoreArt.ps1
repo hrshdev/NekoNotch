@@ -1,4 +1,4 @@
-# Generates Microsoft Store listing artwork from the OrixNotch brand.
+# Generates Microsoft Store listing artwork from the NekoNotch brand.
 # Outputs (repo-rooted): store-assets/BoxArt-1080.png (1:1, required),
 # store-assets/Poster-720x1080.png (2:3, recommended).
 # Run from repo root:  pwsh store-assets/Export-StoreArt.ps1
@@ -58,7 +58,7 @@ function Paint-Background($g, [int]$w, [int]$h) {
 
 function Paint-Mark($g, [float]$x, [float]$y, [float]$size) {
     # Rendered by WPF from the SVG (tools/BrandMark.ps1), then placed on the System.Drawing canvas.
-    $png = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-mark-$([int]$size).png"
+    $png = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-mark-$([int]$size).png"
     Save-BrandMarkPng $repoRoot ([int]$size) $png -MarkScale 1.0
     $img = [System.Drawing.Image]::FromFile($png)
     try { $g.DrawImage($img, $x, $y, $size, $size) } finally { $img.Dispose(); Remove-Item $png }
@@ -69,7 +69,7 @@ function Paint-Wordmark($g, [int]$canvasW, [float]$y, [float]$size) {
     try {
         $sf = New-Object System.Drawing.StringFormat
         $sf.Alignment = [System.Drawing.StringAlignment]::Center
-        $tight = [System.Drawing.StringFormat]::GenericTypographic # no side padding: "OrixNotch" is one word
+        $tight = [System.Drawing.StringFormat]::GenericTypographic # no side padding: "NekoNotch" is one word
         $wOrix = $g.MeasureString("Orix", $font, [System.Drawing.PointF]::Empty, $tight).Width
         $wNotch = $g.MeasureString("Notch", $font, [System.Drawing.PointF]::Empty, $tight).Width
         $total = $wOrix + $wNotch

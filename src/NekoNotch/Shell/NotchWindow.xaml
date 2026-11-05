@@ -1,0 +1,842 @@
+<Window x:Class="NekoNotch.Shell.NotchWindow"
+
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+        xmlns:svc="clr-namespace:NekoNotch.Services"
+
+        xmlns:hero="clr-namespace:NekoNotch.Shell"
+
+        Title="NekoNotch" Icon="pack://application:,,,/Assets/Brand/NekoNotch.ico"
+
+        WindowStyle="None" AllowsTransparency="True" Background="{x:Null}"
+
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+
+        Width="860" Height="600" UseLayoutRounding="True"
+
+        Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource UiFont}" FontSize="14"
+
+        TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType">
+
+    <Grid>
+
+        <!-- While the notch is hidden (Settings → Show notch), a thin accent line marks where the top edge brings it back -->
+
+        <Border x:Name="EdgeHint" Width="120" Height="3" CornerRadius="0,0,2,2" VerticalAlignment="Top" HorizontalAlignment="Center"
+
+                Background="{DynamicResource AccentBrush}" Opacity="0" IsHitTestVisible="False" />
+
+        <!-- Pill = notch silhouette (Shape) + clipped content (Body). Sizes are driven by springs in code. -->
+
+        <Grid x:Name="Pill" VerticalAlignment="Top" HorizontalAlignment="Center" AllowDrop="True">
+
+            <Path x:Name="Shape" Fill="{DynamicResource PillBrush}" Stroke="{DynamicResource StrokeBrush}" StrokeThickness="1" />
+
+            <!-- Glass highlights (NotchWindow.Glass.cs): a sheen across the top, a faint accent glow at the bottom. -->
+
+            <Path x:Name="GlassGlow" IsHitTestVisible="False" Visibility="Collapsed" Opacity="{Binding Opacity, ElementName=Shape}" />
+
+            <Path x:Name="GlassSheen" IsHitTestVisible="False" Visibility="Collapsed" Opacity="{Binding Opacity, ElementName=Shape}">
+
+                <Path.Fill>
+
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+
+                        <GradientStop Color="#26FFFFFF" Offset="0" />
+
+                        <GradientStop Color="#0AFFFFFF" Offset="0.28" />
+
+                        <GradientStop Color="#00FFFFFF" Offset="0.5" />
+
+                    </LinearGradientBrush>
+
+                </Path.Fill>
+
+            </Path>
+
+
+
+            <Grid x:Name="Body">
+
+                <!-- Collapsed: one live activity at a time, Dynamic Island style: a leading glyph in the
+
+                     left ear, the live value in the right one. -->
+
+                <Grid x:Name="CollapsedLayer" Height="32" VerticalAlignment="Top">
+
+                                        <!-- Volume HUD: Sleek Speaker Icon + Horizontal Progress Capsule -->
+
+                    <Grid x:Name="VolumePart" Margin="16,0,18,0" Visibility="Collapsed">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="Auto" />
+
+                            <ColumnDefinition Width="*" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <hero:HeroIcon x:Name="VolumeIcon" Kind="Speaker" Width="15" Height="15" VerticalAlignment="Center"
+
+                                       Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
+
+                        <Grid Grid.Column="1" Height="8" VerticalAlignment="Center">
+
+                            <Border Background="#363636" CornerRadius="4" />
+
+                            <Border CornerRadius="4" ClipToBounds="True">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition x:Name="VolumeFillCol" Width="0*" />
+
+                                        <ColumnDefinition x:Name="VolumeEmptyCol" Width="1*" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="4" />
+
+                                </Grid>
+
+                            </Border>
+
+                        </Grid>
+
+                    </Grid>
+
+
+
+                    <!-- Brightness HUD: Sleek Sun Icon + Horizontal Progress Capsule -->
+
+                    <Grid x:Name="BrightnessPart" Margin="16,0,18,0" Visibility="Collapsed">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="Auto" />
+
+                            <ColumnDefinition Width="*" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <hero:HeroIcon x:Name="BrightnessIcon" Kind="Sun" Width="15" Height="15" VerticalAlignment="Center"
+
+                                       Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
+
+                        <Grid Grid.Column="1" Height="8" VerticalAlignment="Center">
+
+                            <Border Background="#363636" CornerRadius="4" />
+
+                            <Border CornerRadius="4" ClipToBounds="True">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition x:Name="BrightnessFillCol" Width="0*" />
+
+                                        <ColumnDefinition x:Name="BrightnessEmptyCol" Width="1*" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="4" />
+
+                                </Grid>
+
+                            </Border>
+
+                        </Grid>
+
+                    </Grid>
+
+
+
+                    <!-- Coucou Mochi Desktop Pet: Soft squircle body, warm espresso tracking pill eyes, rosy blush, organic breathing -->
+
+                    <Grid x:Name="NotchEyes" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+
+                        <Grid.RenderTransform>
+
+                            <ScaleTransform x:Name="PetBreatheScale" ScaleX="1.0" ScaleY="1.0" CenterX="19" CenterY="12" />
+
+                        </Grid.RenderTransform>
+
+
+
+                        <!-- Mochi Soft Pearlescent Squircle Body (#EDEDEF to #C4C5CA) -->
+
+                        <Border x:Name="MochiBody" Width="38" Height="24" CornerRadius="8" ClipToBounds="True">
+
+                            <Border.Background>
+
+                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+
+                                    <GradientStop Color="#F4F4F6" Offset="0.0" />
+
+                                    <GradientStop Color="#EDEDEF" Offset="0.4" />
+
+                                    <GradientStop Color="#C5C6CB" Offset="1.0" />
+
+                                </LinearGradientBrush>
+
+                            </Border.Background>
+
+                            <Border.BorderBrush>
+
+                                <SolidColorBrush Color="#B0B2B8" Opacity="0.5" />
+
+                            </Border.BorderBrush>
+
+                            <Border.BorderThickness>0.75</Border.BorderThickness>
+
+
+
+                            <Grid>
+
+                                <!-- Top Curved Specular Gloss Highlight -->
+
+                                <Ellipse Width="28" Height="13" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-3,0,0">
+
+                                    <Ellipse.Fill>
+
+                                        <RadialGradientBrush Center="0.5,0.3" GradientOrigin="0.5,0.3" RadiusX="0.5" RadiusY="0.5">
+
+                                            <GradientStop Color="#90FFFFFF" Offset="0" />
+
+                                            <GradientStop Color="#00FFFFFF" Offset="1" />
+
+                                        </RadialGradientBrush>
+
+                                    </Ellipse.Fill>
+
+                                </Ellipse>
+
+
+
+                                <!-- Bottom Subtle Ambient Occlusion Shadow -->
+
+                                <Border Height="6" VerticalAlignment="Bottom">
+
+                                    <Border.Background>
+
+                                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+
+                                            <GradientStop Color="#00000000" Offset="0" />
+
+                                            <GradientStop Color="#18000000" Offset="1" />
+
+                                        </LinearGradientBrush>
+
+                                    </Border.Background>
+
+                                </Border>
+
+
+
+                                <!-- Rosy Blush Cheeks (lower on cheeks, clear of round eyes) -->
+
+                                <Ellipse x:Name="LeftBlush" Width="3.2" Height="2.2" Fill="#FF7896" Opacity="0.45"
+
+                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4.2,5.5,0,0">
+
+                                    <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
+
+                                </Ellipse>
+
+                                <Ellipse x:Name="RightBlush" Width="3.2" Height="2.2" Fill="#FF7896" Opacity="0.45"
+
+                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5.5,4.2,0">
+
+                                    <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
+
+                                </Ellipse>
+
+
+
+                                <!-- Cute Yawning Mouth -->
+
+                                <Border x:Name="PetMouth" Width="3.2" Height="4.2" CornerRadius="1.6" Background="#C4566A"
+
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6.2,0,0" Opacity="0.0">
+
+                                    <Border.RenderTransform>
+
+                                        <ScaleTransform x:Name="PetMouthScale" ScaleX="0.0" ScaleY="0.0" CenterX="1.6" CenterY="2.1" />
+
+                                    </Border.RenderTransform>
+
+                                </Border>
+
+
+
+                                <!-- Mochi Expressive Tracking Eyes (Round) -->
+
+                                <StackPanel x:Name="NormalEyes" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0">
+
+                                    <!-- Left Eye -->
+
+                                    <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.5">
+
+                                        <Grid.RenderTransform>
+
+                                            <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
+
+                                        </Grid.RenderTransform>
+
+                                        <!-- Coucou Ink Eye Round Circle (#1A1412) -->
+
+                                        <Border x:Name="LeftPupil" Width="7.0" Height="7.0" CornerRadius="3.5" Background="#1A1412">
+
+                                            <Border.RenderTransform>
+
+                                                <TranslateTransform x:Name="LeftPupilShift" />
+
+                                            </Border.RenderTransform>
+
+                                            <!-- Specular Glint Reflection Dot -->
+
+                                            <Ellipse Width="2.0" Height="2.0" Fill="#FFFFFF" Opacity="0.95"
+
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.2,0,0" />
+
+                                        </Border>
+
+                                    </Grid>
+
+
+
+                                    <!-- Right Eye -->
+
+                                    <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.5">
+
+                                        <Grid.RenderTransform>
+
+                                            <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
+
+                                        </Grid.RenderTransform>
+
+                                        <!-- Coucou Ink Eye Round Circle (#1A1412) -->
+
+                                        <Border x:Name="RightPupil" Width="7.0" Height="7.0" CornerRadius="3.5" Background="#1A1412">
+
+                                            <Border.RenderTransform>
+
+                                                <TranslateTransform x:Name="RightPupilShift" />
+
+                                            </Border.RenderTransform>
+
+                                            <!-- Specular Glint Reflection Dot -->
+
+                                            <Ellipse Width="2.0" Height="2.0" Fill="#FFFFFF" Opacity="0.95"
+
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.2,0,0" />
+
+                                        </Border>
+
+                                    </Grid>
+
+                                </StackPanel>
+
+
+
+                                <!-- Happy Smiling Squint Eyes (^ ^ / ⌒ ⌒ for petting & yawning) -->
+
+                                <StackPanel x:Name="HappyEyes" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0" Opacity="0.0" IsHitTestVisible="False">
+
+                                    <Path Data="M 0,4.5 Q 3.5,0.5 7,4.5" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="3.5,0" />
+
+                                    <Path Data="M 0,4.5 Q 3.5,0.5 7,4.5" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="3.5,0" />
+
+                                </StackPanel>
+
+                            </Grid>
+
+                        </Border>
+
+                    </Grid>
+
+
+
+                    <!-- Music: art, title and artist (scrolls when long), waveform tinted from the album art -->
+
+                    <Grid x:Name="MusicPart" Margin="9,0,12,0" Visibility="Collapsed" Cursor="Hand"
+
+                          MouseLeftButtonUp="OnMusicPartClick" MouseRightButtonUp="OnMusicPartRightClick"
+
+                          ToolTip="Left click: open player · Right click: go to app/tab">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="Auto" />
+
+                            <ColumnDefinition Width="*" />
+
+                            <ColumnDefinition Width="Auto" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <Border x:Name="MiniArt" Width="22" Height="22" CornerRadius="6" VerticalAlignment="Center"
+
+                                Background="{DynamicResource HoverBrush}">
+
+                            <Border.Clip>
+
+                                <RectangleGeometry Rect="0,0,22,22" RadiusX="6" RadiusY="6" />
+
+                            </Border.Clip>
+
+                            <Grid>
+
+                                <hero:HeroIcon Kind="MusicNote" Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                                               Foreground="{DynamicResource SubTextBrush}" />
+
+                                <Image Source="{Binding Art, Source={x:Static svc:NowPlayingService.Instance}}" Stretch="UniformToFill" />
+
+                            </Grid>
+
+                        </Border>
+
+                        <Canvas x:Name="TitleSlot" Grid.Column="1" Margin="10,0,10,0" ClipToBounds="True" Height="18" VerticalAlignment="Center" Visibility="Collapsed">
+
+                            <TextBlock x:Name="TrackText" FontSize="12.5">
+
+                                <TextBlock.RenderTransform>
+
+                                    <TranslateTransform x:Name="TrackShift" />
+
+                                </TextBlock.RenderTransform>
+
+                                <Run x:Name="TrackTitle" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" /><Run x:Name="TrackArtist" Foreground="{DynamicResource SubTextBrush}" />
+
+                            </TextBlock>
+
+                        </Canvas>
+
+                        <StackPanel x:Name="EqBars" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Height="14">
+
+                            <Rectangle x:Name="Bar1" Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Margin="1.25,0" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><ScaleTransform ScaleY="0.4" /></Rectangle.RenderTransform></Rectangle>
+
+                            <Rectangle x:Name="Bar2" Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Margin="1.25,0" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><ScaleTransform ScaleY="0.8" /></Rectangle.RenderTransform></Rectangle>
+
+                            <Rectangle x:Name="Bar3" Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Margin="1.25,0" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><ScaleTransform ScaleY="0.55" /></Rectangle.RenderTransform></Rectangle>
+
+                            <Rectangle x:Name="Bar4" Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Margin="1.25,0" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><ScaleTransform ScaleY="0.9" /></Rectangle.RenderTransform></Rectangle>
+
+                            <Rectangle x:Name="Bar5" Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Margin="1.25,0" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><ScaleTransform ScaleY="0.5" /></Rectangle.RenderTransform></Rectangle>
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+
+                    <!-- Timer / Pomodoro / Stopwatch: progress ring with mode glyph, then the time -->
+
+                    <Grid x:Name="TimerPart" Margin="11,0,14,0" Visibility="Collapsed">
+
+                        <Grid x:Name="MiniTimerRing" Width="22" Height="22" HorizontalAlignment="Left" VerticalAlignment="Center">
+
+                            <Ellipse Stroke="{DynamicResource TrackBrush}" StrokeThickness="2.5" Margin="1.25" />
+
+                            <Path x:Name="MiniArc" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5"
+
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+
+                            <hero:HeroIcon x:Name="MiniTimerGlyph" Kind="Bolt" Width="10" Height="10"
+
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                        </Grid>
+
+                        <TextBlock x:Name="TimerText" HorizontalAlignment="Right" VerticalAlignment="Center"
+
+                                   FontSize="15" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"
+
+                                   Text="{Binding Text, Source={x:Static svc:NotchActivityService.Instance}}" />
+
+                    </Grid>
+
+
+
+                    <!-- Idle: items split symmetrically around the center eyes -->
+
+                    <Grid x:Name="IdlePart" Margin="14,0,14,0" Visibility="Collapsed">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="*" />
+
+                            <ColumnDefinition Width="88" />
+
+                            <ColumnDefinition Width="*" />
+
+                        </Grid.ColumnDefinitions>
+
+
+
+                        <StackPanel x:Name="IdleLeftGroup" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,8,0">
+
+                            <ContentControl x:Name="IdleSlotA" Focusable="False" VerticalAlignment="Center">
+
+                                <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
+
+                            </ContentControl>
+
+                            <StackPanel x:Name="IdleRowLeft" Orientation="Horizontal" VerticalAlignment="Center" />
+
+                        </StackPanel>
+
+
+
+                        <!-- Column 1 (88px) is dedicated empty zone for center NotchEyes: prevents any text or glow overlap -->
+
+
+
+                        <StackPanel x:Name="IdleRightGroup" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,2,0">
+
+                            <StackPanel x:Name="IdleRowRight" Orientation="Horizontal" VerticalAlignment="Center" />
+
+                            <ContentControl x:Name="IdleSlotB" Focusable="False" VerticalAlignment="Center">
+
+                                <ContentControl.RenderTransform><TranslateTransform /></ContentControl.RenderTransform>
+
+                            </ContentControl>
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+
+                    <!-- Event reminder (compact): calendar tile, "10m", dismiss -->
+
+                    <Grid x:Name="ReminderPart" Margin="9,0,7,0" Visibility="Collapsed">
+
+                        <Border x:Name="ReminderTile" Width="22" Height="22" CornerRadius="6" HorizontalAlignment="Left" VerticalAlignment="Center"
+
+                                Background="{DynamicResource AccentSoftBrush}">
+
+                            <hero:HeroIcon Kind="CalendarDays" Width="12" Height="12" Foreground="{DynamicResource AccentBrush}"
+
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                        </Border>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+
+                            <TextBlock x:Name="ReminderWhen" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+
+                                       Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" Margin="0,0,4,0"
+
+                                       Text="{Binding ShortWhen, Source={x:Static svc:EventReminderService.Instance}}" />
+
+                            <Button x:Name="ReminderDismiss" Style="{StaticResource IconButton}" Width="22" Height="22"
+
+                                    Foreground="{DynamicResource SubTextBrush}" ToolTip="Dismiss reminder"
+
+                                    AutomationProperties.Name="Dismiss reminder" Click="OnDismissReminder">
+
+                                <hero:HeroIcon Kind="XMark" Width="10" Height="10" />
+
+                            </Button>
+
+                        </StackPanel>
+
+                    </Grid>
+
+                </Grid>
+
+
+
+                <!-- Alert: the notch grows for a few seconds for a reminder or a Windows notification (filled in code) -->
+
+                <Grid x:Name="PeekLayer" Margin="18,0,12,0" VerticalAlignment="Stretch" Visibility="Collapsed" Opacity="0"
+
+                      Background="Transparent" Cursor="Hand" MouseLeftButtonUp="OnPeekClick"
+
+                      MouseEnter="OnPeekHover" MouseLeave="OnPeekHover">
+
+                    <Grid.ColumnDefinitions>
+
+                        <ColumnDefinition Width="Auto" />
+
+                        <ColumnDefinition Width="*" />
+
+                        <ColumnDefinition Width="Auto" />
+
+                    </Grid.ColumnDefinitions>
+
+                    <ContentControl x:Name="PeekIconHost" Width="40" Height="40" Focusable="False" VerticalAlignment="Center" />
+
+                    <StackPanel Grid.Column="1" Margin="13,0,10,0" VerticalAlignment="Center">
+
+                        <TextBlock x:Name="PeekTitle" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+
+                        <!-- Up to two lines, then "…"; the full text is in the Notifications tool -->
+
+                        <TextBlock x:Name="PeekSub" FontSize="12.5" Foreground="{DynamicResource SubTextBrush}" Margin="0,1,0,0"
+
+                                   Typography.NumeralAlignment="Tabular" TextWrapping="Wrap" TextTrimming="WordEllipsis"
+
+                                   LineHeight="16" LineStackingStrategy="BlockLineHeight" MaxHeight="32" />
+
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+
+                        <!-- "+2": more alerts waiting; dismissing shows the next -->
+
+                        <TextBlock x:Name="PeekMore" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}"
+
+                                   VerticalAlignment="Center" Margin="0,0,8,0" Visibility="Collapsed" />
+
+                        <Button x:Name="PeekDismiss" Width="28" Height="28" Style="{StaticResource IconButton}"
+
+                                Foreground="{DynamicResource SubTextBrush}" Background="{DynamicResource HoverBrush}" VerticalAlignment="Center"
+
+                                ToolTip="Dismiss" AutomationProperties.Name="Dismiss alert" Click="OnPeekDismiss">
+
+                            <hero:HeroIcon Kind="XMark" Width="11" Height="11" />
+
+                        </Button>
+
+                    </StackPanel>
+
+                </Grid>
+
+
+
+                <!-- Expanded: header (title + pin) / tool / tab bar at the bottom -->
+
+                <Grid x:Name="ExpandedLayer" Opacity="0" Visibility="Collapsed">
+
+                    <Grid x:Name="Header" Height="30" VerticalAlignment="Top" Margin="18,16,14,0">
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                            <Button x:Name="BackButton" Style="{StaticResource IconButton}" Width="26" Height="26" Margin="-4,0,6,0"
+
+                                    Foreground="{DynamicResource SubTextBrush}" Visibility="Collapsed" Click="OnBackClick">
+
+                                <hero:HeroIcon Kind="ChevronLeft" Width="17" Height="17" />
+
+                            </Button>
+
+                            <!-- The logo beside "NekoNotch" on the Home page -->
+
+                            <hero:BrandMark x:Name="TitleLogo" Variant="Gradient" Width="20" Height="20" Margin="0,0,8,0"
+
+                                            VerticalAlignment="Center" Visibility="Collapsed">
+
+                                <hero:BrandMark.Effect>
+
+                                    <DropShadowEffect Color="#FFFFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.4"/>
+
+                                </hero:BrandMark.Effect>
+
+                            </hero:BrandMark>
+
+                            <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+
+                            <Button x:Name="PinButton" Style="{StaticResource IconButton}" Width="30" Height="30" ToolTip="Keep open"
+
+                                    Foreground="{DynamicResource SubTextBrush}" Click="OnPinClick">
+
+                                <hero:HeroIcon x:Name="PinIcon" Kind="Pin" Width="17" Height="17" />
+
+                            </Button>
+
+                            <Button x:Name="CloseButton" Style="{StaticResource IconButton}" Width="30" Height="30" ToolTip="Close"
+
+                                    Foreground="{DynamicResource SubTextBrush}" Click="OnCloseClick" Visibility="Collapsed">
+
+                                <hero:HeroIcon Kind="XMark" Width="17" Height="17" />
+
+                            </Button>
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+
+                    <ContentControl x:Name="ToolHost" Margin="0,56,0,0" Focusable="False"
+
+                                    HorizontalAlignment="Center" VerticalAlignment="Top" />
+
+
+
+                    <Grid x:Name="TabBar" Height="40" VerticalAlignment="Bottom" Margin="0,0,0,12">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="*" />
+
+                            <ColumnDefinition Width="Auto" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Too many tabs to fit scroll sideways (wheel, or hover an end), with the cut-off ends faded (NotchWindow.TabScroll.cs). -->
+
+                        <ScrollViewer x:Name="TabScroller" Margin="24,0,6,0" Focusable="False"
+
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+
+                            <!-- Indicator and tabs share one centered strip, so the indicator stays aligned while the notch resizes. -->
+
+                            <Grid x:Name="TabStrip" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                                <Border x:Name="TabIndicator" Width="35" Height="28" CornerRadius="8" HorizontalAlignment="Left"
+
+                                        VerticalAlignment="Center" Background="{DynamicResource HoverBrush}" Opacity="0">
+
+                                    <Border.RenderTransform>
+
+                                        <TranslateTransform x:Name="TabIndicatorShift" />
+
+                                    </Border.RenderTransform>
+
+                                </Border>
+
+                                <StackPanel x:Name="Tabs" Orientation="Horizontal" />
+
+                            </Grid>
+
+                        </ScrollViewer>
+
+                        <!-- Settings stays put at the right end, outside the scrolling strip. -->
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,24,0" VerticalAlignment="Center">
+
+                            <Rectangle Width="1" Height="16" Fill="{DynamicResource HoverBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+
+                            <Border x:Name="SettingsTabHost" />
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+
+                    <!-- Dragging onto the notch from elsewhere: pick where it goes (NotchWindow.DropChooser.cs). -->
+
+                    <Grid x:Name="DropChooser" Margin="18,56,18,18" Visibility="Collapsed" Background="Transparent">
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="*" />
+
+                            <ColumnDefinition Width="12" />
+
+                            <ColumnDefinition Width="*" />
+
+                            <ColumnDefinition x:Name="DropAskGap" Width="12" />
+
+                            <ColumnDefinition x:Name="DropAskColumn" Width="*" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <Grid x:Name="DropShelf" Grid.Column="0" AllowDrop="True" Background="Transparent"
+
+                              DragEnter="OnChooserDragEnter" DragOver="OnChooserDragOver" DragLeave="OnChooserDragLeave" Drop="OnChooserDrop">
+
+                            <Rectangle x:Name="DropShelfFrame" IsHitTestVisible="False" RadiusX="14" RadiusY="14" StrokeThickness="1.5" StrokeDashArray="4 3"
+
+                                       Stroke="{DynamicResource SubTextBrush}" Opacity="0.5" />
+
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+
+                                <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+
+                                    <hero:HeroIcon Kind="ArchiveBox" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"
+
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                </Border>
+
+                                <TextBlock Text="Shelf" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
+
+                                <TextBlock x:Name="DropShelfSub" Text="Keep it here for later" Style="{StaticResource SubText}" FontWeight="Normal" FontSize="11.5"
+
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+
+                            </StackPanel>
+
+                        </Grid>
+
+                        <Grid x:Name="DropPhone" Grid.Column="2" AllowDrop="True" Background="Transparent"
+
+                              DragEnter="OnChooserDragEnter" DragOver="OnChooserDragOver" DragLeave="OnChooserDragLeave" Drop="OnChooserDrop">
+
+                            <Rectangle x:Name="DropPhoneFrame" IsHitTestVisible="False" RadiusX="14" RadiusY="14" StrokeThickness="1.5" StrokeDashArray="4 3"
+
+                                       Stroke="{DynamicResource SubTextBrush}" Opacity="0.5" />
+
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+
+                                <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+
+                                    <hero:HeroIcon Kind="DevicePhone" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"
+
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                </Border>
+
+                                <TextBlock Text="Phone" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
+
+                                <TextBlock x:Name="DropPhoneSub" Text="Send to your phone" Style="{StaticResource SubText}" FontWeight="Normal" FontSize="11.5"
+
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+
+                            </StackPanel>
+
+                        </Grid>
+
+                        <Grid x:Name="DropAsk" Grid.Column="4" AllowDrop="True" Background="Transparent"
+
+                              DragEnter="OnChooserDragEnter" DragOver="OnChooserDragOver" DragLeave="OnChooserDragLeave" Drop="OnChooserDrop">
+
+                            <Rectangle x:Name="DropAskFrame" IsHitTestVisible="False" RadiusX="14" RadiusY="14" StrokeThickness="1.5" StrokeDashArray="4 3"
+
+                                       Stroke="{DynamicResource SubTextBrush}" Opacity="0.5" />
+
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+
+                                <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+
+                                    <hero:HeroIcon Kind="Sparkles" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"
+
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                </Border>
+
+                                <TextBlock Text="Ask AI" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
+
+                                <TextBlock x:Name="DropAskSub" Text="Ask about it" Style="{StaticResource SubText}" FontWeight="Normal" FontSize="11.5"
+
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+
+                            </StackPanel>
+
+                        </Grid>
+
+                    </Grid>
+
+                </Grid>
+
+            </Grid>
+
+        </Grid>
+
+    </Grid>
+
+</Window>
+

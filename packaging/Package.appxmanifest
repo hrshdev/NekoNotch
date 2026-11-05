@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  OrixNotch MSIX manifest (sideload + Microsoft Store upload).
+  NekoNotch MSIX manifest (sideload + Microsoft Store upload).
   Identity Name / Publisher / PublisherDisplayName and Version are filled in by
   packaging/Build-Msix.ps1 (-IdentityName -Publisher -PublisherDisplayName -Version).
   For the Store, CI passes the values Partner Center shows under
@@ -17,8 +17,8 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap uap3 uap10 rescap desktop mp">
   <Identity
-    Name="OrixNotch"
-    Publisher="CN=OrixNotch"
+    Name="NekoNotch"
+    Publisher="CN=NekoNotch"
     Version="0.3.0.0"
     ProcessorArchitecture="x64" />
   <mp:PhoneIdentity PhoneProductId="3f1d7c9e-0b2a-4e6d-9c8f-7a1b2c3d4e5f" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
@@ -45,7 +45,7 @@
       <Extensions>
         <desktop:Extension Category="windows.startupTask" Executable="NekoNotch.exe" EntryPoint="Windows.FullTrustApplication">
           <!-- Enabled: Windows turns open-at-login on after the first launch; the user can switch it off in
-               Task Manager or OrixNotch's settings (StartupService). -->
+               Task Manager or NekoNotch's settings (StartupService). -->
           <desktop:StartupTask TaskId="NekoNotchAutostart" Enabled="true" DisplayName="NekoNotch" />
         </desktop:Extension>
       </Extensions>

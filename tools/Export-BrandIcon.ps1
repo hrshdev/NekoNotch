@@ -1,14 +1,14 @@
 # Exports the NekoNotch app icon (eyes mark on a dark rounded square) to logo-512.png + a multi-size .ico.
-# The mark comes from src/OrixNotch/Assets/Brand/mark.svg (see tools/BrandMark.ps1).
+# The mark comes from src/NekoNotch/Assets/Brand/mark.svg (see tools/BrandMark.ps1).
 # Run: powershell -File tools/Export-BrandIcon.ps1
 param(
-    [string]$OutDir = "src/OrixNotch/Assets/Brand"
+    [string]$OutDir = "src/NekoNotch/Assets/Brand"
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
-if (-not (Test-Path (Join-Path $repoRoot "OrixNotch.sln"))) { $repoRoot = (Get-Location).Path }
+if (-not (Test-Path (Join-Path $repoRoot "NekoNotch.sln"))) { $repoRoot = (Get-Location).Path }
 . (Join-Path $repoRoot "tools/BrandMark.ps1")
 $out = Join-Path $repoRoot $OutDir
 New-Item -ItemType Directory -Path $out -Force | Out-Null
@@ -32,7 +32,7 @@ Save-BrandMarkPng $repoRoot 512 $logoPath -Tile
 Write-Host "wrote $logoPath"
 
 # Combine PNGs into a Vista-style .ico (PNG-compressed entries).
-$icoPath = Join-Path $out "OrixNotch.ico"
+$icoPath = Join-Path $out "NekoNotch.ico"
 $entries = New-Object Collections.Generic.List[byte[]]
 foreach ($p in $pngs) { $entries.Add([IO.File]::ReadAllBytes($p)) }
 $fs = [IO.File]::Open($icoPath, [IO.FileMode]::Create)

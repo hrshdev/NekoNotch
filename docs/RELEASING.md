@@ -5,7 +5,7 @@
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yml` | every push to `main`, every PR | Builds, then builds all three packages (exe, MSI, MSIX) so packaging breaks show up in the PR. Packages are attached to the run as an artifact for 14 days. |
-| `release.yml` | pushing a tag `vX.Y.Z` | Checks the tag matches `<Version>` in `OrixNotch.csproj`, builds the packages, writes `SHA256SUMS.txt`, publishes a GitHub Release. Tags with a suffix (`v1.2.0-beta.1`) become pre-releases. |
+| `release.yml` | pushing a tag `vX.Y.Z` | Checks the tag matches `<Version>` in `NekoNotch.csproj`, builds the packages, writes `SHA256SUMS.txt`, publishes a GitHub Release. Tags with a suffix (`v1.2.0-beta.1`) become pre-releases. |
 | `store.yml` | called by `release.yml` after a normal (non-pre-) release, or run by hand | Uploads the release's `*-store.msix` to Partner Center. Skipped until the Store app is set up (below). |
 | Dependabot | weekly / monthly | PRs for NuGet packages and GitHub Actions. |
 
@@ -13,9 +13,9 @@
 
 | File | For | Install behaviour |
 |---|---|---|
-| `OrixNotch-X.Y.Z-setup.msi` | Most users (GitHub download) | Per-user install to `%LOCALAPPDATA%\Programs\OrixNotch`, **no admin prompt**. Starts OrixNotch when the install finishes and registers it to **open at login**. Upgrades close the running app and start the new one. These changes will be overwritten during setup: native Windows notification banner pop-ups are silenced (ShowBanners = 0) so alerts route cleanly through the Dynamic Island notch. Uninstall removes the app, the Start menu entry and the login entry; user data in `%LOCALAPPDATA%\OrixNotch` is kept. Silent: `msiexec /i <file> /qn LAUNCHAPP=0`. |
-| `OrixNotch-X.Y.Z-portable.exe` | No-install use | Single self-contained exe. Turns on open-at-login for itself on first run. |
-| `OrixNotch-X.Y.Z-store.msix` | Microsoft Store upload only | Self-contained (MSIX can't depend on the .NET 8 Desktop Runtime). The Store signs it; it can't be installed from the file. Its StartupTask is enabled, so Windows opens it at login after the first launch. |
+| `NekoNotch-X.Y.Z-setup.msi` | Most users (GitHub download) | Per-user install to `%LOCALAPPDATA%\Programs\NekoNotch`, **no admin prompt**. Starts NekoNotch when the install finishes and registers it to **open at login**. Upgrades close the running app and start the new one. These changes will be overwritten during setup: native Windows notification banner pop-ups are silenced (ShowBanners = 0) so alerts route cleanly through the Dynamic Island notch. Uninstall removes the app, the Start menu entry and the login entry; user data in `%LOCALAPPDATA%\NekoNotch` is kept. Silent: `msiexec /i <file> /qn LAUNCHAPP=0`. |
+| `NekoNotch-X.Y.Z-portable.exe` | No-install use | Single self-contained exe. Turns on open-at-login for itself on first run. |
+| `NekoNotch-X.Y.Z-store.msix` | Microsoft Store upload only | Self-contained (MSIX can't depend on the .NET 8 Desktop Runtime). The Store signs it; it can't be installed from the file. Its StartupTask is enabled, so Windows opens it at login after the first launch. |
 
 Open at login is **on by default** for every install type (the user can switch it off in Settings → General, or in Task Manager → Startup apps). `Services/StartupService.cs` uses the MSIX StartupTask when the app is packaged and the per-user `Run` key otherwise.
 
@@ -36,7 +36,7 @@ pwsh packaging/Build-Msi.ps1
 pwsh packaging/Build-Msix.ps1            # add -Sign for a self-signed sideload test package
 ```
 
-Upgrading from 0.5.0: that MSI installed per-machine (Program Files). The new per-user MSI can't replace it, so uninstall the old OrixNotch from Settings → Apps once.
+Upgrading from 0.5.0: that MSI installed per-machine (Program Files). The new per-user MSI can't replace it, so uninstall the old NekoNotch from Settings → Apps once.
 
 ## Code signing (recommended before wide distribution)
 
@@ -50,7 +50,7 @@ Without them everything still builds, unsigned. (The Store package never needs y
 ## Publishing to the Microsoft Store (when you're ready)
 
 1. **Partner Center account** — register as an individual developer at <https://partner.microsoft.com/dashboard> (one-time fee).
-2. **Reserve the name** — Apps and games → New product → MSIX or PWA app → reserve "OrixNotch".
+2. **Reserve the name** — Apps and games → New product → MSIX or PWA app → reserve "NekoNotch".
 3. **Product identity** — Product management → Product identity. Add these as repository **variables** (Settings → Secrets and variables → Actions → Variables):
    - `STORE_IDENTITY_NAME` = `Package/Identity/Name`
    - `STORE_PUBLISHER` = `Package/Identity/Publisher` (the `CN=…` value)

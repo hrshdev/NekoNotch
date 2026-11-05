@@ -187,7 +187,7 @@ publish/
 
 # MSIX staging output (packaging/Package.appxmanifest + Build-Msix.ps1 are source)
 packaging/layout/
-# MSI staging + generated WiX fragment (packaging/OrixNotch.wxs + Build-Msi.ps1 are source)
+# MSI staging + generated WiX fragment (packaging/NekoNotch.wxs + Build-Msi.ps1 are source)
 packaging/msi-stage/
 # Release workflow staging
 dist/

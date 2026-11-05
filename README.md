@@ -1,6 +1,6 @@
 # NekoNotch
 
-<img src="src/OrixNotch/Assets/Brand/logo-512.png" width="180" alt="NekoNotch logo — dynamic island with expressive character eyes" />
+<img src="src/NekoNotch/Assets/Brand/logo-512.png" width="180" alt="NekoNotch logo — dynamic island with expressive character eyes" />
 
 > **Your Screen, Smarter** — Smoother • Faster • Smarter
 
@@ -13,7 +13,7 @@ A small black pill sits at the top-center of your screen. Hover it (or click it,
 | --- | --- |
 | Now Playing | Art, title, seek bar and controls for any app using Windows media controls (Spotify, browsers, Media Player…). The closed pill shows the art and an equalizer while music plays. |
 | File Shelf | Drop files or text on the notch to park them; drag them back out, open, reveal or copy. Items expire after a configurable number of days. |
-| Phone | Send files, folders and text both ways with any phone on the same Wi-Fi: scan the QR code on the notch to open a page. Drop files on the Phone tab (or Shelf → Send to phone) and they show up on the page right away; folders download as .zip. Files from the phone go to `Downloads\OrixNotch` (or the folder set in Settings) and show up in the Phone tab's Transfers list; text sent from the phone lands there too, click to copy. No app needed. Off until turned on. |
+| Phone | Send files, folders and text both ways with any phone on the same Wi-Fi: scan the QR code on the notch to open a page. Drop files on the Phone tab (or Shelf → Send to phone) and they show up on the page right away; folders download as .zip. Files from the phone go to `Downloads\NekoNotch` (or the folder set in Settings) and show up in the Phone tab's Transfers list; text sent from the phone lands there too, click to copy. No app needed. Off until turned on. |
 | Clipboard | Searchable history of text, links, images and files. Click to copy again. Skips clips that password managers mark as private. |
 | Quick Note | Auto-saving scratchpad. |
 | To-Dos | Quick list with stars and completion. |
@@ -44,9 +44,9 @@ When a new version is out, the notch says so once. Microsoft Store builds instal
 Requires the .NET 8 SDK on Windows 10 (2004) or later.
 
 ```powershell
-dotnet run --project src/OrixNotch
+dotnet run --project src/NekoNotch
 # start with the panel open on a tool:
-dotnet run --project src/OrixNotch -- --open weather
+dotnet run --project src/NekoNotch -- --open weather
 ```
 
 Installers (portable exe, per-user MSI, Store MSIX) are built by the scripts in `packaging/`; CI builds
@@ -55,12 +55,12 @@ for the release process, code signing and Microsoft Store setup.
 
 ## Data & privacy
 
-Everything is stored locally in `%LOCALAPPDATA%\OrixNotch` (settings, notes, to-dos, events, clipboard history, shelf). Network calls happen only for features you use: Open-Meteo (weather), Yahoo Finance (stocks), LRCLIB (lyrics), the AI provider you pick, calendars you subscribe to (their links are stored encrypted), and GitHub or the Microsoft Store for update checks and downloads. Phone transfer, when turned on, listens only on your local network (port 53318, or 53328 if that one is taken) and never goes through a server.
+Everything is stored locally in `%LOCALAPPDATA%\NekoNotch` (settings, notes, to-dos, events, clipboard history, shelf). Network calls happen only for features you use: Open-Meteo (weather), Yahoo Finance (stocks), LRCLIB (lyrics), the AI provider you pick, calendars you subscribe to (their links are stored encrypted), and GitHub or the Microsoft Store for update checks and downloads. Phone transfer, when turned on, listens only on your local network (port 53318, or 53328 if that one is taken) and never goes through a server.
 
 ## Project layout
 
 ```
-src/OrixNotch/
+src/NekoNotch/
   Shell/       NotchWindow (pill, spring animation, hover/leave logic), ToolRegistry
   Services/    Now playing, clipboard, shelf, pomodoro, settings, storage, tray
   Tools/       One UserControl per tool

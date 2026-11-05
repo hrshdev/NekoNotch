@@ -16,7 +16,7 @@ try {
     if (git status --porcelain) { throw "Working tree has uncommitted changes; commit or stash them first." }
     if (git tag --list $tag) { throw "Tag $tag already exists." }
 
-    $csprojPath = "src/OrixNotch/OrixNotch.csproj"
+    $csprojPath = "src/NekoNotch/NekoNotch.csproj"
     $csproj = Get-Content $csprojPath -Raw
     $updated = $csproj -replace '<Version>[^<]+</Version>', "<Version>$core</Version>"
     if ($updated -ne $csproj) {
@@ -24,7 +24,7 @@ try {
         git add $csprojPath
         git commit -m "release: v$Version"
     }
-    git tag -a $tag -m "OrixNotch $Version"
+    git tag -a $tag -m "NekoNotch $Version"
     Write-Host "Tagged $tag. Push with:  git push origin HEAD --follow-tags"
 }
 finally {

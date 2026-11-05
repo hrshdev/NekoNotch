@@ -2,18 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-OrixNotch is a Windows "dynamic island" toolbox: a WPF (.NET 8, `net8.0-windows10.0.19041.0`) app. A black pill sits top-center and springs open into a panel of tools. There is a single project, `src/OrixNotch`, and no test project.
+NekoNotch is a Windows "dynamic island" toolbox: a WPF (.NET 8, `net8.0-windows10.0.19041.0`) app. A black pill sits top-center and springs open into a panel of tools. There is a single project, `src/NekoNotch`, and no test project.
 
 ## Commands
 
 ```powershell
-dotnet build OrixNotch.sln                         # CI builds with -c Release
-dotnet run --project src/OrixNotch                 # run
-dotnet run --project src/OrixNotch -- --open phone # start open on a tool id (see ToolRegistry); --settings opens Settings
+dotnet build NekoNotch.sln                         # CI builds with -c Release
+dotnet run --project src/NekoNotch                 # run
+dotnet run --project src/NekoNotch -- --open phone # start open on a tool id (see ToolRegistry); --settings opens Settings
 ```
 
-- **The app is single-instance.** It holds a mutex (`OrixNotch.SingleInstance`), so stop any running copy before building or launching, including the installed one at `%LOCALAPPDATA%\Programs\OrixNotch`: `Stop-Process -Name OrixNotch -Force`. If you skip this, a running dev exe locks `bin/Debug` and the build fails. A second instance also just exits silently.
-- **Test with throwaway data.** Set `ORIXNOTCH_DATA_DIR` to a scratch folder to run against isolated data instead of `%LOCALAPPDATA%\OrixNotch`. Other test hooks are env vars named `ORIXNOTCH_*`: `ORIXNOTCH_AILIMIT_TEST`, `ORIXNOTCH_WPN_DB`, `ORIXNOTCH_CURSOR_DB`, the `*_BASE` URL overrides in `AiService` and `AiUsageService`, and `ORIXNOTCH_UPDATE_BASE` (fake GitHub releases API) with `ORIXNOTCH_UPDATE_DELAY` (seconds to the first update check) for `UpdateService`. `ORIXNOTCH_SHOTS=<dir>` runs the Store screenshot mode (`Shell/NotchWindow.Shots.cs`; drive it with `marketing/store-shots/Make-StoreShots.ps1`), and `ORIXNOTCH_PC_NAME` overrides the PC name the phone page shows.
+- **The app is single-instance.** It holds a mutex (`NekoNotch.SingleInstance`), so stop any running copy before building or launching, including the installed one at `%LOCALAPPDATA%\Programs\NekoNotch`: `Stop-Process -Name NekoNotch -Force`. If you skip this, a running dev exe locks `bin/Debug` and the build fails. A second instance also just exits silently.
+- **Test with throwaway data.** Set `ORIXNOTCH_DATA_DIR` to a scratch folder to run against isolated data instead of `%LOCALAPPDATA%\NekoNotch`. Other test hooks are env vars named `ORIXNOTCH_*`: `ORIXNOTCH_AILIMIT_TEST`, `ORIXNOTCH_WPN_DB`, `ORIXNOTCH_CURSOR_DB`, the `*_BASE` URL overrides in `AiService` and `AiUsageService`, and `ORIXNOTCH_UPDATE_BASE` (fake GitHub releases API) with `ORIXNOTCH_UPDATE_DELAY` (seconds to the first update check) for `UpdateService`. `ORIXNOTCH_SHOTS=<dir>` runs the Store screenshot mode (`Shell/NotchWindow.Shots.cs`; drive it with `marketing/store-shots/Make-StoreShots.ps1`), and `ORIXNOTCH_PC_NAME` overrides the PC name the phone page shows.
 - **Packaging.** Run `pwsh packaging/Build-Exe.ps1`, `Build-Msi.ps1` or `Build-Msix.ps1`. These are self-contained win-x64 publishes into `publish/`, and the MSI needs WiX 5.0.2. CI (`.github/workflows/ci.yml`) runs all three on every PR, so a broken manifest or WiX change fails the PR.
 - **Releases.** `pwsh tools/Bump-Version.ps1 X.Y.Z` sets `<Version>` in the csproj, commits and tags it. `git push origin main --follow-tags` then triggers `release.yml`, which calls `store.yml` to upload the `*-store.msix` to Partner Center (a draft unless `commit` is set). Details are in `docs/RELEASING.md`.
 - **SDK** is pinned in `global.json` (8.0.400, `latestFeature` roll-forward).
@@ -42,7 +42,7 @@ Device alerts: `PowerWatcher` (polled from `Guard()`), `VolumeService` (Core Aud
 
 **Calendar:** `CalendarEvent.LoadAll()` merges the user's `events.json` with `events-feed.json`. The feed file is written by `CalendarFeedService` from subscribed `.ics` links (stored DPAPI-protected in `calendar-feeds.bin`; events carry only a hashed `Feed` id) and expanded by `IcsParser`, a pure class with no WPF dependencies. Calendar, Home, idle items and reminders all read through `LoadAll()`. Subscribed events are read-only.
 
-**Updates (`UpdateService`):** Store builds check `StoreContext`, download quietly where allowed, then install through the Windows dialog. An MSI install (detected by `HKCU\Software\OrixNotch\InstallDir` matching the exe folder) downloads the `-setup.msi` release asset to `%TEMP%\OrixNotch-update`, checks it against GitHub's SHA-256 digest, and runs `msiexec /i … /passive`; the MSI closes, upgrades and relaunches the app. The portable exe opens the release page.
+**Updates (`UpdateService`):** Store builds check `StoreContext`, download quietly where allowed, then install through the Windows dialog. An MSI install (detected by `HKCU\Software\NekoNotch\InstallDir` matching the exe folder) downloads the `-setup.msi` release asset to `%TEMP%\NekoNotch-update`, checks it against GitHub's SHA-256 digest, and runs `msiexec /i … /passive`; the MSI closes, upgrades and relaunches the app. The portable exe opens the release page.
 
 **Persistence:**
 - `Services/Storage.cs`: `Storage.Load<T>` and `Save` write JSON files under the data dir (atomic tmp+move); `Storage.Dir(name)` gives a subfolder.
@@ -57,7 +57,7 @@ Device alerts: `PowerWatcher` (polled from `Guard()`), `VolumeService` (Core Aud
 - The artwork comes from `HeroIconsData.g.cs` (generated Heroicons, do not hand-edit) or `HeroCustomIcons.cs` (hand-added Tabler/Phosphor paths with their own viewBox).
 - To add an icon, add an enum member plus one of those entries.
 
-**Brand:** `Assets/Brand/mark.svg` (the designer's file) is the single source of the logo. `Shell/BrandMark.cs` draws it in the app, and `tools/BrandMark.ps1` renders it for `tools/Export-BrandIcon.ps1` (`OrixNotch.ico`, `logo-512.png`, also used for the tray) and `store-assets/Export-StoreArt.ps1`. The colours are pink `#FD0388` → orange `#FC6F18` on tile `#0B0E17`. After changing the SVG, re-run both scripts.
+**Brand:** `Assets/Brand/mark.svg` (the designer's file) is the single source of the logo. `Shell/BrandMark.cs` draws it in the app, and `tools/BrandMark.ps1` renders it for `tools/Export-BrandIcon.ps1` (`NekoNotch.ico`, `logo-512.png`, also used for the tray) and `store-assets/Export-StoreArt.ps1`. The colours are pink `#FD0388` → orange `#FC6F18` on tile `#0B0E17`. After changing the SVG, re-run both scripts.
 
 **Theming:** `Themes/Theme.xaml` defines brushes (`SurfaceBrush`, `AccentBrush`, `SubTextBrush`, …) and styles (`IconButton`, `AccentButton`, `Card`, `Caps`, `SubText`, `ToggleSwitch`). `ThemeService` swaps the colors live, so reference brushes with `DynamicResource` or `SetResourceReference`, never hard-coded colors.
 

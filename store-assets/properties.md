@@ -10,11 +10,11 @@ Copied from the original Partner Center draft (EXE/MSI product) for reuse with t
 
 ## Notes for certification
 
-OrixNotch is a dynamic-island style toolbox for Windows. No account, sign-in, or license key is required — all features work immediately after install.
+NekoNotch is a dynamic-island style toolbox for Windows. No account, sign-in, or license key is required — all features work immediately after install.
 
 HOW TO OPEN THE APP
 - After launch, a small dark pill sits at the top-center of the screen. Hover over it, click it, or press Ctrl+Alt+N to expand the tool panel. Press Esc or click Close to collapse it (collapsing does NOT quit the app).
-- If you can't see the pill, use the system tray icon (OrixNotch logo) > "Open panel", or press Ctrl+Alt+N.
+- If you can't see the pill, use the system tray icon (NekoNotch logo) > "Open panel", or press Ctrl+Alt+N.
 - The app is single-instance: launching it again focuses the existing instance.
 
 WHAT TO TEST
@@ -27,5 +27,5 @@ NOTES
 - "Open at login" is on by default and uses the package's StartupTask; it can be turned off in Settings > General or Task Manager > Startup apps.
 - Windows notifications are mirrored on the notch only after the user allows notification access (Settings > General > Notifications).
 - Local data (settings, notes, history) is stored locally; no data leaves the machine except the third-party requests listed above.
-- To fully quit: tray icon > "Quit OrixNotch" (or Settings > About > Quit OrixNotch).
+- To fully quit: tray icon > "Quit NekoNotch" (or Settings > About > Quit NekoNotch).
 - Requires Windows 10 version 2004 or later.

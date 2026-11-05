@@ -1,4 +1,4 @@
-# Builds the OrixNotch MSI (per-user, x64, no admin needed).
+# Builds the NekoNotch MSI (per-user, x64, no admin needed).
 # Requires WiX v5 (v7+ needs OSMF EULA acceptance) and its Util extension:
 #   dotnet tool install --global wix --version 5.0.2
 #   wix extension add -g WixToolset.Util.wixext/5.0.2
@@ -21,6 +21,7 @@ $mainExe = Get-ChildItem $stage -Filter *.exe | Select-Object -First 1
 if ($mainExe -and $mainExe.Name -ne "NekoNotch.exe") {
     Move-Item $mainExe.FullName (Join-Path $stage "NekoNotch.exe") -Force
 }
+Copy-Item (Join-Path $ProjectDir "Assets/Brand/NekoNotch.ico") (Join-Path $stage "NekoNotch.ico") -Force
 Invoke-CodeSign (Join-Path $stage "NekoNotch.exe")
 
 # 2. File list for the AppBinaries component.
@@ -40,8 +41,8 @@ if (-not ((wix extension list -g) -match "WixToolset.Util.wixext")) {
 }
 New-Item -ItemType Directory -Path (Split-Path $OutFile) -Force | Out-Null
 & wix build -arch x64 -ext WixToolset.Util.wixext -d "ProductVersion=$appVersion" `
-    -d "BrandIco=$(Join-Path $ProjectDir 'Assets/Brand/OrixNotch.ico')" `
-    -o $OutFile (Join-Path $PSScriptRoot "OrixNotch.wxs")
+    -d "BrandIco=$(Join-Path $ProjectDir 'Assets/Brand/NekoNotch.ico')" `
+    -o $OutFile (Join-Path $PSScriptRoot "NekoNotch.wxs")
 if ($LASTEXITCODE -ne 0) { throw "wix build failed" }
 Remove-Item ([IO.Path]::ChangeExtension($OutFile, ".wixpdb")) -ErrorAction SilentlyContinue # build debug info, not shipped
 Invoke-CodeSign $OutFile

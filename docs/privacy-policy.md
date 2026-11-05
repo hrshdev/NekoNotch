@@ -1,12 +1,12 @@
-# Privacy Policy — OrixNotch
+# Privacy Policy — NekoNotch
 
 **Effective date:** October 28, 2026
 
-OrixNotch ("the app") is a Windows utility developed by Faisal Shohag. This policy explains what data the app handles. In short: **your data stays on your PC — the app has no accounts, no analytics, and no advertising.**
+NekoNotch ("the app") is a Windows utility developed by Faisal Shohag. This policy explains what data the app handles. In short: **your data stays on your PC — the app has no accounts, no analytics, and no advertising.**
 
 ## 1. Data stored on your device
 
-Everything the app saves lives locally under `%LOCALAPPDATA%\OrixNotch` (settings, notes, to-dos, calendar events, clipboard history, shelf items, logs). Nothing is uploaded to the developer or any first-party server, because there isn't one.
+Everything the app saves lives locally under `%LOCALAPPDATA%\NekoNotch` (settings, notes, to-dos, calendar events, clipboard history, shelf items, logs). Nothing is uploaded to the developer or any first-party server, because there isn't one.
 
 | Data | Where it lives | Notes |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ These providers process requests under their own privacy policies. The app's dev
 ## 5. Data retention & deletion
 
 - Shelf items expire automatically after your chosen retention period (default 7 days).
-- To erase everything, quit the app and delete `%LOCALAPPDATA%\OrixNotch`, then uninstall. Uninstalling via the Microsoft Store removes the app; delete the data folder if you want all local data gone.
+- To erase everything, quit the app and delete `%LOCALAPPDATA%\NekoNotch`, then uninstall. Uninstalling via the Microsoft Store removes the app; delete the data folder if you want all local data gone.
 
 ## 6. Children's privacy
 

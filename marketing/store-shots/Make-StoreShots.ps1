@@ -121,7 +121,7 @@ function New-Seed([string]$dir) {
 
     New-DemoImage "$dir/clipboard/shot.png" 900 560 "#10B981" "#0EA5E9" "Signups"
     Write-Json "$dir/clipboard.json" @(
-        @{ Id = [guid]::NewGuid(); Kind = 1; Text = "https://github.com/orixnotch/orixnotch/releases"; Time = & $iso $now.AddMinutes(-2); Pinned = $false }
+        @{ Id = [guid]::NewGuid(); Kind = 1; Text = "https://github.com/nekonotch/nekonotch/releases"; Time = & $iso $now.AddMinutes(-2); Pinned = $false }
         @{ Id = [guid]::NewGuid(); Kind = 2; ImagePath = (Resolve-Path "$dir/clipboard/shot.png").Path; Time = & $iso $now.AddMinutes(-8); Pinned = $false }
         @{ Id = [guid]::NewGuid(); Kind = 0; Text = "Thanks for the quick turnaround! Let's ship it on Thursday."; Time = & $iso $now.AddMinutes(-15); Pinned = $true }
         @{ Id = [guid]::NewGuid(); Kind = 3; Files = @((Resolve-Path "$dir/shelf/Q4 Roadmap.docx").Path); Time = & $iso $now.AddMinutes(-25); Pinned = $false }
@@ -146,7 +146,7 @@ function New-Seed([string]$dir) {
     ) | Where-Object { Test-Path $_.Target }
     Write-Json "$dir/shortcuts.json" @($shortcuts)
 
-    "Good morning, everyone.`n`nToday we're introducing OrixNotch — the Dynamic Island, reimagined for Windows.`n`nYour music, your timers, your AI assistant and your files, one glance away at the top of the screen.`n`nLet's take a look." |
+    "Good morning, everyone.`n`nToday we're introducing NekoNotch — the Dynamic Island, reimagined for Windows.`n`nYour music, your timers, your AI assistant and your files, one glance away at the top of the screen.`n`nLet's take a look." |
         Set-Content "$dir/teleprompter.txt" -Encoding utf8
 }
 
@@ -182,7 +182,7 @@ function Start-DemoMusic([string]$dir) {
   a.addEventListener('playing', () => { try { navigator.mediaSession.setPositionState({ duration: 214, position: 83, playbackRate: 1 }); } catch {} });
 </script>
 "@ | Set-Content "$dir/player.html" -Encoding utf8
-    $profileDir = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-shots-music"
+    $profileDir = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-shots-music"
     Start-Process $chrome -ArgumentList "--user-data-dir=`"$profileDir`"", "--autoplay-policy=no-user-gesture-required",
         "--allow-file-access-from-files", "--window-size=420,300", "--window-position=40,700", "--app=$(([Uri]"$dir/player.html").AbsoluteUri)" | Out-Null
     Start-Sleep 8 # Windows needs a few seconds of playback before it lists the session
@@ -197,13 +197,13 @@ function Stop-DemoMusic([string]$profileDir) {
 # ------------------------------------------------------------------ capture
 
 if (-not $SkipCapture) {
-    Get-Process OrixNotch -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process NekoNotch -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep 1
-    dotnet build "$repo/OrixNotch.sln" -c $Configuration | Out-Null
+    dotnet build "$repo/NekoNotch.sln" -c $Configuration | Out-Null
     if ($LASTEXITCODE) { throw "Build failed." }
-    $exe = Get-ChildItem "$repo/src/OrixNotch/bin/$Configuration" -Recurse -Filter OrixNotch.exe | Select-Object -First 1
+    $exe = Get-ChildItem "$repo/src/NekoNotch/bin/$Configuration" -Recurse -Filter NekoNotch.exe | Select-Object -First 1
 
-    $data = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-store-seed"
+    $data = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-store-seed"
     New-Seed $data
     if (Test-Path $raw) { Remove-Item $raw -Recurse -Force }
     New-Item -ItemType Directory $raw | Out-Null
@@ -222,8 +222,8 @@ if (-not $SkipCapture) {
     while (-not (Test-Path "$raw/manifest.json") -and -not $proc.HasExited) { Start-Sleep 1 }
     $settings = Get-Content "$data/settings.json" -Raw | ConvertFrom-Json
     $key = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect(
-        [IO.File]::ReadAllBytes("$data/phone-key.bin"), [Text.Encoding]::UTF8.GetBytes("OrixNotch.PhoneKey"), "CurrentUser"))
-    $profileDir = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-shots-chrome"
+        [IO.File]::ReadAllBytes("$data/phone-key.bin"), [Text.Encoding]::UTF8.GetBytes("NekoNotch.PhoneKey"), "CurrentUser"))
+    $profileDir = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-shots-chrome"
     & $chrome --headless=new --disable-gpu --hide-scrollbars --user-data-dir="$profileDir" --force-device-scale-factor=3 `
         --window-size=500,1094 --timeout=5000 --screenshot="$raw/phone-page.png" "http://localhost:$($settings.PhonePort)/?k=$key" 2>$null | Out-Null
     New-Item "$raw/continue.flag" -ItemType File | Out-Null
@@ -242,7 +242,7 @@ $big = Join-Path $out "store-3840"
 $small = Join-Path $out "store-1920"
 New-Item -ItemType Directory -Force $big, $small | Out-Null
 Get-ChildItem $big, $small -Filter *.png | Remove-Item # frames that were renamed or dropped mustn't linger
-$profileDir = Join-Path ([IO.Path]::GetTempPath()) "orixnotch-shots-chrome"
+$profileDir = Join-Path ([IO.Path]::GetTempPath()) "nekonotch-shots-chrome"
 foreach ($frame in Get-ChildItem "$here/frames" -Filter "*.html" | Sort-Object Name) {
     $png = Join-Path $big ($frame.BaseName + ".png")
     & $chrome --headless=new --disable-gpu --hide-scrollbars --user-data-dir="$profileDir" --allow-file-access-from-files `

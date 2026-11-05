@@ -1,16 +1,16 @@
-# Builds the OrixNotch MSIX package.
+# Builds the NekoNotch MSIX package.
 #
 #   Microsoft Store upload (Store signs it):
 #     pwsh packaging/Build-Msix.ps1 -Version 1.2.3 -IdentityName <Store name> -Publisher "CN=..." -PublisherDisplayName "..."
-#   Local sideload test (self-signed; trust publish/OrixNotch-test.cer in Local Machine > Trusted People first):
+#   Local sideload test (self-signed; trust publish/NekoNotch-test.cer in Local Machine > Trusted People first):
 #     pwsh packaging/Build-Msix.ps1 -Sign
 #
 # The app is published self-contained: MSIX can't pull in the .NET 8 Desktop Runtime, so a
 # framework-dependent package would fail to start on PCs without it.
 param(
     [string]$Version,
-    [string]$IdentityName = "OrixNotch",
-    [string]$Publisher = "CN=OrixNotch",
+    [string]$IdentityName = "NekoNotch",
+    [string]$Publisher = "CN=NekoNotch",
     [string]$PublisherDisplayName = "Faisal Shohag",
     [string]$OutFile,
     [switch]$Sign
@@ -67,11 +67,11 @@ if ($LASTEXITCODE -ne 0) { throw "makeappx pack failed" }
 
 if ($Sign) {
     # Self-signed test certificate; its subject must equal the manifest Publisher.
-    $certPath = Join-Path $RepoRoot "publish/OrixNotch-test.cer"
-    $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $Publisher -and $_.FriendlyName -eq "OrixNotch test cert" } | Select-Object -First 1
+    $certPath = Join-Path $RepoRoot "publish/NekoNotch-test.cer"
+    $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $Publisher -and $_.FriendlyName -eq "NekoNotch test cert" } | Select-Object -First 1
     if (-not $cert) {
         $cert = New-SelfSignedCertificate -Type Custom -Subject $Publisher -KeyUsage DigitalSignature `
-            -FriendlyName "OrixNotch test cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+            -FriendlyName "NekoNotch test cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
     }
     Export-Certificate -Cert $cert -FilePath $certPath | Out-Null
     & (Join-Path $sdkBin "signtool.exe") sign /fd SHA256 /sha1 $cert.Thumbprint $OutFile
@@ -80,4 +80,4 @@ if ($Sign) {
 }
 
 Write-Host "MSIX ready: $OutFile"
-Copy-ToOutput $OutFile ($(if ($Sign) { "OrixNotch-test-signed.msix" } else { Split-Path $OutFile -Leaf }))
+Copy-ToOutput $OutFile ($(if ($Sign) { "NekoNotch-test-signed.msix" } else { Split-Path $OutFile -Leaf }))
