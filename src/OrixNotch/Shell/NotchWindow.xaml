@@ -61,7 +61,7 @@
                         </Grid.RenderTransform>
 
                         <!-- Mochi Soft Pearlescent Squircle Body (#EDEDEF to #C4C5CA) -->
-                        <Border x:Name="MochiBody" Width="38" Height="24" CornerRadius="12" ClipToBounds="True">
+                        <Border x:Name="MochiBody" Width="38" Height="24" CornerRadius="8" ClipToBounds="True">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                     <GradientStop Color="#F4F4F6" Offset="0.0" />
@@ -96,13 +96,13 @@
                                 </Border>
 
                                 <!-- Rosy Blush Cheeks (Coucou rgba(255,120,150,0.5)) -->
-                                <Ellipse x:Name="LeftBlush" Width="6" Height="3.5" Fill="#FF7896" Opacity="0.45"
-                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,3,0,0">
-                                    <Ellipse.Effect><BlurEffect Radius="2.5" /></Ellipse.Effect>
+                                <Ellipse x:Name="LeftBlush" Width="3.2" Height="2.4" Fill="#FF7896" Opacity="0.45"
+                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4.5,2.5,0,0">
+                                    <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse x:Name="RightBlush" Width="6" Height="3.5" Fill="#FF7896" Opacity="0.45"
-                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,3,3,0">
-                                    <Ellipse.Effect><BlurEffect Radius="2.5" /></Ellipse.Effect>
+                                <Ellipse x:Name="RightBlush" Width="3.2" Height="2.4" Fill="#FF7896" Opacity="0.45"
+                                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,2.5,4.5,0">
+                                    <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
 
                                 <!-- Mochi Expressive Tracking Eyes -->
