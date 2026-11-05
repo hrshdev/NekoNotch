@@ -43,6 +43,9 @@ public sealed partial class NowPlayingService : ObservableObject
     private static string? _lastTrackArtist;
     private static string? _lastSourceApp;
     private static byte[]? _lastThumbnailBytes;
+    private static byte[]? _lastKnownThumbnailBytes;
+    private static string? _lastKnownThumbnailSource;
+    private static string? _lastKnownThumbnailTitle;
 
 
     public string PositionText => Format(Position);
@@ -160,30 +163,32 @@ public sealed partial class NowPlayingService : ObservableObject
             }
 
             // Check if Chromium/browser passed a stale thumbnail from a previous video/tab
-            // (e.g. user was playing a YouTube video, then switched to Miruro or anime site with no artwork)
+            // (e.g. user was playing a YouTube video, then switched to WhatsApp or Miruro or anime site with no artwork)
             var currentTrackKey = $"{SourceApp}|{enhancedTitle}|{enhancedArtist}";
             var isTrackChanged = _lastTrackKey != null && _lastTrackKey != currentTrackKey;
 
             bool isStaleThumbnail = false;
-            if (currentThumbBytes is not null && _lastThumbnailBytes is not null && isTrackChanged)
+
+            // 1. Messaging, calling, and voice note sources (WhatsApp, Telegram, Discord, Teams, Slack) NEVER have video thumbnails
+            if (IsNonMusicOrMessagingApp(SourceApp, enhancedTitle, rawTitle, aumid))
             {
-                if (System.Collections.StructuralComparisons.StructuralEqualityComparer.Equals(currentThumbBytes, _lastThumbnailBytes))
+                isStaleThumbnail = true;
+            }
+
+            // 2. Exact match with the last known video thumbnail across different tracks/sources
+            if (!isStaleThumbnail && currentThumbBytes is not null)
+            {
+                var refBytes = _lastThumbnailBytes ?? _lastKnownThumbnailBytes;
+                if (refBytes is not null && System.Collections.StructuralComparisons.StructuralEqualityComparer.Equals(currentThumbBytes, refBytes))
                 {
-                    if (_lastSourceApp != SourceApp || 
-                        (!enhancedTitle.Contains(_lastTrackTitle ?? "___", StringComparison.OrdinalIgnoreCase) && 
-                         !(_lastTrackTitle ?? "___").Contains(enhancedTitle, StringComparison.OrdinalIgnoreCase)))
+                    var refTitle = _lastTrackTitle ?? _lastKnownThumbnailTitle;
+                    if (_lastSourceApp != SourceApp ||
+                        (!string.IsNullOrEmpty(refTitle) &&
+                         !enhancedTitle.Contains(refTitle, StringComparison.OrdinalIgnoreCase) &&
+                         !refTitle.Contains(enhancedTitle, StringComparison.OrdinalIgnoreCase)))
                     {
                         isStaleThumbnail = true;
                     }
-                }
-            }
-
-            if (SourceApp != "YouTube" && _lastSourceApp == "YouTube" && isTrackChanged && currentThumbBytes is not null)
-            {
-                if (_lastThumbnailBytes is not null && 
-                    System.Collections.StructuralComparisons.StructuralEqualityComparer.Equals(currentThumbBytes, _lastThumbnailBytes))
-                {
-                    isStaleThumbnail = true;
                 }
             }
 
@@ -208,6 +213,9 @@ public sealed partial class NowPlayingService : ObservableObject
                     image = bmp;
 
                     _lastThumbnailBytes = currentThumbBytes;
+                    _lastKnownThumbnailBytes = currentThumbBytes;
+                    _lastKnownThumbnailSource = SourceApp;
+                    _lastKnownThumbnailTitle = enhancedTitle;
                     _lastSourceApp = SourceApp;
                 }
                 catch (Exception ex)
@@ -260,12 +268,61 @@ public sealed partial class NowPlayingService : ObservableObject
         }
     }
 
+    public static bool IsNonMusicOrMessagingApp(string? sourceApp, string? title, string? rawTitle, string? aumid)
+    {
+        var combined = $"{sourceApp} {title} {rawTitle} {aumid}".ToLowerInvariant();
+        return combined.Contains("whatsapp") ||
+               combined.Contains("telegram") ||
+               combined.Contains("discord") ||
+               combined.Contains("slack") ||
+               combined.Contains("teams") ||
+               combined.Contains("meet.google") ||
+               combined.Contains("zoom");
+    }
+
     private static (string Title, string Artist, string App) EnhanceMediaMetadata(
         string rawTitle, string rawArtist, string rawAlbum, string app, string aumid)
     {
         var title = rawTitle;
         var artist = rawArtist;
         var sourceApp = app;
+
+        // 0. Check for WhatsApp (Web, PWA, or Desktop App)
+        var isWhatsApp = rawTitle.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase) ||
+                         sourceApp.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase) ||
+                         aumid.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase);
+
+        if (!isWhatsApp && (sourceApp.Contains("Web App", StringComparison.OrdinalIgnoreCase) ||
+                            sourceApp.Contains("Chrome", StringComparison.OrdinalIgnoreCase) ||
+                            sourceApp.Contains("Edge", StringComparison.OrdinalIgnoreCase) ||
+                            sourceApp.Contains("Firefox", StringComparison.OrdinalIgnoreCase) ||
+                            sourceApp.Contains("Brave", StringComparison.OrdinalIgnoreCase) ||
+                            sourceApp.Contains("Zen", StringComparison.OrdinalIgnoreCase)))
+        {
+            var winTitles = GetVisibleWindowTitles();
+            if (winTitles.Any(w => w.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase)))
+            {
+                isWhatsApp = true;
+            }
+        }
+
+        if (isWhatsApp)
+        {
+            sourceApp = "WhatsApp";
+            // Clean tab numbers e.g. "(1) WhatsApp", "(3) WhatsApp", or "WhatsApp"
+            var clean = Regex.Replace(rawTitle, @"^\s*\(\d+\+?\)\s*", "").Trim();
+            if (string.IsNullOrWhiteSpace(clean) || clean.Equals("WhatsApp", StringComparison.OrdinalIgnoreCase) || clean.Equals("WhatsApp Web", StringComparison.OrdinalIgnoreCase))
+            {
+                title = "Voice Message";
+                artist = "WhatsApp Audio";
+            }
+            else
+            {
+                title = clean;
+                artist = "WhatsApp";
+            }
+            return (title, artist, sourceApp);
+        }
 
         // 1. Check for Netflix (App or Web)
         var isNetflix = aumid.Contains("Netflix", StringComparison.OrdinalIgnoreCase) ||
@@ -632,10 +689,12 @@ public sealed partial class NowPlayingService : ObservableObject
         {
             if (aumid.Contains("Edge", StringComparison.OrdinalIgnoreCase)) return "Microsoft Edge";
             if (aumid.Contains("Chrome", StringComparison.OrdinalIgnoreCase)) return "Google Chrome";
+            if (aumid.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase)) return "WhatsApp";
             return "Web App";
         }
         return name.ToLowerInvariant() switch
         {
+            "whatsapp" => "WhatsApp",
             "msedge" => "Microsoft Edge",
             "chrome" => "Google Chrome",
             "firefox" => "Firefox",
@@ -738,6 +797,9 @@ public sealed partial class NowPlayingService : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(platform)) return "♪";
         var p = platform.Trim();
+        if (p.Contains("whatsapp", StringComparison.OrdinalIgnoreCase)) return "W";
+        if (p.Contains("telegram", StringComparison.OrdinalIgnoreCase)) return "T";
+        if (p.Contains("discord", StringComparison.OrdinalIgnoreCase)) return "D";
         if (p.Contains("miruro", StringComparison.OrdinalIgnoreCase)) return "M";
         if (p.Contains("crunchyroll", StringComparison.OrdinalIgnoreCase)) return "C";
         if (p.Contains("youtube", StringComparison.OrdinalIgnoreCase)) return "Y";
@@ -761,6 +823,12 @@ public sealed partial class NowPlayingService : ObservableObject
     private static (Color Top, Color Bottom) GetPlatformGradient(string platform)
     {
         var p = (platform ?? "").ToLowerInvariant();
+        if (p.Contains("whatsapp"))
+            return (Color.FromRgb(37, 211, 102), Color.FromRgb(18, 140, 126));
+        if (p.Contains("telegram"))
+            return (Color.FromRgb(42, 171, 238), Color.FromRgb(28, 120, 180));
+        if (p.Contains("discord"))
+            return (Color.FromRgb(88, 101, 242), Color.FromRgb(60, 70, 180));
         if (p.Contains("miruro"))
             return (Color.FromRgb(108, 92, 231), Color.FromRgb(45, 52, 54));
         if (p.Contains("crunchyroll"))
@@ -857,6 +925,7 @@ public sealed partial class NowPlayingService : ObservableObject
     private static async Task<ImageSource?> FetchOnlineArtworkAsync(string title, string artist, string? sourceApp = null)
     {
         if (string.IsNullOrWhiteSpace(title) || title == "Nothing playing") return null;
+        if (IsNonMusicOrMessagingApp(sourceApp, title, title, null)) return null;
         var cacheKey = $"{sourceApp}|{title}|{artist}";
         if (ArtworkCache.TryGetValue(cacheKey, out var cached)) return cached;
 
