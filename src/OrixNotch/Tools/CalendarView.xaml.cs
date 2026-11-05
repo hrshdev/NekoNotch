@@ -21,9 +21,71 @@ public sealed class CalendarEvent
     [JsonIgnore] public string TimeLabel => string.IsNullOrEmpty(Time) ? "All day" : Time;
     [JsonIgnore] public bool IsSubscribed => Feed is not null;
 
-    /// <summary>Events added here plus those from subscribed calendars.</summary>
-    public static List<CalendarEvent> LoadAll() =>
-        [.. Storage.Load<List<CalendarEvent>>("events.json"), .. Storage.Load<List<CalendarEvent>>(CalendarFeedService.FileName)];
+    /// <summary>Events added here plus those from subscribed calendars, cleanly deduplicated.</summary>
+    public static List<CalendarEvent> LoadAll()
+    {
+        var local = Storage.Load<List<CalendarEvent>>("events.json");
+        var feed = Storage.Load<List<CalendarEvent>>(CalendarFeedService.FileName);
+        return Deduplicate(feed.Concat(local));
+    }
+
+    /// <summary>Checks whether two events represent the exact same appointment (same date, time, and title).</summary>
+    public static bool IsSameEvent(CalendarEvent a, CalendarEvent b)
+    {
+        if (a.Date.Date != b.Date.Date) return false;
+
+        var tA = NormalizeTime(a.Time);
+        var tB = NormalizeTime(b.Time);
+        if (!string.Equals(tA, tB, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var titleA = NormalizeTitle(a.Title);
+        var titleB = NormalizeTitle(b.Title);
+        return string.Equals(titleA, titleB, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeTime(string? t)
+    {
+        if (string.IsNullOrWhiteSpace(t) || t.Equals("All day", StringComparison.OrdinalIgnoreCase)) return "";
+        var parts = t.Trim().Split(':');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var h) && int.TryParse(parts[1], out var m))
+        {
+            return $"{h:00}:{m:00}";
+        }
+        return t.Trim();
+    }
+
+    private static string NormalizeTitle(string? t)
+    {
+        if (string.IsNullOrWhiteSpace(t)) return "";
+        return t.Trim('"', ''', '.', ' ', '	');
+    }
+
+    /// <summary>
+    /// Deduplicates events. If an event exists in both local storage and a subscribed feed
+    /// (e.g. created locally, pushed to Google Calendar, then synced back via ICS),
+    /// only the subscribed feed event is retained.
+    /// </summary>
+    public static List<CalendarEvent> Deduplicate(IEnumerable<CalendarEvent> events)
+    {
+        var result = new List<CalendarEvent>();
+        foreach (var ev in events)
+        {
+            var matchIdx = result.FindIndex(r => IsSameEvent(r, ev));
+            if (matchIdx < 0)
+            {
+                result.Add(ev);
+            }
+            else
+            {
+                // Prefer the subscribed feed event (e.g. from Google Calendar) over un-synced local
+                if (!result[matchIdx].IsSubscribed && ev.IsSubscribed)
+                {
+                    result[matchIdx] = ev;
+                }
+            }
+        }
+        return result;
+    }
 }
 
 public partial class CalendarView : UserControl, IToolView, IEscapeHandler
@@ -31,7 +93,7 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
     private const string FileName = "events.json";
     private readonly List<CalendarEvent> _events = Storage.Load<List<CalendarEvent>>(FileName); // the user's own (editable)
     private List<CalendarEvent> _feed = Storage.Load<List<CalendarEvent>>(CalendarFeedService.FileName); // subscribed (read-only)
-    private IEnumerable<CalendarEvent> All => _events.Concat(_feed);
+    private IEnumerable<CalendarEvent> All => CalendarEvent.Deduplicate(_feed.Concat(_events));
     private DateTime _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime _selected = DateTime.Today;
 
@@ -60,6 +122,8 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
         };
         CalendarFeedService.Instance.Updated += () =>
         {
+            _events.Clear();
+            _events.AddRange(Storage.Load<List<CalendarEvent>>(FileName));
             _feed = Storage.Load<List<CalendarEvent>>(CalendarFeedService.FileName);
             Render();
         };
@@ -67,6 +131,10 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
 
     public void OnShown()
     {
+        _events.Clear();
+        _events.AddRange(Storage.Load<List<CalendarEvent>>(FileName));
+        _feed = Storage.Load<List<CalendarEvent>>(CalendarFeedService.FileName);
+
         // Day may have rolled over while the panel was closed; "up next" also moves with the clock.
         if (_renderedDay != DateTime.Today && _selected.Date == _renderedDay)
         {
@@ -364,7 +432,11 @@ public partial class CalendarView : UserControl, IToolView, IEscapeHandler
         }
         else
         {
-            _events.Add(new CalendarEvent { Date = _selected.Date, Time = time, Title = title });
+            var newEvent = new CalendarEvent { Date = _selected.Date, Time = time, Title = title };
+            if (!All.Any(e => CalendarEvent.IsSameEvent(e, newEvent)))
+            {
+                _events.Add(newEvent);
+            }
             TitleInput.Clear();
             TimeInput.Clear();
         }

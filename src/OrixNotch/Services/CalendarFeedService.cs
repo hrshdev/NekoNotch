@@ -33,6 +33,12 @@ public sealed partial class CalendarFeedService : ObservableObject
     public void Start()
     {
         _timer.Start();
+        try
+        {
+            var existingFeed = Storage.Load<List<CalendarEvent>>(FileName);
+            if (existingFeed.Count > 0) CleanLocalDuplicates(existingFeed);
+        }
+        catch { }
         _ = RefreshAsync();
     }
 
@@ -72,6 +78,7 @@ public sealed partial class CalendarFeedService : ObservableObject
                 }
             }
             Storage.Save(FileName, events);
+            CleanLocalDuplicates(events);
             EventReminderService.Instance.Reload();
             Updated?.Invoke();
             Status = feeds.Count == 0 ? ""
@@ -106,6 +113,31 @@ public sealed partial class CalendarFeedService : ObservableObject
                 App.Log(ex);
                 return [];
             }
+        }
+    }
+
+    /// <summary>
+    /// If an event created locally in NekoNotch has now synced to Google Calendar or subscribed feed,
+    /// remove the redundant local copy from events.json so it doesn't appear twice.
+    /// </summary>
+    public static void CleanLocalDuplicates(List<CalendarEvent> feedEvents)
+    {
+        try
+        {
+            var localEvents = Storage.Load<List<CalendarEvent>>("events.json");
+            if (localEvents.Count == 0) return;
+
+            var removed = localEvents.RemoveAll(local =>
+                feedEvents.Any(feed => CalendarEvent.IsSameEvent(local, feed)));
+
+            if (removed > 0)
+            {
+                Storage.Save("events.json", localEvents);
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
         }
     }
 
