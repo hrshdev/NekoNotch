@@ -13,7 +13,7 @@
 
 | File | For | Install behaviour |
 |---|---|---|
-| `OrixNotch-X.Y.Z-setup.msi` | Most users (GitHub download) | Per-user install to `%LOCALAPPDATA%\Programs\OrixNotch`, **no admin prompt**. Starts OrixNotch when the install finishes and registers it to **open at login**. Upgrades close the running app and start the new one. Uninstall removes the app, the Start menu entry and the login entry; user data in `%LOCALAPPDATA%\OrixNotch` is kept. Silent: `msiexec /i <file> /qn LAUNCHAPP=0`. |
+| `OrixNotch-X.Y.Z-setup.msi` | Most users (GitHub download) | Per-user install to `%LOCALAPPDATA%\Programs\OrixNotch`, **no admin prompt**. Starts OrixNotch when the install finishes and registers it to **open at login**. Upgrades close the running app and start the new one. These changes will be overwritten during setup: native Windows notification banner pop-ups are silenced (ShowBanners = 0) so alerts route cleanly through the Dynamic Island notch. Uninstall removes the app, the Start menu entry and the login entry; user data in `%LOCALAPPDATA%\OrixNotch` is kept. Silent: `msiexec /i <file> /qn LAUNCHAPP=0`. |
 | `OrixNotch-X.Y.Z-portable.exe` | No-install use | Single self-contained exe. Turns on open-at-login for itself on first run. |
 | `OrixNotch-X.Y.Z-store.msix` | Microsoft Store upload only | Self-contained (MSIX can't depend on the .NET 8 Desktop Runtime). The Store signs it; it can't be installed from the file. Its StartupTask is enabled, so Windows opens it at login after the first launch. |
 

@@ -4,6 +4,7 @@
 #   wix extension add -g WixToolset.Util.wixext/5.0.2
 # Run from repo root:  pwsh packaging/Build-Msi.ps1 [-Version 1.2.3]
 # Silent install:      msiexec /i publish/NekoNotch-Setup.msi /qn LAUNCHAPP=0
+# Note: System notification banner settings will be overwritten during setup to route alerts through the notch.
 param([string]$Version, [string]$OutFile)
 
 $ErrorActionPreference = "Stop"

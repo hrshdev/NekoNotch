@@ -8,6 +8,7 @@
     - Starts OrixNotch when the install finishes. Silent installs can skip that:
         msiexec /i OrixNotch.msi /qn LAUNCHAPP=0
     - A running OrixNotch is closed before files are replaced or removed (upgrade / uninstall).
+    - Note: System notification banner settings are overwritten during setup to route alerts exclusively through the Dynamic Island notch.
   -->
   <Package Name="NekoNotch"
            Language="1033"
@@ -21,6 +22,7 @@
     <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/hrshdev/orixNotch" />
     <Property Id="LAUNCHAPP" Value="1" Secure="yes" />
+    <Property Id="ARPCOMMENTS" Value="Note: System notification banner settings are overwritten during setup to route alerts through the NekoNotch Dynamic Island." />
 
     <Feature Id="Main" Title="NekoNotch" Level="1">
       <ComponentGroupRef Id="AppFiles" />
@@ -36,8 +38,16 @@
     <CustomAction Id="LaunchApp" Directory="INSTALLFOLDER"
                   ExeCommand="&quot;[INSTALLFOLDER]NekoNotch.exe&quot;"
                   Return="asyncNoWait" Impersonate="yes" Execute="immediate" />
+    <!-- Overwrite system notification banner settings during setup so only the notch shows them -->
+    <SetProperty Id="ConfigureSystemDefaults"
+                 Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings' -ErrorAction SilentlyContinue | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'ShowBanners' -Value 0 -Type DWord -ErrorAction SilentlyContinue }&quot;"
+                 Before="ConfigureSystemDefaults" Sequence="execute" />
+    <CustomAction Id="ConfigureSystemDefaults" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
+                  Execute="immediate" Return="ignore" />
+
     <InstallExecuteSequence>
       <Custom Action="CloseRunningApp" Before="InstallValidate" />
+      <Custom Action="ConfigureSystemDefaults" Before="InstallFinalize" Condition="NOT REMOVE" />
       <Custom Action="LaunchApp" After="InstallFinalize" Condition="LAUNCHAPP = &quot;1&quot; AND NOT REMOVE" />
     </InstallExecuteSequence>
 

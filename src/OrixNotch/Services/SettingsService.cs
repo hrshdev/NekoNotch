@@ -159,6 +159,7 @@ public static class SettingsService
             s.BrightnessHud = true;
             s.SettingsVersion = 3;
             Storage.Save(FileName, s);
+            SuppressWindowsNotificationBanners();
         }
         return s;
     }
@@ -170,6 +171,7 @@ public static class SettingsService
     /// </summary>
     public static void ApplyFirstRunDefaults()
     {
+        SuppressWindowsNotificationBanners();
         if (!FirstRun) return;
         var settings = Current;
         var region = System.Globalization.RegionInfo.CurrentRegion;
@@ -196,6 +198,35 @@ public static class SettingsService
 
     /// <summary>Raised after settings that affect layout or behaviour were saved.</summary>
     public static event Action? Changed;
+
+    /// <summary>
+    /// Overwrites Windows notification banner settings (ShowBanners = 0) so native bottom-right toast popups are silenced
+    /// while allowing NekoNotch to mirror them in the Dynamic Island notch.
+    /// </summary>
+    public static void SuppressWindowsNotificationBanners()
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings", writable: true);
+                if (key != null)
+                {
+                    foreach (var sub in key.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using var subKey = key.OpenSubKey(sub, writable: true);
+                            subKey?.SetValue("ShowBanners", 0, Microsoft.Win32.RegistryValueKind.DWord);
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+        });
+    }
 
     public static void Save(bool notify = true)
     {
