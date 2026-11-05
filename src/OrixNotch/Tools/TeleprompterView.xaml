@@ -53,54 +53,61 @@
 
         <!-- Controls -->
         <Grid Grid.Row="1" Margin="0,6,0,0" HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="EditButton" Style="{StaticResource IconButton}" Width="28" Height="28" ToolTip="Edit script"
-                        Foreground="{DynamicResource SubTextBrush}" Click="OnEdit">
-                    <hero:HeroIcon x:Name="EditIcon" Kind="Pencil" Width="14" Height="14" />
-                </Button>
-                <Button x:Name="PlayButton" Width="28" Height="28" Margin="8,0" Padding="0" ToolTip="Play / Pause (Space)"
-                        Cursor="Hand" Focusable="False" Click="OnPlay">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="14" Background="{DynamicResource AccentBrush}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
-                                </Trigger>
-                                <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.35" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                    <hero:HeroIcon x:Name="PlayIcon" Kind="Play" Width="14" Height="14" Foreground="{DynamicResource OnAccentBrush}" />
-                </Button>
-                <Button Style="{StaticResource IconButton}" Width="28" Height="28" ToolTip="Restart"
-                        Foreground="{DynamicResource SubTextBrush}" Click="OnRestart">
-                    <hero:HeroIcon Kind="Refresh" Width="14" Height="14" />
-                </Button>
+            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="30" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="EditButton" Style="{StaticResource IconButton}" Width="28" Height="28" ToolTip="Edit script"
+                            Foreground="{DynamicResource SubTextBrush}" Click="OnEdit">
+                        <hero:HeroIcon x:Name="EditIcon" Kind="Pencil" Width="14" Height="14" />
+                    </Button>
+                    <Button x:Name="PlayButton" Width="28" Height="28" Margin="8,0" Padding="0" ToolTip="Play / Pause (Space)"
+                            Cursor="Hand" Focusable="False" Click="OnPlay">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" CornerRadius="14" Background="{DynamicResource AccentBrush}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.35" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <hero:HeroIcon x:Name="PlayIcon" Kind="Play" Width="14" Height="14" Foreground="{DynamicResource OnAccentBrush}" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="28" Height="28" ToolTip="Restart"
+                            Foreground="{DynamicResource SubTextBrush}" Click="OnRestart">
+                        <hero:HeroIcon Kind="Refresh" Width="14" Height="14" />
+                    </Button>
 
-                <hero:HeroIcon Kind="Signal" Width="14" Height="14" Margin="14,0,6,0" VerticalAlignment="Center"
-                                      Foreground="{DynamicResource SubTextBrush}" ToolTip="Speed" />
-                <Slider x:Name="SpeedSlider" Width="90" Minimum="0" Maximum="1" VerticalAlignment="Center" ValueChanged="OnSpeedChanged" />
-                <hero:HeroIcon Kind="Rocket" Width="14" Height="14" Margin="6,0,0,0" VerticalAlignment="Center"
-                                      Foreground="{DynamicResource SubTextBrush}" />
+                    <hero:HeroIcon Kind="Signal" Width="14" Height="14" Margin="12,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SubTextBrush}" ToolTip="Speed" />
+                    <Slider x:Name="SpeedSlider" Width="72" Minimum="0" Maximum="1" VerticalAlignment="Center" ValueChanged="OnSpeedChanged" />
+                    <hero:HeroIcon Kind="Rocket" Width="14" Height="14" Margin="6,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SubTextBrush}" />
 
-                <hero:HeroIcon Kind="Language" Width="14" Height="14" Margin="14,0,6,0" VerticalAlignment="Center"
-                                      Foreground="{DynamicResource SubTextBrush}" ToolTip="Text size" />
-                <Slider x:Name="SizeSlider" Width="60" Minimum="13" Maximum="34" VerticalAlignment="Center" ValueChanged="OnSizeChanged" />
+                    <hero:HeroIcon Kind="Language" Width="14" Height="14" Margin="12,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SubTextBrush}" ToolTip="Text size" />
+                    <Slider x:Name="SizeSlider" Width="50" Minimum="13" Maximum="34" VerticalAlignment="Center" ValueChanged="OnSizeChanged" />
 
-                <hero:HeroIcon Kind="Sun" Width="14" Height="14" Margin="14,0,6,0" VerticalAlignment="Center"
-                                      Foreground="{DynamicResource SubTextBrush}" ToolTip="Background opacity" />
-                <Slider x:Name="OpacitySlider" Width="70" Minimum="0.2" Maximum="1" VerticalAlignment="Center" ValueChanged="OnOpacityChanged" />
+                    <!-- Width Slider (reduce or increase text window width) -->
+                    <hero:HeroIcon Kind="ArrowsLeftRight" Width="14" Height="14" Margin="12,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SubTextBrush}" ToolTip="Window width" />
+                    <Slider x:Name="WidthSlider" Width="65" Minimum="420" Maximum="840" VerticalAlignment="Center" ValueChanged="OnWidthChanged" />
 
-                <Button x:Name="MirrorButton" Style="{StaticResource IconButton}" Width="28" Height="28" Margin="10,0,0,0"
-                        ToolTip="Mirror text" Foreground="{DynamicResource SubTextBrush}" Click="OnMirror">
-                    <hero:HeroIcon Kind="ArrowsLeftRight" Width="14" Height="14" />
-                </Button>
-            </StackPanel>
+                    <hero:HeroIcon Kind="Sun" Width="14" Height="14" Margin="12,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SubTextBrush}" ToolTip="Background opacity" />
+                    <Slider x:Name="OpacitySlider" Width="55" Minimum="0.2" Maximum="1" VerticalAlignment="Center" ValueChanged="OnOpacityChanged" />
+
+                    <Button x:Name="MirrorButton" Style="{StaticResource IconButton}" Width="28" Height="28" Margin="8,0,0,0"
+                            ToolTip="Mirror text" Foreground="{DynamicResource SubTextBrush}" Click="OnMirror">
+                        <hero:HeroIcon Kind="ArrowsUpDown" Width="14" Height="14" />
+                    </Button>
+                </StackPanel>
+            </Viewbox>
         </Grid>
 
         <!-- Grab handle: drag to make the prompter taller or shorter -->

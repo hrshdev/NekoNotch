@@ -2003,11 +2003,17 @@ public partial class NotchWindow : Window
         var chrome = HeaderH + (tabs ? TabBarH : SidePad);
         var screenH = CurrentScreen().Bounds.Height / VisualTreeHelper.GetDpi(this).DpiScaleY;
         h = Math.Max(0, Math.Min(h, screenH - chrome - ScreenMargin));
-        // The window is a fixed transparent canvas the notch draws into: grow it so a tall tool isn't cropped.
+        // The window is a fixed transparent canvas the notch draws into: grow it so a tall or wide tool isn't cropped.
         var needed = Math.Ceiling(chrome + h + WindowSlack);
         if (needed > Height)
         {
             Height = needed;
+            Place();
+        }
+        var neededW = Math.Ceiling(w + 2 * SidePad + WindowSlack);
+        if (neededW > Width)
+        {
+            Width = neededW;
             Place();
         }
 

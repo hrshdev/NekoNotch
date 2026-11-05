@@ -124,6 +124,7 @@ public sealed class AppSettings
     public double PrompterOpacity { get; set; } = 1.0;   // background opacity 0.2..1
     public double PrompterFontSize { get; set; } = 20;
     public double PrompterHeight { get; set; } = 203;
+    public double PrompterWidth { get; set; } = 690;     // width 420..840
     public bool PrompterMirror { get; set; }
 
     // Ask AI (API keys are stored separately, encrypted — see AiService)

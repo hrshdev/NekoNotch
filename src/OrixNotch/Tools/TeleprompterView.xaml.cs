@@ -24,6 +24,8 @@ public partial class TeleprompterView : UserControl, IToolView
 {
     private const double MinPrompterHeight = 120;
     private const double MaxPrompterHeight = 360;
+    private const double MinPrompterWidth = 420;
+    private const double MaxPrompterWidth = 840;
     private const double LineSpacing = 1.35;
     private const double SideMargin = 24;
     private const double SpeedEase = 0.18;   // seconds: time constant for speed changes
@@ -49,6 +51,7 @@ public partial class TeleprompterView : UserControl, IToolView
         SpeedSlider.Value = s.PrompterSpeed;
         SizeSlider.Value = s.PrompterFontSize;
         OpacitySlider.Value = s.PrompterOpacity;
+        WidthSlider.Value = Math.Clamp(s.PrompterWidth > 0 ? s.PrompterWidth : 690, MinPrompterWidth, MaxPrompterWidth);
         Mirror.ScaleX = s.PrompterMirror ? -1 : 1;
 
         Service.PropertyChanged += OnServiceChanged;
@@ -68,7 +71,8 @@ public partial class TeleprompterView : UserControl, IToolView
 
     public void OnShown()
     {
-        NotchWindow.Instance?.SetToolSize(690, App.Settings.PrompterHeight);
+        var w = Math.Clamp(App.Settings.PrompterWidth > 0 ? App.Settings.PrompterWidth : 690, MinPrompterWidth, MaxPrompterWidth);
+        NotchWindow.Instance?.SetToolSize(w, App.Settings.PrompterHeight);
         NotchWindow.Instance?.SetBackgroundOpacity(App.Settings.PrompterOpacity);
         UpdateMode();
     }
@@ -301,6 +305,15 @@ public partial class TeleprompterView : UserControl, IToolView
         SettingsService.Save(notify: false);
     }
 
+    private void OnWidthChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded) return;
+        var width = Math.Round(e.NewValue);
+        App.Settings.PrompterWidth = width;
+        NotchWindow.Instance?.SetToolSize(width, App.Settings.PrompterHeight);
+        SettingsService.Save(notify: false);
+    }
+
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsLoaded) return;
@@ -332,7 +345,8 @@ public partial class TeleprompterView : UserControl, IToolView
         var dpi = VisualTreeHelper.GetDpi(this).DpiScaleY;
         var dy = (PointToScreen(e.GetPosition(this)).Y - _dragStartY) / dpi;
         var want = Math.Clamp(_dragStartHeight + dy, MinPrompterHeight, MaxPrompterHeight);
-        App.Settings.PrompterHeight = NotchWindow.Instance?.SetToolSize(690, want) ?? want;
+        var w = Math.Clamp(App.Settings.PrompterWidth > 0 ? App.Settings.PrompterWidth : 690, MinPrompterWidth, MaxPrompterWidth);
+        App.Settings.PrompterHeight = NotchWindow.Instance?.SetToolSize(w, want) ?? want;
     }
 
     private void OnGripUp(object sender, MouseButtonEventArgs e)
