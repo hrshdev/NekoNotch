@@ -28,7 +28,8 @@ public sealed class AppSettings
     /// <summary>Leave the notch out of screenshots, recordings and screen sharing.</summary>
     public bool HideFromCapture { get; set; }
     public bool PowerAlerts { get; set; } = true;  // charger in/out, low battery
-    public bool VolumeHud { get; set; }            // off: Windows shows its own volume flyout too
+    public int SettingsVersion { get; set; } = 2;
+    public bool VolumeHud { get; set; } = true;     // on: show on notch & suppress native Windows flyout
     public bool BluetoothAlerts { get; set; } = true;
     public bool DownloadAlerts { get; set; } = true;
     public bool TrackPeek { get; set; }            // a short alert with the new song when the track changes
@@ -146,7 +147,19 @@ public static class SettingsService
     /// <summary>No settings saved yet: this is the first launch (read before anything saves).</summary>
     public static bool FirstRun { get; } = !System.IO.File.Exists(Storage.PathOf(FileName));
 
-    public static AppSettings Current { get; } = Storage.Load<AppSettings>(FileName);
+    public static AppSettings Current { get; } = LoadSettings();
+
+    private static AppSettings LoadSettings()
+    {
+        var s = Storage.Load<AppSettings>(FileName);
+        if (s.SettingsVersion < 2)
+        {
+            s.VolumeHud = true;
+            s.SettingsVersion = 2;
+            Storage.Save(FileName, s);
+        }
+        return s;
+    }
 
     /// <summary>
     /// Defaults that depend on this PC, set once on the first launch (saved values win afterwards): the weather

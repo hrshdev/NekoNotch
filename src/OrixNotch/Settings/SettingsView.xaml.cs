@@ -469,7 +469,7 @@ public partial class SettingsView : UserControl, IToolView
             }));
         Row("Battery alerts", "Show on the notch when the charger is plugged in or pulled, and when the battery drops to 20% and 10%.",
             Toggle(S.PowerAlerts, v => { S.PowerAlerts = v; Save(false); }));
-        Row("Volume on the notch", "Show the volume level on the notch when it changes. Windows still shows its own volume pop-up too.",
+        Row("Volume on the notch", "Show the volume level on the notch and suppress the native Windows volume pop-up.",
             Toggle(S.VolumeHud, v => { S.VolumeHud = v; Save(false); }));
         Row("Bluetooth devices", "Show on the notch when paired headphones, a mouse or other Bluetooth device connects or disconnects.",
             Toggle(S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(false); }));
