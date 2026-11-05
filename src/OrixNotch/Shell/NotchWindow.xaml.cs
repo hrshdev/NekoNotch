@@ -1794,6 +1794,17 @@ public partial class NotchWindow : Window
     private void SetEqualizer(bool on)
     {
         _eqRunning = on;
+        if (on && !_isGrooving && !_isYawning && !_isPetting && !_isSleeping)
+        {
+            _isGrooving = true;
+            StartMusicGroove();
+        }
+        else if (!on && _isGrooving)
+        {
+            _isGrooving = false;
+            StartIdleBreathing();
+        }
+
         if (!on)
         {
             var bars = new[] { Bar1, Bar2, Bar3, Bar4, Bar5 };
@@ -2158,6 +2169,7 @@ public partial class NotchWindow : Window
     private bool _isYawning;
     private bool _isPetting;
     private bool _isSleeping;
+    private bool _isGrooving;
     private DateTime _lastActivityTime = DateTime.UtcNow;
     private Win32.POINT _lastCursorPt;
     private const double ConstantBlinkIntervalSec = 3.5;
@@ -2177,6 +2189,12 @@ public partial class NotchWindow : Window
 
     private void StartIdleBreathing()
     {
+        if (_isGrooving && !_isSleeping)
+        {
+            StartMusicGroove();
+            return;
+        }
+
         // Coucou Mochi organic idle breathing animation
         var breatheY = new DoubleAnimation
         {
@@ -2198,6 +2216,32 @@ public partial class NotchWindow : Window
         };
         PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, breatheY);
         PetBreatheScale.BeginAnimation(ScaleTransform.ScaleXProperty, breatheX);
+    }
+
+    private void StartMusicGroove()
+    {
+        if (_isYawning || _isPetting || _isSleeping) return;
+        // Upbeat rhythmic music head bob / bounce (~120 BPM groove)
+        var grooveY = new DoubleAnimation
+        {
+            From = 0.94,
+            To = 1.06,
+            Duration = TimeSpan.FromMilliseconds(480),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+        var grooveX = new DoubleAnimation
+        {
+            From = 1.02,
+            To = 0.98,
+            Duration = TimeSpan.FromMilliseconds(480),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, grooveY);
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleXProperty, grooveX);
     }
 
     private void TriggerYawn()
