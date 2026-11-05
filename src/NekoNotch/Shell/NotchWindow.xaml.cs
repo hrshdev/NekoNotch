@@ -366,6 +366,8 @@ public partial class NotchWindow : Window
 
         BuildTabs();
 
+        SportsService.Instance.MatchesUpdated += () => Dispatcher.InvokeAsync(UpdateActivity);
+        SportsService.Instance.MatchEventOccurred += (match, banner) => Dispatcher.InvokeAsync(() => TriggerCheerAnimation(banner));
         UpdateActivity();
 
         NotchEyes.Visibility = Visibility.Visible;
@@ -1733,6 +1735,8 @@ public partial class NotchWindow : Window
     private bool HasActivity() => NotchActivityService.Instance.HasActivity;
 
     private bool _reminderPulsing;
+    private bool _celebratingSportsEvent;
+    private bool _isCheering;
 
 
 
@@ -1762,9 +1766,15 @@ public partial class NotchWindow : Window
 
         if (timer) return _timerW;
 
+                if (_celebratingSportsEvent) return 330;
+        var sm = SportsService.Instance.ActiveMatch;
+        var sportsLive = sm != null && SportsService.Instance.ShowScoreInNotch;
+
         var music = NowPlayingService.Instance.HasSession && NowPlayingService.Instance.IsPlaying;
 
-        return music ? _musicW : IdleActive ? IdleWidth() : _idleW;
+        if (music) return _musicW;
+        if (sportsLive) return 280;
+        return IdleActive ? IdleWidth() : _idleW;
 
     }
 
@@ -1950,7 +1960,14 @@ public partial class NotchWindow : Window
 
         ReminderPart.Visibility = reminder ? Visibility.Visible : Visibility.Collapsed;
 
-        var idle = kind == NotchActivityKind.None && IdleInfoService.Instance.Items.Count > 0;
+        var sports = !music && !timer && !reminder && SportsService.Instance.ActiveMatch != null && SportsService.Instance.ShowScoreInNotch;
+        SportsPart.Visibility = sports ? Visibility.Visible : Visibility.Collapsed;
+        if (sports && SportsService.Instance.ActiveMatch is { } actMatch)
+        {
+            RenderSportsScorecard(actMatch);
+        }
+
+        var idle = !sports && kind == NotchActivityKind.None && IdleInfoService.Instance.Items.Count > 0;
 
         IdlePart.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
 
@@ -2929,6 +2946,84 @@ public partial class NotchWindow : Window
     }
 
 
+
+
+    private void RenderSportsScorecard(SportMatch m)
+    {
+        SportsHomeTeamText.Text = m.HomeTeamCode;
+        SportsHomeScoreText.Text = m.HomeScore;
+        SportsAwayScoreText.Text = m.AwayScore;
+        SportsAwayTeamText.Text = m.AwayTeamCode;
+        SportsTimeBadge.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail;
+        SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnSportsPartClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        OpenTool("sports");
+    }
+
+    private void TriggerCheerAnimation(string bannerText)
+    {
+        if (_expanded || NotchEyes.Visibility != Visibility.Visible) return;
+        _isCheering = true;
+
+        // Happy victory squints (^ ^)
+        HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation
+        {
+            From = 0.0,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(250)
+        });
+        MochiPupils.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation
+        {
+            From = 1.0,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(250)
+        });
+
+        // Rosy blush glows bright
+        LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.95, Duration = TimeSpan.FromMilliseconds(200) });
+        RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.95, Duration = TimeSpan.FromMilliseconds(200) });
+
+        // Cheerful jump bounce
+        var jump = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(1500),
+            RepeatBehavior = new RepeatBehavior(2)
+        };
+        jump.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromPercent(0.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(1.22, KeyTime.FromPercent(0.3), new KeySpline(0.1, 0.9, 0.2, 1.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(0.92, KeyTime.FromPercent(0.6), new KeySpline(0.2, 0.0, 0.2, 1.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(1.0, KeyTime.FromPercent(1.0), new KeySpline(0.1, 0.9, 0.2, 1.0)));
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, jump);
+
+        // Celebratory banner pop
+        SportsEventPill.Visibility = Visibility.Visible;
+        SportsEventText.Text = bannerText;
+        _celebratingSportsEvent = true;
+        _width.Target = ActivityWidth();
+        StartAnimation();
+
+        var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+        resetTimer.Tick += (s, e) =>
+        {
+            resetTimer.Stop();
+            _celebratingSportsEvent = false;
+            _isCheering = false;
+
+            SportsEventPill.Visibility = Visibility.Collapsed;
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(400) });
+            MochiPupils.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(400) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(400) });
+
+            _width.Target = ActivityWidth();
+            StartAnimation();
+        };
+        resetTimer.Start();
+    }
 
     private void OnMusicPartClick(object sender, MouseButtonEventArgs e)
 
