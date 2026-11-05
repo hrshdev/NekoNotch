@@ -32,7 +32,9 @@ jobs:
           $version = $Matches[1]
           $csproj = Get-Content src/NekoNotch/NekoNotch.csproj -Raw
           if ($csproj -notmatch "<Version>$([regex]::Escape($version))</Version>") {
-            throw "Tag $tag doesn't match <Version> in src/NekoNotch/NekoNotch.csproj. Bump the csproj first (tools/Bump-Version.ps1)."
+            Write-Host "Tag $tag differs from csproj version; updating csproj to $version..."
+            $updated = $csproj -replace '<Version>[^<]+</Version>', "<Version>$version</Version>"
+            Set-Content src/NekoNotch/NekoNotch.csproj $updated
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           $prerelease = if ($tag.Contains('-')) { 'true' } else { 'false' }
