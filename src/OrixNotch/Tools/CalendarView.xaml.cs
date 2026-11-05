@@ -57,7 +57,7 @@ public sealed class CalendarEvent
     private static string NormalizeTitle(string? t)
     {
         if (string.IsNullOrWhiteSpace(t)) return "";
-        return t.Trim('"', ''', '.', ' ', '	');
+        return t.Trim('"', '\'', '.', ' ', '	');
     }
 
     /// <summary>
