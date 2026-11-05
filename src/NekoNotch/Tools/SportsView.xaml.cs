@@ -14,6 +14,7 @@ public sealed partial class SportsView : UserControl, IToolView
 {
     private SportType? _currentFilter = null; // null = All
     private SportMatch? _spotlightMatch;
+    private string _searchQuery = "";
 
     public sealed class MatchItemViewModel
     {
@@ -24,6 +25,7 @@ public sealed partial class SportsView : UserControl, IToolView
         public string StatusOrScoreText { get; set; } = "";
         public Brush StatusBgBrush { get; set; } = Brushes.Transparent;
         public Brush StatusFgBrush { get; set; } = Brushes.White;
+        public Brush PinColor { get; set; } = Brushes.Gray;
         public SportMatch RawMatch { get; set; } = null!;
     }
 
@@ -36,7 +38,6 @@ public sealed partial class SportsView : UserControl, IToolView
     public SportsView()
     {
         InitializeComponent();
-        UpdateFilterButtons();
         LoadQuickPresets();
         SportsService.Instance.MatchesUpdated += OnServiceMatchesUpdated;
         RefreshUI();
@@ -55,34 +56,27 @@ public sealed partial class SportsView : UserControl, IToolView
         Dispatcher.Invoke(RefreshUI);
     }
 
-    private void UpdateFilterButtons()
-    {
-        var accentBrush = (Brush)FindResource("AccentBrush");
-        var subBrush = (Brush)FindResource("SubTextBrush");
-
-        FilterAllBtn.Foreground = _currentFilter == null ? accentBrush : subBrush;
-        FilterFootballBtn.Foreground = _currentFilter == SportType.Football ? accentBrush : subBrush;
-        FilterCricketBtn.Foreground = _currentFilter == SportType.Cricket ? accentBrush : subBrush;
-    }
-
     private void OnFilterAll(object sender, RoutedEventArgs e)
     {
         _currentFilter = null;
-        UpdateFilterButtons();
         RefreshUI();
     }
 
     private void OnFilterFootball(object sender, RoutedEventArgs e)
     {
         _currentFilter = SportType.Football;
-        UpdateFilterButtons();
         RefreshUI();
     }
 
     private void OnFilterCricket(object sender, RoutedEventArgs e)
     {
         _currentFilter = SportType.Cricket;
-        UpdateFilterButtons();
+        RefreshUI();
+    }
+
+    private void OnSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        _searchQuery = SearchBox.Text.Trim();
         RefreshUI();
     }
 
@@ -98,11 +92,12 @@ public sealed partial class SportsView : UserControl, IToolView
         var chips = new List<PresetChipViewModel>
         {
             new() { Id = "fb-ars", Label = "⚽ Arsenal" },
+            new() { Id = "fb-mci", Label = "⚽ Man City" },
             new() { Id = "fb-rma", Label = "⚽ Real Madrid" },
+            new() { Id = "fb-bar", Label = "⚽ Barcelona" },
             new() { Id = "cr-ind", Label = "🏏 India" },
             new() { Id = "cr-csk", Label = "🏏 CSK" },
-            new() { Id = "cr-rcb", Label = "🏏 RCB" },
-            new() { Id = "fb-mci", Label = "⚽ Man City" }
+            new() { Id = "cr-rcb", Label = "🏏 RCB" }
         };
         QuickPresetsList.ItemsSource = chips;
     }
@@ -116,22 +111,70 @@ public sealed partial class SportsView : UserControl, IToolView
             {
                 SportsService.Instance.FollowTeam(preset);
                 StatusText.Text = $"Following {preset.Name}!";
+                RefreshUI();
             }
+        }
+    }
+
+    private void OnUnfollowTeamClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string teamId)
+        {
+            SportsService.Instance.UnfollowTeam(teamId);
+            RefreshUI();
         }
     }
 
     private void RefreshUI()
     {
         var matches = SportsService.Instance.Matches;
-        var filtered = _currentFilter == null
-            ? matches
-            : matches.Where(m => m.Sport == _currentFilter.Value).ToList();
+        var filtered = matches.AsEnumerable();
 
-        // Active / Spotlight Match
-        _spotlightMatch = SportsService.Instance.ActiveMatch ?? filtered.FirstOrDefault();
+        if (_currentFilter.HasValue)
+        {
+            filtered = filtered.Where(m => m.Sport == _currentFilter.Value);
+        }
 
+        if (!string.IsNullOrEmpty(_searchQuery))
+        {
+            var q = _searchQuery.ToUpperInvariant();
+            filtered = filtered.Where(m =>
+                m.HomeTeamName.ToUpperInvariant().Contains(q) ||
+                m.AwayTeamName.ToUpperInvariant().Contains(q) ||
+                m.HomeTeamCode.ToUpperInvariant().Contains(q) ||
+                m.AwayTeamCode.ToUpperInvariant().Contains(q) ||
+                m.LeagueName.ToUpperInvariant().Contains(q));
+        }
+
+        var matchList = filtered.ToList();
+
+        // Spotlight Match:
+        // Priority 1: User's explicitly chosen spotlight
+        // Priority 2: Pinned match
+        // Priority 3: Active live match
+        // Priority 4: First match in current filtered list
+        var pinnedId = SportsService.Instance.FollowedTeams; // Just checking config
+        var activeMatch = SportsService.Instance.ActiveMatch;
+
+        if (_spotlightMatch != null && matchList.All(m => m.Id != _spotlightMatch.Id))
+        {
+            // If the previously selected match isn't in filtered list, check if it's active
+            if (activeMatch != null && matchList.Any(m => m.Id == activeMatch.Id))
+                _spotlightMatch = activeMatch;
+            else
+                _spotlightMatch = matchList.FirstOrDefault();
+        }
+        else if (_spotlightMatch == null)
+        {
+            _spotlightMatch = activeMatch ?? matchList.FirstOrDefault();
+        }
+
+        // Render Spotlight Card
         if (_spotlightMatch != null)
         {
+            SpotlightPopulatedView.Visibility = Visibility.Visible;
+            SpotlightEmptyView.Visibility = Visibility.Collapsed;
+
             SpotlightLeagueText.Text = _spotlightMatch.LeagueName.ToUpperInvariant();
             SpotlightHomeName.Text = _spotlightMatch.HomeTeamCode;
             SpotlightAwayName.Text = _spotlightMatch.AwayTeamCode;
@@ -156,6 +199,9 @@ public sealed partial class SportsView : UserControl, IToolView
                 try { SpotlightAwayLogo.Source = new BitmapImage(new Uri(_spotlightMatch.AwayTeamLogo)); } catch { }
             }
 
+            var isPinned = SportsService.Instance.ActiveMatch?.Id == _spotlightMatch.Id;
+            PinToNotchText.Text = isPinned ? "Pinned ✓" : "Pin";
+
             if (_spotlightMatch.IsLive)
             {
                 SpotlightStatusBadge.Background = new SolidColorBrush(Color.FromArgb(40, 50, 215, 75));
@@ -166,21 +212,29 @@ public sealed partial class SportsView : UserControl, IToolView
             else
             {
                 SpotlightStatusBadge.Background = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
-                SpotlightStatusText.Foreground = (Brush)FindResource("SubTextBrush");
+                SpotlightStatusText.Foreground = (Brush)TryFindResource("SubTextBrush") ?? Brushes.Gray;
                 SpotlightStatusText.Text = _spotlightMatch.StatusDetail;
                 LiveIndicator.Visibility = Visibility.Collapsed;
             }
+        }
+        else
+        {
+            SpotlightPopulatedView.Visibility = Visibility.Collapsed;
+            SpotlightEmptyView.Visibility = Visibility.Visible;
+            LiveIndicator.Visibility = Visibility.Collapsed;
         }
 
         // List items
         var viewModels = new List<MatchItemViewModel>();
         var liveGreen = new SolidColorBrush(Color.FromRgb(50, 215, 75));
         var liveBg = new SolidColorBrush(Color.FromArgb(40, 50, 215, 75));
-        var grayText = (Brush)FindResource("SubTextBrush");
+        var grayText = (Brush)TryFindResource("SubTextBrush") ?? Brushes.Gray;
         var grayBg = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+        var accentBrush = (Brush)TryFindResource("AccentBrush") ?? Brushes.DodgerBlue;
 
-        foreach (var m in filtered)
+        foreach (var m in matchList)
         {
+            var isPinned = activeMatch?.Id == m.Id;
             viewModels.Add(new MatchItemViewModel
             {
                 Id = m.Id,
@@ -190,11 +244,18 @@ public sealed partial class SportsView : UserControl, IToolView
                 StatusOrScoreText = m.IsLive ? $"{m.HomeScore} - {m.AwayScore} ({m.StatusDetail})" : m.StatusDetail,
                 StatusBgBrush = m.IsLive ? liveBg : grayBg,
                 StatusFgBrush = m.IsLive ? liveGreen : grayText,
+                PinColor = isPinned ? accentBrush : grayText,
                 RawMatch = m
             });
         }
 
         MatchesList.ItemsSource = viewModels;
+        NoMatchesText.Visibility = viewModels.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Followed Teams
+        var followed = SportsService.Instance.FollowedTeams;
+        FollowedTeamsList.ItemsSource = followed.ToList();
+        NoFollowedHint.Visibility = followed.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnPinToNotchClick(object sender, RoutedEventArgs e)
@@ -202,7 +263,11 @@ public sealed partial class SportsView : UserControl, IToolView
         if (_spotlightMatch != null)
         {
             SportsService.Instance.PinMatch(_spotlightMatch.Id);
-            StatusText.Text = $"Pinned {_spotlightMatch.HomeTeamCode} vs {_spotlightMatch.AwayTeamCode} to Notch!";
+            var isPinned = SportsService.Instance.ActiveMatch?.Id == _spotlightMatch.Id;
+            StatusText.Text = isPinned
+                ? $"Pinned {_spotlightMatch.HomeTeamCode} vs {_spotlightMatch.AwayTeamCode} to Notch!"
+                : "Unpinned match from Notch.";
+            RefreshUI();
         }
     }
 
@@ -211,7 +276,7 @@ public sealed partial class SportsView : UserControl, IToolView
         if (sender is Button btn && btn.Tag is string matchId)
         {
             SportsService.Instance.PinMatch(matchId);
-            StatusText.Text = "Pinned match to Dynamic Island Notch!";
+            StatusText.Text = "Toggled pin to Dynamic Island Notch!";
             RefreshUI();
         }
     }

@@ -116,15 +116,7 @@ public sealed partial class SportsService : ObservableObject
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) NekoNotch/1.0");
         LoadConfig();
 
-        if (_config.FollowedTeams.Count == 0)
-        {
-            // Default followed teams: Arsenal, Real Madrid, India, CSK
-            _config.FollowedTeams.Add(PresetTeams[0]); // Arsenal
-            _config.FollowedTeams.Add(PresetTeams[5]); // Real Madrid
-            _config.FollowedTeams.Add(PresetTeams[8]); // India
-            _config.FollowedTeams.Add(PresetTeams[11]); // CSK
-            SaveConfig();
-        }
+
 
         _pollTimer.Interval = TimeSpan.FromSeconds(20);
         _pollTimer.Tick += async (_, _) => await RefreshMatchesAsync();
@@ -169,9 +161,17 @@ public sealed partial class SportsService : ObservableObject
 
     public void PinMatch(string? matchId)
     {
-        _config.PinnedMatchId = matchId;
+        if (_config.PinnedMatchId == matchId)
+        {
+            _config.PinnedMatchId = null;
+        }
+        else
+        {
+            _config.PinnedMatchId = matchId;
+        }
         SaveConfig();
         UpdateActiveMatch();
+        MatchesUpdated?.Invoke();
     }
 
     public async Task RefreshMatchesAsync()
@@ -250,8 +250,8 @@ public sealed partial class SportsService : ObservableObject
             selected = _matches.FirstOrDefault(m => m.Id == _config.PinnedMatchId);
         }
 
-        // 2. Live match involving a followed team
-        if (selected == null)
+        // 2. Live match involving a followed team ONLY
+        if (selected == null && _config.FollowedTeams.Count > 0)
         {
             var followedCodes = _config.FollowedTeams.Select(t => t.Code.ToUpperInvariant()).ToHashSet();
             var followedNames = _config.FollowedTeams.Select(t => t.Name.ToUpperInvariant()).ToHashSet();
@@ -263,17 +263,7 @@ public sealed partial class SportsService : ObservableObject
                  followedNames.Any(n => m.AwayTeamName.ToUpperInvariant().Contains(n))));
         }
 
-        // 3. Any live match
-        selected ??= _matches.FirstOrDefault(m => m.IsLive);
-
-        // 4. Upcoming match involving followed team
-        if (selected == null)
-        {
-            var followedCodes = _config.FollowedTeams.Select(t => t.Code.ToUpperInvariant()).ToHashSet();
-            selected = _matches.FirstOrDefault(m =>
-                followedCodes.Contains(m.HomeTeamCode.ToUpperInvariant()) ||
-                followedCodes.Contains(m.AwayTeamCode.ToUpperInvariant()));
-        }
+        // NO fallback to random matches! Only show if pinned or if followed team is live.
 
         ActiveMatch = selected;
         IsMatchLive = selected?.IsLive == true;
@@ -300,11 +290,20 @@ public sealed partial class SportsService : ObservableObject
 
         foreach (var ev in events.EnumerateArray())
         {
-            var id = ev.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
-            var statusObj = ev.GetProperty("status");
-            var typeObj = statusObj.GetProperty("type");
-            var state = typeObj.GetProperty("state").GetString() ?? "pre"; // pre, in, post
-            var detail = typeObj.TryGetProperty("detail", out var d) ? d.GetString() ?? "" : "";
+            if (!ev.TryGetProperty("id", out var idProp)) continue;
+            var id = idProp.GetString() ?? Guid.NewGuid().ToString();
+
+            if (!ev.TryGetProperty("status", out var statusObj)) continue;
+            var state = "pre";
+            var detail = "";
+            if (statusObj.TryGetProperty("type", out var typeObj))
+            {
+                if (typeObj.TryGetProperty("state", out var stProp))
+                    state = stProp.GetString() ?? "pre";
+                if (typeObj.TryGetProperty("detail", out var dProp))
+                    detail = dProp.GetString() ?? "";
+            }
+
             var displayClock = statusObj.TryGetProperty("displayClock", out var dc) ? dc.GetString() ?? "" : "";
             var summary = statusObj.TryGetProperty("summary", out var sm) ? sm.GetString() ?? "" : "";
 
@@ -314,12 +313,9 @@ public sealed partial class SportsService : ObservableObject
                 startTime = parsedDate;
             }
 
-            var competitions = ev.GetProperty("competitions");
-            if (competitions.GetArrayLength() == 0) continue;
+            if (!ev.TryGetProperty("competitions", out var competitions) || competitions.GetArrayLength() == 0) continue;
             var comp = competitions[0];
-            var competitors = comp.GetProperty("competitors");
-
-            if (competitors.GetArrayLength() < 2) continue;
+            if (!comp.TryGetProperty("competitors", out var competitors) || competitors.GetArrayLength() < 2) continue;
 
             var comp1 = competitors[0];
             var comp2 = competitors[1];
@@ -328,14 +324,13 @@ public sealed partial class SportsService : ObservableObject
             var home = isComp1Home ? comp1 : comp2;
             var away = isComp1Home ? comp2 : comp1;
 
-            var homeTeam = home.GetProperty("team");
-            var awayTeam = away.GetProperty("team");
+            if (!home.TryGetProperty("team", out var homeTeam) || !away.TryGetProperty("team", out var awayTeam)) continue;
 
-            var homeName = homeTeam.TryGetProperty("displayName", out var hdn) ? hdn.GetString() ?? "" : homeTeam.GetProperty("name").GetString() ?? "";
-            var awayName = awayTeam.TryGetProperty("displayName", out var adn) ? adn.GetString() ?? "" : awayTeam.GetProperty("name").GetString() ?? "";
+            var homeName = homeTeam.TryGetProperty("displayName", out var hdn) ? hdn.GetString() ?? "" : (homeTeam.TryGetProperty("name", out var hn) ? hn.GetString() ?? "" : "");
+            var awayName = awayTeam.TryGetProperty("displayName", out var adn) ? adn.GetString() ?? "" : (awayTeam.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "");
 
-            var homeCode = homeTeam.TryGetProperty("abbreviation", out var hab) ? hab.GetString() ?? "" : homeName[..Math.Min(3, homeName.Length)].ToUpperInvariant();
-            var awayCode = awayTeam.TryGetProperty("abbreviation", out var aab) ? aab.GetString() ?? "" : awayName[..Math.Min(3, awayName.Length)].ToUpperInvariant();
+            var homeCode = homeTeam.TryGetProperty("abbreviation", out var hab) ? hab.GetString() ?? "" : (homeName.Length > 0 ? homeName[..Math.Min(3, homeName.Length)].ToUpperInvariant() : "HOM");
+            var awayCode = awayTeam.TryGetProperty("abbreviation", out var aab) ? aab.GetString() ?? "" : (awayName.Length > 0 ? awayName[..Math.Min(3, awayName.Length)].ToUpperInvariant() : "AWY");
 
             var homeLogo = homeTeam.TryGetProperty("logo", out var hl) ? hl.GetString() ?? "" : "";
             var awayLogo = awayTeam.TryGetProperty("logo", out var al) ? al.GetString() ?? "" : "";
@@ -343,13 +338,18 @@ public sealed partial class SportsService : ObservableObject
             var homeScore = home.TryGetProperty("score", out var hs) ? hs.GetString() ?? "0" : "0";
             var awayScore = away.TryGetProperty("score", out var ascore) ? ascore.GetString() ?? "0" : "0";
 
-            string statusText = state == "in" ? (sport == SportType.Football ? (string.IsNullOrEmpty(displayClock) ? "LIVE" : displayClock) : (string.IsNullOrEmpty(detail) ? "LIVE" : detail)) : detail;
+            if (string.IsNullOrWhiteSpace(homeScore)) homeScore = "-";
+            if (string.IsNullOrWhiteSpace(awayScore)) awayScore = "-";
+
+            string statusText = state == "in"
+                ? (sport == SportType.Football ? (string.IsNullOrEmpty(displayClock) ? "LIVE" : displayClock) : (string.IsNullOrEmpty(detail) ? "LIVE" : detail))
+                : (string.IsNullOrEmpty(detail) ? (startTime > DateTime.UtcNow ? startTime.ToLocalTime().ToString("HH:mm") : "FT") : detail);
 
             result.Add(new SportMatch
             {
                 Id = id,
                 Sport = sport,
-                LeagueName = leagueName,
+                LeagueName = string.IsNullOrEmpty(leagueName) ? (sport == SportType.Football ? "Football" : "Cricket") : leagueName,
                 LeagueId = leagueId,
                 HomeTeamName = homeName,
                 HomeTeamCode = homeCode,
