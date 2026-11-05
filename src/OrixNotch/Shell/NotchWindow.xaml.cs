@@ -1470,6 +1470,12 @@ public partial class NotchWindow : Window
         OpenTool("nowplaying");
     }
 
+    private void OnMusicPartRightClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        NowPlayingService.Instance.OpenPlayingApp();
+    }
+
     private void OnPeekClick(object sender, MouseButtonEventArgs e)
     {
         var click = _currentPeek?.OnClick;

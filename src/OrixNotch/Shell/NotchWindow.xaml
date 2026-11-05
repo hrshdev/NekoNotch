@@ -166,7 +166,9 @@
                     </Grid>
 
                     <!-- Music: art, title and artist (scrolls when long), waveform tinted from the album art -->
-                    <Grid x:Name="MusicPart" Margin="9,0,12,0" Visibility="Collapsed" Cursor="Hand" MouseLeftButtonUp="OnMusicPartClick">
+                    <Grid x:Name="MusicPart" Margin="9,0,12,0" Visibility="Collapsed" Cursor="Hand"
+                          MouseLeftButtonUp="OnMusicPartClick" MouseRightButtonUp="OnMusicPartRightClick"
+                          ToolTip="Left click: open player · Right click: go to app/tab">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />

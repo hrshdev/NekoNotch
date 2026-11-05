@@ -85,6 +85,13 @@ public partial class NowPlayingView : UserControl, IToolView
         if (index != _current) Highlight(index);
     }
 
+    private void OnGoToApp(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        NotchWindow.Instance?.Collapse();
+        Service.OpenPlayingApp();
+    }
+
     private void OnToggleLyrics(object sender, RoutedEventArgs e)
     {
         _lyricsActive = !_lyricsActive;

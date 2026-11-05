@@ -73,7 +73,8 @@
 
                     <!-- Media Thumbnail -->
                     <Border Width="116" Height="116" CornerRadius="14" Background="{DynamicResource Surface2Brush}"
-                            VerticalAlignment="Center">
+                            VerticalAlignment="Center" Cursor="Hand" ToolTip="Go to playing app or browser tab"
+                            MouseLeftButtonUp="OnGoToApp">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.45" Color="Black" />
                         </Border.Effect>
@@ -96,15 +97,31 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <!-- Top Row: Source App Caps and optional Lyrics Toggle -->
+                        <!-- Top Row: Source App Caps, Go to App button, and optional Lyrics Toggle -->
                         <Grid>
-                            <TextBlock Text="{Binding SourceApp}" Style="{StaticResource Caps}"
-                                       Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="10" VerticalAlignment="Center" />
-                            <Button x:Name="LyricsToggle" Style="{StaticResource IconButton}" Width="26" Height="26"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Toggle Lyrics Split View"
-                                    Foreground="{DynamicResource SubTextBrush}" Click="OnToggleLyrics" Visibility="Collapsed">
-                                <hero:HeroIcon Kind="Quote" Width="14" Height="14" />
+                            <!-- Clickable Source App Badge -->
+                            <Button Style="{StaticResource IconButton}" Height="22" Width="Auto" Padding="6,2"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                    ToolTip="Go to playing app or browser tab" Cursor="Hand" Click="OnGoToApp">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SourceApp}" Style="{StaticResource Caps}"
+                                               Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="10" VerticalAlignment="Center" />
+                                    <hero:HeroIcon Kind="ArrowRight" Width="9" Height="9" Margin="4,0,0,0"
+                                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </Button>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button x:Name="GoToAppButton" Style="{StaticResource IconButton}" Width="26" Height="26" Margin="0,0,4,0"
+                                        ToolTip="Go to playing app or browser tab" Foreground="{DynamicResource SubTextBrush}" Click="OnGoToApp">
+                                    <hero:HeroIcon Kind="ArrowRight" Width="14" Height="14" />
+                                </Button>
+                                <Button x:Name="LyricsToggle" Style="{StaticResource IconButton}" Width="26" Height="26"
+                                        ToolTip="Toggle Lyrics Split View" Foreground="{DynamicResource SubTextBrush}"
+                                        Click="OnToggleLyrics" Visibility="Collapsed">
+                                    <hero:HeroIcon Kind="Quote" Width="14" Height="14" />
+                                </Button>
+                            </StackPanel>
                         </Grid>
 
                         <!-- Middle Row: Track Title & Artist -->

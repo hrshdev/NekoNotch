@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -56,6 +57,14 @@ public static class AppLauncher
     private const int SwRestore = 9;
     private const int SwShow = 5;
 
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
+    private static readonly string[] BrowserNames =
+    {
+        "zen", "firefox", "chrome", "msedge", "brave", "opera", "vivaldi", "arc", "chromium", "waterfox"
+    };
+
     private static bool BringToFront(IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero) return false;
@@ -63,7 +72,9 @@ public static class AppLauncher
         {
             if (IsIconic(hWnd)) ShowWindow(hWnd, SwRestore);
             else ShowWindow(hWnd, SwShow);
-            return SetForegroundWindow(hWnd);
+            SetForegroundWindow(hWnd);
+            SwitchToThisWindow(hWnd, true);
+            return true;
         }
         catch
         {
@@ -176,6 +187,227 @@ public static class AppLauncher
             }
         }
         catch { }
+        return false;
+    }
+
+    /// <summary>
+    /// Activates the application or browser tab responsible for currently playing audio.
+    /// If media is playing in a web browser (YouTube, Netflix, Spotify Web, SoundCloud, etc.),
+    /// it searches across open browser tabs, switches directly to that tab, and brings the window to front.
+    /// If media is playing in a native app (Spotify, Netflix App, Apple Music, VLC), it activates that app.
+    /// </summary>
+    public static void LaunchMediaSource(string? sourceAumid, string? sourceApp, string? title, string? artist)
+    {
+        var searchTerms = BuildMediaSearchTerms(title, artist, sourceApp, sourceAumid);
+        var isBrowser = IsBrowserCandidate(sourceAumid, sourceApp);
+
+        if (isBrowser)
+        {
+            if (TryActivateBrowserMedia(sourceAumid, searchTerms))
+                return;
+        }
+
+        // Check if it's a UWP / Store App (contains '!')
+        if (!string.IsNullOrWhiteSpace(sourceAumid) && sourceAumid.Contains('!'))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"shell:AppsFolder\\{sourceAumid}",
+                    UseShellExecute = true
+                });
+                return;
+            }
+            catch { }
+        }
+
+        // Search running desktop processes
+        if (TryActivateDesktopApp(sourceAumid, sourceApp))
+        {
+            return;
+        }
+
+        // Fallback: search browser tabs even if not identified as a browser upfront
+        if (!isBrowser && TryActivateBrowserMedia(null, searchTerms))
+        {
+            return;
+        }
+
+        // Last resort: general launcher
+        Launch(sourceAumid, sourceApp, title, artist);
+    }
+
+    private static bool IsBrowserCandidate(string? aumid, string? appName)
+    {
+        var combined = $"{aumid} {appName}".ToLowerInvariant();
+        if (BrowserNames.Any(b => combined.Contains(b))) return true;
+        if (aumid == null || !aumid.Contains('!'))
+        {
+            if (combined.Contains("youtube") || combined.Contains("netflix") || combined.Contains("web app") || combined.Contains("soundcloud"))
+                return true;
+        }
+        return false;
+    }
+
+    private static List<string> BuildMediaSearchTerms(string? title, string? artist, string? sourceApp, string? aumid)
+    {
+        var terms = new List<string>();
+
+        void AddTerm(string? t)
+        {
+            if (string.IsNullOrWhiteSpace(t)) return;
+            var s = t.Trim();
+            if (s.Length >= 2 && !terms.Any(existing => existing.Equals(s, StringComparison.OrdinalIgnoreCase)))
+            {
+                terms.Add(s);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(title) && !title.Equals("Nothing playing", StringComparison.OrdinalIgnoreCase))
+        {
+            AddTerm(title);
+
+            // Clean common suffix tags
+            var cleaned = Regex.Replace(title, @"\s*[-|]\s*(YouTube|Netflix|Spotify|SoundCloud|Twitch).*$", "", RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, @"\s*[\(\[](official\s*(music\s*)?video|lyrics?(\s*video)?|audio|hd|4k|remastered)[\)\]]", "", RegexOptions.IgnoreCase);
+            cleaned = cleaned.Trim(' ', '-', '|');
+            AddTerm(cleaned);
+
+            var words = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length >= 3)
+            {
+                AddTerm(string.Join(" ", words.Take(3)));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(artist) &&
+            !artist.Equals("Nothing playing", StringComparison.OrdinalIgnoreCase) &&
+            !artist.Equals(title, StringComparison.OrdinalIgnoreCase))
+        {
+            AddTerm(artist);
+        }
+
+        var services = new[] { "Netflix", "YouTube", "Spotify", "SoundCloud", "Twitch", "Prime Video", "Disney+", "Hotstar", "Apple Music", "Bandcamp", "Deezer", "Tidal" };
+        foreach (var svc in services)
+        {
+            if (sourceApp?.Contains(svc, StringComparison.OrdinalIgnoreCase) == true ||
+                title?.Contains(svc, StringComparison.OrdinalIgnoreCase) == true ||
+                aumid?.Contains(svc, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                AddTerm(svc);
+            }
+        }
+
+        return terms;
+    }
+
+    private static bool TryActivateBrowserMedia(string? preferredAumid, IReadOnlyList<string> searchTerms)
+    {
+        var browserOrder = new List<string>();
+        if (!string.IsNullOrWhiteSpace(preferredAumid))
+        {
+            var lower = preferredAumid.ToLowerInvariant();
+            var matched = BrowserNames.FirstOrDefault(b => lower.Contains(b));
+            if (matched != null) browserOrder.Add(matched);
+        }
+
+        foreach (var b in BrowserNames)
+        {
+            if (!browserOrder.Contains(b)) browserOrder.Add(b);
+        }
+
+        IntPtr firstFallback = IntPtr.Zero;
+
+        // Stage 1: Fast check - does any browser window title match?
+        foreach (var bName in browserOrder)
+        {
+            var hwnds = FindWindowsByProcessName(bName);
+            foreach (var hWnd in hwnds)
+            {
+                if (firstFallback == IntPtr.Zero) firstFallback = hWnd;
+
+                var sb = new StringBuilder(512);
+                GetWindowText(hWnd, sb, 512);
+                var winTitle = sb.ToString();
+
+                foreach (var term in searchTerms)
+                {
+                    if (winTitle.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    {
+                        BringToFront(hWnd);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Stage 2: Deep tab search via UI Automation
+        foreach (var bName in browserOrder)
+        {
+            var hwnds = FindWindowsByProcessName(bName);
+            foreach (var hWnd in hwnds)
+            {
+                foreach (var term in searchTerms)
+                {
+                    if (TrySwitchToBrowserTab(hWnd, term))
+                    {
+                        BringToFront(hWnd);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Stage 3: Fallback - bring the running browser to front
+        if (firstFallback != IntPtr.Zero)
+        {
+            BringToFront(firstFallback);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryActivateDesktopApp(string? aumid, string? appName)
+    {
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(appName)) candidates.Add(appName.Trim());
+        if (!string.IsNullOrWhiteSpace(aumid))
+        {
+            var clean = aumid;
+            if (clean.Contains('.')) clean = clean.Split('.').Last();
+            if (clean.Contains('\\')) clean = Path.GetFileNameWithoutExtension(clean);
+            if (!string.IsNullOrWhiteSpace(clean)) candidates.Add(clean.Trim());
+        }
+
+        try
+        {
+            var running = Process.GetProcesses();
+            foreach (var name in candidates)
+            {
+                var match = running.FirstOrDefault(p =>
+                {
+                    try
+                    {
+                        return p.MainWindowHandle != IntPtr.Zero &&
+                               (p.ProcessName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                                p.ProcessName.Contains(name, StringComparison.OrdinalIgnoreCase) ||
+                                p.MainWindowTitle.Contains(name, StringComparison.OrdinalIgnoreCase));
+                    }
+                    catch { return false; }
+                });
+
+                if (match != null && match.MainWindowHandle != IntPtr.Zero)
+                {
+                    BringToFront(match.MainWindowHandle);
+                    return true;
+                }
+            }
+        }
+        catch { }
+
         return false;
     }
 

@@ -31,6 +31,7 @@ public sealed partial class NowPlayingService : ObservableObject
     [ObservableProperty] private string _title = "Nothing playing";
     [ObservableProperty] private string _artist = "";
     [ObservableProperty] private string _sourceApp = "";
+    [ObservableProperty] private string _sourceAumid = "";
     [ObservableProperty] private ImageSource? _art;
     [ObservableProperty] private Color? _artTint;
     [ObservableProperty] private bool _isPlaying;
@@ -46,6 +47,11 @@ public sealed partial class NowPlayingService : ObservableObject
 
     public string PositionText => Format(Position);
     public string DurationText => Format(Duration);
+
+    public void OpenPlayingApp()
+    {
+        AppLauncher.LaunchMediaSource(SourceAumid, SourceApp, Title, Artist);
+    }
 
     private NowPlayingService() => _ = InitAsync();
 
@@ -82,6 +88,7 @@ public sealed partial class NowPlayingService : ObservableObject
             Title = "Nothing playing";
             Artist = "";
             SourceApp = "";
+            SourceAumid = "";
             Art = null;
             ArtTint = null;
             IsPlaying = false;
@@ -93,6 +100,7 @@ public sealed partial class NowPlayingService : ObservableObject
         session.MediaPropertiesChanged += OnMediaChanged;
         session.PlaybackInfoChanged += OnPlaybackChanged;
         session.TimelinePropertiesChanged += OnTimelineChanged;
+        SourceAumid = session.SourceAppUserModelId ?? "";
         SourceApp = PrettyAppName(session.SourceAppUserModelId);
         _ = RefreshMediaAsync();
         RefreshPlayback();
