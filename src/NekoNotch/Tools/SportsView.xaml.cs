@@ -12,6 +12,7 @@ namespace NekoNotch.Tools;
 
 public sealed partial class SportsView : UserControl, IToolView
 {
+    private bool _isInitialized = false;
     private SportType? _currentFilter = null; // null = All
     private SportMatch? _spotlightMatch;
     private string _searchQuery = "";
@@ -38,6 +39,7 @@ public sealed partial class SportsView : UserControl, IToolView
     public SportsView()
     {
         InitializeComponent();
+        _isInitialized = true;
         LoadQuickPresets();
         SportsService.Instance.MatchesUpdated += OnServiceMatchesUpdated;
         RefreshUI();
@@ -58,24 +60,28 @@ public sealed partial class SportsView : UserControl, IToolView
 
     private void OnFilterAll(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
         _currentFilter = null;
         RefreshUI();
     }
 
     private void OnFilterFootball(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
         _currentFilter = SportType.Football;
         RefreshUI();
     }
 
     private void OnFilterCricket(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
         _currentFilter = SportType.Cricket;
         RefreshUI();
     }
 
     private void OnSearchChanged(object sender, TextChangedEventArgs e)
     {
+        if (!_isInitialized) return;
         _searchQuery = SearchBox.Text.Trim();
         RefreshUI();
     }
@@ -127,6 +133,8 @@ public sealed partial class SportsView : UserControl, IToolView
 
     private void RefreshUI()
     {
+        if (!_isInitialized || MatchesList == null) return;
+
         var matches = SportsService.Instance.Matches;
         var filtered = matches.AsEnumerable();
 

@@ -50,11 +50,11 @@
             <!-- Sport Filter Chips -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <RadioButton x:Name="FilterAllRadio" Content="All Sports" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" IsChecked="True" Checked="OnFilterAll" />
+                             GroupName="SportFilter" IsChecked="True" Click="OnFilterAll" />
                 <RadioButton x:Name="FilterFootballRadio" Content="⚽ Football" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" Checked="OnFilterFootball" />
+                             GroupName="SportFilter" Click="OnFilterFootball" />
                 <RadioButton x:Name="FilterCricketRadio" Content="🏏 Cricket" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" Checked="OnFilterCricket" />
+                             GroupName="SportFilter" Click="OnFilterCricket" />
             </StackPanel>
 
             <!-- Status Indicator / Hint -->

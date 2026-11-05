@@ -4047,7 +4047,20 @@ public partial class NotchWindow : Window
 
         {
 
-            try { view = create(); } catch (Exception ex) { App.Log(ex); return; }
+            try { view = create(); }
+            catch (Exception ex)
+            {
+                App.Log(ex);
+                if (id != "home")
+                {
+                    ShowTool("home");
+                }
+                else
+                {
+                    NotchEyes.Visibility = Visibility.Visible;
+                }
+                return;
+            }
 
             _views[id] = view;
 
