@@ -18,10 +18,10 @@
   <!-- Rosy Blush Cheeks (compact width) -->
   <ellipse cx="20.5" cy="53.5" rx="3.2" ry="2.4" fill="#FF7896" opacity="0.45"/>
   <ellipse cx="79.5" cy="53.5" rx="3.2" ry="2.4" fill="#FF7896" opacity="0.45"/>
-  <!-- Left Eye Pill -->
-  <rect x="37" y="41" width="9.6" height="16" rx="4.8" ry="4.8" fill="#1A1412"/>
-  <circle cx="39.6" cy="44.2" r="1.6" fill="#FFFFFF"/>
-  <!-- Right Eye Pill -->
-  <rect x="53.4" y="41" width="9.6" height="16" rx="4.8" ry="4.8" fill="#1A1412"/>
-  <circle cx="56.0" cy="44.2" r="1.6" fill="#FFFFFF"/>
+  <!-- Left Eye Round Circle -->
+  <circle cx="41.5" cy="49" r="7.0" fill="#1A1412"/>
+  <circle cx="39.8" cy="47.3" r="2.0" fill="#FFFFFF"/>
+  <!-- Right Eye Round Circle -->
+  <circle cx="58.5" cy="49" r="7.0" fill="#1A1412"/>
+  <circle cx="56.8" cy="47.3" r="2.0" fill="#FFFFFF"/>
 </svg>

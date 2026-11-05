@@ -127,37 +127,37 @@
                                     <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
                                 </Ellipse>
 
-                                <!-- Mochi Expressive Tracking Eyes -->
+                                <!-- Mochi Expressive Tracking Eyes (Round) -->
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-0.5,0,0">
                                     <!-- Left Eye -->
-                                    <Grid Margin="4,0" RenderTransformOrigin="0.5,0.5">
+                                    <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.5">
                                         <Grid.RenderTransform>
                                             <ScaleTransform x:Name="LeftEyeScale" ScaleX="1.0" ScaleY="1.0" />
                                         </Grid.RenderTransform>
-                                        <!-- Coucou Ink Eye Pill (#1A1412) -->
-                                        <Border x:Name="LeftPupil" Width="4.8" Height="8.0" CornerRadius="2.4" Background="#1A1412">
+                                        <!-- Coucou Ink Eye Round Circle (#1A1412) -->
+                                        <Border x:Name="LeftPupil" Width="7.0" Height="7.0" CornerRadius="3.5" Background="#1A1412">
                                             <Border.RenderTransform>
                                                 <TranslateTransform x:Name="LeftPupilShift" />
                                             </Border.RenderTransform>
                                             <!-- Specular Glint Reflection Dot -->
-                                            <Ellipse Width="1.8" Height="1.8" Fill="#FFFFFF" Opacity="0.95"
-                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1.2,0,0" />
+                                            <Ellipse Width="2.0" Height="2.0" Fill="#FFFFFF" Opacity="0.95"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.2,0,0" />
                                         </Border>
                                     </Grid>
 
                                     <!-- Right Eye -->
-                                    <Grid Margin="4,0" RenderTransformOrigin="0.5,0.5">
+                                    <Grid Margin="3.5,0" RenderTransformOrigin="0.5,0.5">
                                         <Grid.RenderTransform>
                                             <ScaleTransform x:Name="RightEyeScale" ScaleX="1.0" ScaleY="1.0" />
                                         </Grid.RenderTransform>
-                                        <!-- Coucou Ink Eye Pill (#1A1412) -->
-                                        <Border x:Name="RightPupil" Width="4.8" Height="8.0" CornerRadius="2.4" Background="#1A1412">
+                                        <!-- Coucou Ink Eye Round Circle (#1A1412) -->
+                                        <Border x:Name="RightPupil" Width="7.0" Height="7.0" CornerRadius="3.5" Background="#1A1412">
                                             <Border.RenderTransform>
                                                 <TranslateTransform x:Name="RightPupilShift" />
                                             </Border.RenderTransform>
                                             <!-- Specular Glint Reflection Dot -->
-                                            <Ellipse Width="1.8" Height="1.8" Fill="#FFFFFF" Opacity="0.95"
-                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1.2,0,0" />
+                                            <Ellipse Width="2.0" Height="2.0" Fill="#FFFFFF" Opacity="0.95"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.2,0,0" />
                                         </Border>
                                     </Grid>
                                 </StackPanel>

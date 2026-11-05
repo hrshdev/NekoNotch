@@ -90,21 +90,20 @@ public class BrandMark : Control
         dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.14, blushY), blushRx, blushRy);
         dc.DrawEllipse(BlushBrush, null, new Point(x + targetWidth * 0.86, blushY), blushRx, blushRy);
 
-        // Espresso ink eye pills
-        var eyeW = targetWidth * (4.8 / 38.0);
-        var eyeH = targetHeight * (8.0 / 24.0);
-        var eyeRadius = eyeW / 2.0;
-        var eyeY = y + (targetHeight - eyeH) / 2.0 + (targetHeight * 0.01);
+        // Round ink eyes (circular)
+        var eyeSize = targetHeight * (7.0 / 24.0);
+        var eyeRadius = eyeSize / 2.0;
+        var eyeY = y + (targetHeight - eyeSize) / 2.0;
 
-        var leftEyeX = cx - targetWidth * 0.18 - eyeW / 2.0;
-        var rightEyeX = cx + targetWidth * 0.18 - eyeW / 2.0;
-        dc.DrawRoundedRectangle(EyeBrush, null, new Rect(leftEyeX, eyeY, eyeW, eyeH), eyeRadius, eyeRadius);
-        dc.DrawRoundedRectangle(EyeBrush, null, new Rect(rightEyeX, eyeY, eyeW, eyeH), eyeRadius, eyeRadius);
+        var leftEyeX = cx - targetWidth * 0.17 - eyeSize / 2.0;
+        var rightEyeX = cx + targetWidth * 0.17 - eyeSize / 2.0;
+        dc.DrawRoundedRectangle(EyeBrush, null, new Rect(leftEyeX, eyeY, eyeSize, eyeSize), eyeRadius, eyeRadius);
+        dc.DrawRoundedRectangle(EyeBrush, null, new Rect(rightEyeX, eyeY, eyeSize, eyeSize), eyeRadius, eyeRadius);
 
         // Specular glint dots
-        var glintR = Math.Max(0.6, eyeW * 0.20);
-        dc.DrawEllipse(GlintBrush, null, new Point(leftEyeX + eyeW * 0.38, eyeY + eyeH * 0.26), glintR, glintR);
-        dc.DrawEllipse(GlintBrush, null, new Point(rightEyeX + eyeW * 0.38, eyeY + eyeH * 0.26), glintR, glintR);
+        var glintR = Math.Max(0.6, eyeSize * 0.16);
+        dc.DrawEllipse(GlintBrush, null, new Point(leftEyeX + eyeSize * 0.35, eyeY + eyeSize * 0.32), glintR, glintR);
+        dc.DrawEllipse(GlintBrush, null, new Point(rightEyeX + eyeSize * 0.35, eyeY + eyeSize * 0.32), glintR, glintR);
     }
 
     private static LinearGradientBrush CreateBodyBrush()

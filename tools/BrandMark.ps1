@@ -64,24 +64,23 @@ function Draw-MochiPetGraphic([System.Windows.Media.DrawingContext]$dc, [double]
     $dc.DrawEllipse($blushBrush, $null, $leftBlushPt, $blushRx, $blushRy)
     $dc.DrawEllipse($blushBrush, $null, $rightBlushPt, $blushRx, $blushRy)
 
-    # Espresso Ink Eye Pills (#1A1412)
+    # Round Ink Eyes (circular)
     $eyeBrush = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.ColorConverter]::ConvertFromString('#1A1412'))
-    $eyeW = $targetWidth * (4.8 / 38.0)
-    $eyeH = $targetHeight * (8.0 / 24.0)
-    $eyeRadius = $eyeW / 2.0
-    $eyeY = $y + ($targetHeight - $eyeH) / 2.0 + ($targetHeight * 0.01)
+    $eyeSize = $targetHeight * (7.0 / 24.0)
+    $eyeRadius = $eyeSize / 2.0
+    $eyeY = $y + ($targetHeight - $eyeSize) / 2.0
 
-    $leftEyeX = $cx - $targetWidth * 0.18 - $eyeW / 2.0
-    $dc.DrawRoundedRectangle($eyeBrush, $null, (New-Object System.Windows.Rect($leftEyeX, $eyeY, $eyeW, $eyeH)), $eyeRadius, $eyeRadius)
+    $leftEyeX = $cx - $targetWidth * 0.17 - $eyeSize / 2.0
+    $dc.DrawRoundedRectangle($eyeBrush, $null, (New-Object System.Windows.Rect($leftEyeX, $eyeY, $eyeSize, $eyeSize)), $eyeRadius, $eyeRadius)
 
-    $rightEyeX = $cx + $targetWidth * 0.18 - $eyeW / 2.0
-    $dc.DrawRoundedRectangle($eyeBrush, $null, (New-Object System.Windows.Rect($rightEyeX, $eyeY, $eyeW, $eyeH)), $eyeRadius, $eyeRadius)
+    $rightEyeX = $cx + $targetWidth * 0.17 - $eyeSize / 2.0
+    $dc.DrawRoundedRectangle($eyeBrush, $null, (New-Object System.Windows.Rect($rightEyeX, $eyeY, $eyeSize, $eyeSize)), $eyeRadius, $eyeRadius)
 
     # Specular Glint Dots
     $glintBrush = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Color]::FromArgb(242, 255, 255, 255))
-    $glintR = [Math]::Max(0.75, $eyeW * 0.20)
-    $leftGlintPt = New-Object System.Windows.Point(($leftEyeX + $eyeW * 0.38), ($eyeY + $eyeH * 0.26))
-    $rightGlintPt = New-Object System.Windows.Point(($rightEyeX + $eyeW * 0.38), ($eyeY + $eyeH * 0.26))
+    $glintR = [Math]::Max(0.75, $eyeSize * 0.16)
+    $leftGlintPt = New-Object System.Windows.Point(($leftEyeX + $eyeSize * 0.35), ($eyeY + $eyeSize * 0.32))
+    $rightGlintPt = New-Object System.Windows.Point(($rightEyeX + $eyeSize * 0.35), ($eyeY + $eyeSize * 0.32))
     $dc.DrawEllipse($glintBrush, $null, $leftGlintPt, $glintR, $glintR)
     $dc.DrawEllipse($glintBrush, $null, $rightGlintPt, $glintR, $glintR)
 }
