@@ -1770,7 +1770,7 @@ public partial class NotchWindow : Window
         var sm = SportsService.Instance.ActiveMatch;
         var sportsLive = sm != null && SportsService.Instance.ShowScoreInNotch;
 
-        var music = NowPlayingService.Instance.HasSession && NowPlayingService.Instance.IsPlaying;
+        var music = NotchActivityService.Instance.Kind == NotchActivityKind.Music;
 
         if (music) return _musicW;
         if (sportsLive) return 280;
@@ -2067,7 +2067,7 @@ public partial class NotchWindow : Window
 
 
 
-        SetEqualizer(!_expanded && music);
+        SetEqualizer(!_expanded && music && NowPlayingService.Instance.IsPlaying);
 
 
 

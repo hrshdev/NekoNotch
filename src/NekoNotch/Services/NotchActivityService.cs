@@ -64,6 +64,8 @@ public sealed partial class NotchActivityService : ObservableObject
 
     private bool _inMusicGrace;
 
+    private bool _wasPlaying;
+
 
 
     private NotchActivityService()
@@ -89,6 +91,8 @@ public sealed partial class NotchActivityService : ObservableObject
             _musicGraceTimer.Stop();
 
             _inMusicGrace = false;
+
+            _wasPlaying = false;
 
             Refresh();
 
@@ -140,6 +144,8 @@ public sealed partial class NotchActivityService : ObservableObject
 
             _inMusicGrace = false;
 
+            _wasPlaying = false;
+
             kind = NotchActivityKind.Reminder;
 
             text = reminder.Text;
@@ -155,6 +161,8 @@ public sealed partial class NotchActivityService : ObservableObject
             _musicGraceTimer.Stop();
 
             _inMusicGrace = false;
+
+            _wasPlaying = false;
 
             kind = pom.IsBreak ? NotchActivityKind.Break : NotchActivityKind.Focus;
 
@@ -172,6 +180,8 @@ public sealed partial class NotchActivityService : ObservableObject
 
             _inMusicGrace = false;
 
+            _wasPlaying = false;
+
             kind = NotchActivityKind.Timer;
 
             text = ctd.RemainingText;
@@ -187,6 +197,8 @@ public sealed partial class NotchActivityService : ObservableObject
             _musicGraceTimer.Stop();
 
             _inMusicGrace = false;
+
+            _wasPlaying = false;
 
             kind = NotchActivityKind.Stopwatch;
 
@@ -206,17 +218,19 @@ public sealed partial class NotchActivityService : ObservableObject
 
             _inMusicGrace = false;
 
+            _wasPlaying = true;
+
             kind = NotchActivityKind.Music;
 
             text = string.IsNullOrEmpty(np.Artist) ? np.Title : $"{np.Title} – {np.Artist}";
 
         }
 
-        else if (np.HasSession && (Kind == NotchActivityKind.Music || _inMusicGrace))
+        else if (np.HasSession && (_inMusicGrace || _wasPlaying))
 
         {
 
-            // Buffering, seeking, or temporary pause: hold the music notch in place for a 4s grace period
+            // Playback just stopped or was interrupted: give a 4s grace period (for buffering/track skips)
 
             if (!_inMusicGrace)
 
@@ -224,9 +238,13 @@ public sealed partial class NotchActivityService : ObservableObject
 
                 _inMusicGrace = true;
 
+                _musicGraceTimer.Stop();
+
                 _musicGraceTimer.Start();
 
             }
+
+            _wasPlaying = false;
 
             kind = NotchActivityKind.Music;
 
@@ -241,6 +259,8 @@ public sealed partial class NotchActivityService : ObservableObject
             _musicGraceTimer.Stop();
 
             _inMusicGrace = false;
+
+            _wasPlaying = false;
 
             kind = NotchActivityKind.None;
 
