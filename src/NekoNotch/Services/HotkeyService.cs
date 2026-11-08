@@ -11,6 +11,7 @@ public static class HotkeyService
     public static IReadOnlyList<HotkeyAction> Actions { get; } =
     [
         new("toggle", "Open or close the notch", "Works from anywhere."),
+        new("voice", "Voice Assistant (Hey Neko)", "Triggers Voice-to-Done listening mode."),
         new("ask", "Ask AI", "Opens the notch on the AI chat."),
         new("clipboard", "Clipboard history", "Opens the notch on clipboard history."),
         new("teleprompter", "Teleprompter", "Opens the teleprompter and starts or pauses scrolling."),

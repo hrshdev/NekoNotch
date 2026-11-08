@@ -52,22 +52,52 @@ public sealed partial class VoiceAssistantService : ObservableObject
     private VoiceAssistantService()
     {
         _silenceTimer.Tick += (_, _) => OnSilenceTimeout();
+
+        try
+        {
+            Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
+            {
+                if (e.Mode == Microsoft.Win32.PowerModes.Resume && App.Settings.EnableWakeWord)
+                {
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(2500); // Allow Windows audio stack to recover
+                        Restart();
+                    });
+                }
+            };
+
+            Microsoft.Win32.SystemEvents.SessionSwitch += (_, e) =>
+            {
+                if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock && App.Settings.EnableWakeWord)
+                {
+                    if (!IsAvailable) Start();
+                }
+            };
+        }
+        catch { }
     }
 
     public void Start()
     {
         if (!App.Settings.EnableWakeWord) return;
 
-        Task.Run(() =>
+        Task.Run(async () =>
         {
-            try
+            const int maxRetries = 5;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                InitializeRecognizer();
-            }
-            catch (Exception ex)
-            {
-                App.Log(ex);
-                _ui.Invoke(() => IsAvailable = false);
+                try
+                {
+                    InitializeRecognizer();
+                    if (IsAvailable) return;
+                }
+                catch (Exception ex)
+                {
+                    App.Log(ex);
+                }
+
+                await Task.Delay(attempt * 1500);
             }
         });
     }
@@ -79,7 +109,10 @@ public sealed partial class VoiceAssistantService : ObservableObject
             _silenceTimer.Stop();
             if (_engine != null)
             {
-                _engine.RecognizeAsyncCancel();
+                _engine.SpeechHypothesized -= OnSpeechHypothesized;
+                _engine.SpeechRecognized -= OnSpeechRecognized;
+                _engine.RecognizeCompleted -= OnRecognizeCompleted;
+                try { _engine.RecognizeAsyncCancel(); } catch { }
                 _engine.Dispose();
                 _engine = null;
             }
@@ -98,6 +131,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
     public void Restart()
     {
         Stop();
+        Thread.Sleep(300); // give OS audio subsystem a moment to release capture endpoint
         Start();
     }
 

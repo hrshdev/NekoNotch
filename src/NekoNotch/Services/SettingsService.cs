@@ -119,6 +119,7 @@ public sealed class AppSettings
     public Dictionary<string, string> Hotkeys { get; set; } = new()
     {
         ["toggle"] = "Ctrl+Alt+N",
+        ["voice"] = "Ctrl+Space",
         ["ask"] = "",
         ["clipboard"] = "",
         ["teleprompter"] = "",
@@ -159,14 +160,21 @@ public static class SettingsService
     private static AppSettings LoadSettings()
     {
         var s = Storage.Load<AppSettings>(FileName);
+        bool dirty = false;
+        if (!s.Hotkeys.ContainsKey("voice"))
+        {
+            s.Hotkeys["voice"] = "Ctrl+Space";
+            dirty = true;
+        }
         if (s.SettingsVersion < 3)
         {
             s.VolumeHud = true;
             s.BrightnessHud = true;
             s.SettingsVersion = 3;
-            Storage.Save(FileName, s);
+            dirty = true;
             SuppressWindowsNotificationBanners();
         }
+        if (dirty) Storage.Save(FileName, s);
         return s;
     }
 

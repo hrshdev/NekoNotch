@@ -413,6 +413,22 @@ public partial class NotchWindow : Window
 
         HotkeyService.Attach(_hwnd);
 
+        Microsoft.Win32.SystemEvents.SessionSwitch += (_, e) =>
+        {
+            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock)
+            {
+                Dispatcher.BeginInvoke(() => HotkeyService.RegisterAll());
+            }
+        };
+
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
+        {
+            if (e.Mode == Microsoft.Win32.PowerModes.Resume)
+            {
+                Dispatcher.BeginInvoke(() => HotkeyService.RegisterAll());
+            }
+        };
+
 
 
         SystemEvents.DisplaySettingsChanged += (_, _) => Dispatcher.BeginInvoke(Place);
@@ -498,6 +514,14 @@ public partial class NotchWindow : Window
         switch (action)
 
         {
+
+            case "voice":
+
+                if (_expanded) Collapse();
+
+                VoiceAssistantService.Instance.TriggerWake();
+
+                break;
 
             case "toggle":
 
@@ -3050,6 +3074,13 @@ public partial class NotchWindow : Window
             StartAnimation();
         };
         resetTimer.Start();
+    }
+
+    private void OnVoiceButtonClick(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        Collapse();
+        VoiceAssistantService.Instance.TriggerWake();
     }
 
     private bool _isVoiceActive;
