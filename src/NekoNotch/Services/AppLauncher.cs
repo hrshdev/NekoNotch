@@ -27,6 +27,21 @@ public static class AppLauncher
 
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
@@ -72,7 +87,28 @@ public static class AppLauncher
         {
             if (IsIconic(hWnd)) ShowWindow(hWnd, SwRestore);
             else ShowWindow(hWnd, SwShow);
-            SetForegroundWindow(hWnd);
+
+            var foreWnd = GetForegroundWindow();
+            uint foreThread = 0;
+            if (foreWnd != IntPtr.Zero)
+            {
+                GetWindowThreadProcessId(foreWnd, out foreThread);
+            }
+            var curThread = GetCurrentThreadId();
+
+            if (foreThread != 0 && foreThread != curThread)
+            {
+                AttachThreadInput(curThread, foreThread, true);
+                BringWindowToTop(hWnd);
+                SetForegroundWindow(hWnd);
+                AttachThreadInput(curThread, foreThread, false);
+            }
+            else
+            {
+                BringWindowToTop(hWnd);
+                SetForegroundWindow(hWnd);
+            }
+
             SwitchToThisWindow(hWnd, true);
             return true;
         }
@@ -129,6 +165,92 @@ public static class AppLauncher
         return list;
     }
 
+    private static IntPtr FindExistingAppWindow(string? appName, string? aumid, string? title)
+    {
+        var terms = new List<string>();
+        if (!string.IsNullOrWhiteSpace(appName)) terms.Add(appName.Trim());
+        if (!string.IsNullOrWhiteSpace(aumid))
+        {
+            var clean = aumid;
+            if (clean.Contains('.')) clean = clean.Split('.').Last();
+            if (clean.Contains('!')) clean = clean.Split('!').First();
+            if (clean.Contains('\\')) clean = Path.GetFileNameWithoutExtension(clean);
+            if (!string.IsNullOrWhiteSpace(clean) && !terms.Any(t => t.Equals(clean, StringComparison.OrdinalIgnoreCase)))
+                terms.Add(clean.Trim());
+        }
+
+        // Add special package prefixes or common aliases
+        if (terms.Any(t => t.Contains("Netflix", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!terms.Any(t => t.Equals("Netflix", StringComparison.OrdinalIgnoreCase))) terms.Add("Netflix");
+        }
+        if (terms.Any(t => t.Contains("Spotify", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!terms.Any(t => t.Equals("Spotify", StringComparison.OrdinalIgnoreCase))) terms.Add("Spotify");
+        }
+
+        IntPtr found = IntPtr.Zero;
+        uint myPid = 0;
+        try { myPid = (uint)Process.GetCurrentProcess().Id; } catch { }
+
+        EnumWindows((hWnd, _) =>
+        {
+            if (!IsWindowVisible(hWnd)) return true;
+
+            GetWindowThreadProcessId(hWnd, out var pid);
+            if (pid == myPid || pid == 0) return true;
+
+            var sb = new StringBuilder(512);
+            GetWindowText(hWnd, sb, 512);
+            var winTitle = sb.ToString().Trim();
+
+            var cbClass = new StringBuilder(256);
+            GetClassName(hWnd, cbClass, 256);
+            var cls = cbClass.ToString();
+
+            // Ignore system shells / desktop
+            if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd") return true;
+
+            // 1. Direct title matching (e.g. "Netflix", "Spotify Free", "VLC media player")
+            if (!string.IsNullOrEmpty(winTitle))
+            {
+                foreach (var term in terms)
+                {
+                    if (winTitle.Equals(term, StringComparison.OrdinalIgnoreCase) ||
+                        winTitle.StartsWith(term + " -", StringComparison.OrdinalIgnoreCase) ||
+                        winTitle.EndsWith("- " + term, StringComparison.OrdinalIgnoreCase) ||
+                        winTitle.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    {
+                        found = hWnd;
+                        return false;
+                    }
+                }
+            }
+
+            // 2. Process name matching (e.g. netflix.exe, spotify.exe, vlc.exe)
+            try
+            {
+                var proc = Process.GetProcessById((int)pid);
+                var pName = proc.ProcessName;
+                foreach (var term in terms)
+                {
+                    if (pName.Equals(term, StringComparison.OrdinalIgnoreCase) ||
+                        pName.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    {
+                        found = hWnd;
+                        return false;
+                    }
+                }
+            }
+            catch { }
+
+            return true;
+        }, IntPtr.Zero);
+
+        return found;
+    }
+
+
     private static bool TrySwitchToBrowserTab(IntPtr hWnd, string tabTitleSubstring)
     {
         try
@@ -136,14 +258,12 @@ public static class AppLauncher
             var root = AutomationElement.FromHandle(hWnd);
             if (root == null) return false;
 
-            // Search across all tab-like control types (tabs, lists, custom XUL sidebar items, buttons, panes)
+            // Search ONLY tab items and tree/list items (for vertical tabs like Zen/Edge/TreeTabs)
+            // DO NOT search Pane, Custom, Button which traverses entire DOM and freezes
             var tabCond = new OrCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem),
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TreeItem),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Custom),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Pane)
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem)
             );
 
             var elements = root.FindAll(TreeScope.Descendants, tabCond);
@@ -154,7 +274,7 @@ public static class AppLauncher
                     var name = tab.Current.Name;
                     if (!string.IsNullOrEmpty(name) && name.Contains(tabTitleSubstring, StringComparison.OrdinalIgnoreCase))
                     {
-                        // 1. SelectionItemPattern
+                        // 1. SelectionItemPattern (Firefox, XUL, standard UI)
                         if (tab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPattern) &&
                             selPattern is SelectionItemPattern sip)
                         {
@@ -162,7 +282,15 @@ public static class AppLauncher
                             return true;
                         }
 
-                        // 2. InvokePattern
+                        // 2. LegacyIAccessiblePattern (Chromium / Chrome / Edge tabs!)
+                        if (tab.TryGetCurrentPattern(LegacyIAccessiblePattern.Pattern, out var legPattern) &&
+                            legPattern is LegacyIAccessiblePattern lip)
+                        {
+                            lip.DoDefaultAction();
+                            return true;
+                        }
+
+                        // 3. InvokePattern
                         if (tab.TryGetCurrentPattern(InvokePattern.Pattern, out var invPattern) &&
                             invPattern is InvokePattern ip)
                         {
@@ -170,13 +298,13 @@ public static class AppLauncher
                             return true;
                         }
 
-                        // 3. Click bounding rectangle on screen
+                        // 4. Physical click: click at 30% from the left to avoid close button ('X') on the right
                         var rect = tab.Current.BoundingRectangle;
                         if (rect.Width > 0 && rect.Height > 0)
                         {
                             BringToFront(hWnd);
-                            Thread.Sleep(50);
-                            var cx = (int)(rect.Left + rect.Width / 2);
+                            Thread.Sleep(40);
+                            var cx = (int)(rect.Left + Math.Min(30, rect.Width * 0.3));
                             var cy = (int)(rect.Top + rect.Height / 2);
                             ClickScreenPoint(cx, cy);
                             return true;
@@ -201,13 +329,35 @@ public static class AppLauncher
         var searchTerms = BuildMediaSearchTerms(title, artist, sourceApp, sourceAumid);
         var isBrowser = IsBrowserCandidate(sourceAumid, sourceApp);
 
+        // 1. If it's identified as browser media, search open browser tabs and windows first
         if (isBrowser)
         {
             if (TryActivateBrowserMedia(sourceAumid, searchTerms))
                 return;
         }
 
-        // Check if it's a UWP / Store App (contains '!')
+        // 2. Search already open windows (crucial for UWP apps like Netflix App, Spotify, VLC, etc.)
+        // This MUST run BEFORE any shell:AppsFolder or process launch to prevent opening duplicate windows!
+        var existingWnd = FindExistingAppWindow(sourceApp, sourceAumid, title);
+        if (existingWnd != IntPtr.Zero)
+        {
+            BringToFront(existingWnd);
+            return;
+        }
+
+        // 3. Search running desktop processes by process name
+        if (TryActivateDesktopApp(sourceAumid, sourceApp))
+        {
+            return;
+        }
+
+        // 4. Fallback browser search if media might have been from a browser but not marked upfront
+        if (!isBrowser && TryActivateBrowserMedia(null, searchTerms))
+        {
+            return;
+        }
+
+        // 5. Only if absolutely NO window or process is already running, launch UWP app as fallback
         if (!string.IsNullOrWhiteSpace(sourceAumid) && sourceAumid.Contains('!'))
         {
             try
@@ -223,19 +373,7 @@ public static class AppLauncher
             catch { }
         }
 
-        // Search running desktop processes
-        if (TryActivateDesktopApp(sourceAumid, sourceApp))
-        {
-            return;
-        }
-
-        // Fallback: search browser tabs even if not identified as a browser upfront
-        if (!isBrowser && TryActivateBrowserMedia(null, searchTerms))
-        {
-            return;
-        }
-
-        // Last resort: general launcher
+        // 6. Last resort: general launcher
         Launch(sourceAumid, sourceApp, title, artist);
     }
 
@@ -320,7 +458,7 @@ public static class AppLauncher
 
         IntPtr firstFallback = IntPtr.Zero;
 
-        // Stage 1: Fast check - does any browser window title match?
+        // Stage 1: Fast check - does any open browser window title match directly?
         foreach (var bName in browserOrder)
         {
             var hwnds = FindWindowsByProcessName(bName);
@@ -343,7 +481,7 @@ public static class AppLauncher
             }
         }
 
-        // Stage 2: Deep tab search via UI Automation
+        // Stage 2: Deep tab search via UI Automation (fast TabItem lookup)
         foreach (var bName in browserOrder)
         {
             var hwnds = FindWindowsByProcessName(bName);
@@ -360,7 +498,23 @@ public static class AppLauncher
             }
         }
 
-        // Stage 3: Fallback - bring the running browser to front
+        // Stage 3: If preferred browser is known (e.g. Chrome was playing), bring its window to front
+        if (!string.IsNullOrWhiteSpace(preferredAumid))
+        {
+            var lower = preferredAumid.ToLowerInvariant();
+            var matched = BrowserNames.FirstOrDefault(b => lower.Contains(b));
+            if (matched != null)
+            {
+                var prefHwnds = FindWindowsByProcessName(matched);
+                if (prefHwnds.Count > 0)
+                {
+                    BringToFront(prefHwnds[0]);
+                    return true;
+                }
+            }
+        }
+
+        // Stage 4: Fallback - bring the running browser to front
         if (firstFallback != IntPtr.Zero)
         {
             BringToFront(firstFallback);
@@ -472,6 +626,14 @@ public static class AppLauncher
             {
                 App.Log(ex);
             }
+        }
+
+        // 2.5 Check for an already-open window (handles UWP / ApplicationFrameHost apps like Netflix as well as normal windows)
+        var existingWnd = FindExistingAppWindow(appName, appId, title);
+        if (existingWnd != IntPtr.Zero)
+        {
+            BringToFront(existingWnd);
+            return;
         }
 
         // 3. Search already-running processes by name or window title (e.g. Antigravity, Chrome, Edge, Slack, Spotify)

@@ -112,10 +112,6 @@
                             </Button>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button x:Name="GoToAppButton" Style="{StaticResource IconButton}" Width="26" Height="26" Margin="0,0,4,0"
-                                        ToolTip="Go to playing app or browser tab" Foreground="{DynamicResource SubTextBrush}" Click="OnGoToApp">
-                                    <hero:HeroIcon Kind="ArrowRight" Width="14" Height="14" />
-                                </Button>
                                 <Button x:Name="LyricsToggle" Style="{StaticResource IconButton}" Width="26" Height="26"
                                         ToolTip="Toggle Lyrics Split View" Foreground="{DynamicResource SubTextBrush}"
                                         Click="OnToggleLyrics" Visibility="Collapsed">
