@@ -56,7 +56,25 @@ public sealed partial class NowPlayingService : ObservableObject
         AppLauncher.LaunchMediaSource(SourceAumid, SourceApp, Title, Artist);
     }
 
-    private NowPlayingService() => _ = InitAsync();
+    private readonly DispatcherTimer _fallbackTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
+    private int _fallbackSilenceCount = 0;
+    private bool _isFallbackActive = false;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+    private static void SendMediaKey(byte vk)
+    {
+        keybd_event(vk, 0, 0, UIntPtr.Zero);
+        keybd_event(vk, 0, 2 /* KEYEVENTF_KEYUP */, UIntPtr.Zero);
+    }
+
+    private NowPlayingService()
+    {
+        _fallbackTimer.Tick += (_, _) => CheckAudioFallback();
+        _fallbackTimer.Start();
+        _ = InitAsync();
+    }
 
     partial void OnPositionChanged(double value) => OnPropertyChanged(nameof(PositionText));
     partial void OnDurationChanged(double value) => OnPropertyChanged(nameof(DurationText));
@@ -623,18 +641,21 @@ public sealed partial class NowPlayingService : ObservableObject
     private async Task PlayPause()
     {
         if (_session is not null) await _session.TryTogglePlayPauseAsync();
+        else if (_isFallbackActive) SendMediaKey(0xB3 /* VK_MEDIA_PLAY_PAUSE */);
     }
 
     [RelayCommand]
     private async Task Next()
     {
         if (_session is not null) await _session.TrySkipNextAsync();
+        else if (_isFallbackActive) SendMediaKey(0xB0 /* VK_MEDIA_NEXT_TRACK */);
     }
 
     [RelayCommand]
     private async Task Previous()
     {
         if (_session is not null) await _session.TrySkipPreviousAsync();
+        else if (_isFallbackActive) SendMediaKey(0xB1 /* VK_MEDIA_PREV_TRACK */);
     }
 
     public async Task SeekAsync(double seconds)
@@ -1084,4 +1105,180 @@ public sealed partial class NowPlayingService : ObservableObject
             return null;
         }
     }
+    private void CheckAudioFallback()
+    {
+        // If an official GSMTC session is active and playing, GSMTC takes priority
+        if (_session is not null && IsPlaying && !_isFallbackActive)
+        {
+            return;
+        }
+
+        var peak = AudioMeterService.Instance.GetPeak();
+
+        if (peak > 0.002f)
+        {
+            var info = DetectActiveMediaPlayer();
+            if (info != null)
+            {
+                _fallbackSilenceCount = 0;
+                _isFallbackActive = true;
+                if (!HasSession || !IsPlaying || Title != info.Value.Title)
+                {
+                    HasSession = true;
+                    IsPlaying = true;
+                    Title = info.Value.Title;
+                    Artist = info.Value.Artist;
+                    SourceApp = info.Value.App;
+                    SourceAumid = info.Value.ProcessName;
+                    Art = GeneratePlatformLetterThumbnail(info.Value.App);
+                    ArtTint = Art is BitmapSource bs ? AverageColor(bs) : null;
+                }
+                return;
+            }
+        }
+
+        if (_isFallbackActive)
+        {
+            _fallbackSilenceCount++;
+            if (_fallbackSilenceCount >= 6) // ~3s silence
+            {
+                _isFallbackActive = false;
+                _fallbackSilenceCount = 0;
+                if (_session is null)
+                {
+                    HasSession = false;
+                    IsPlaying = false;
+                    Title = "Nothing playing";
+                    Artist = "";
+                    SourceApp = "";
+                    SourceAumid = "";
+                    Art = null;
+                    ArtTint = null;
+                }
+                else
+                {
+                    RefreshPlayback();
+                }
+            }
+        }
+    }
+
+    private struct FallbackPlayerInfo
+    {
+        public string Title;
+        public string Artist;
+        public string App;
+        public string ProcessName;
+    }
+
+    private static FallbackPlayerInfo? DetectActiveMediaPlayer()
+    {
+        // 1. VLC Media Player
+        try
+        {
+            var vlcProcs = Process.GetProcessesByName("vlc");
+            if (vlcProcs.Length > 0)
+            {
+                foreach (var p in vlcProcs)
+                {
+                    var title = p.MainWindowTitle?.Trim();
+                    if (!string.IsNullOrEmpty(title))
+                    {
+                        var cleanTitle = title;
+                        if (cleanTitle.EndsWith(" - VLC media player", StringComparison.OrdinalIgnoreCase))
+                            cleanTitle = cleanTitle[..^(" - VLC media player".Length)].Trim();
+
+                        if (!string.IsNullOrWhiteSpace(cleanTitle) && !cleanTitle.Equals("VLC media player", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return new FallbackPlayerInfo
+                            {
+                                Title = cleanTitle,
+                                Artist = "VLC media player",
+                                App = "VLC",
+                                ProcessName = "vlc.exe"
+                            };
+                        }
+
+                        return new FallbackPlayerInfo
+                        {
+                            Title = "Playing in VLC",
+                            Artist = "VLC media player",
+                            App = "VLC",
+                            ProcessName = "vlc.exe"
+                        };
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2. Media Player Classic (MPC-HC / MPC-BE)
+        try
+        {
+            var mpcProcs = Process.GetProcesses().Where(p => p.ProcessName.StartsWith("mpc-", StringComparison.OrdinalIgnoreCase)).ToArray();
+            foreach (var p in mpcProcs)
+            {
+                var title = p.MainWindowTitle?.Trim();
+                if (!string.IsNullOrEmpty(title))
+                {
+                    var cleanTitle = Regex.Replace(title, @"\s*-\s*MPC.*$", "", RegexOptions.IgnoreCase).Trim();
+                    return new FallbackPlayerInfo
+                    {
+                        Title = string.IsNullOrWhiteSpace(cleanTitle) ? "Playing media" : cleanTitle,
+                        Artist = "Media Player Classic",
+                        App = "MPC-HC",
+                        ProcessName = p.ProcessName
+                    };
+                }
+            }
+        }
+        catch { }
+
+        // 3. Foobar2000
+        try
+        {
+            var fbProcs = Process.GetProcessesByName("foobar2000");
+            if (fbProcs.Length > 0)
+            {
+                var title = fbProcs[0].MainWindowTitle?.Trim();
+                if (!string.IsNullOrEmpty(title) && !title.Equals("foobar2000", StringComparison.OrdinalIgnoreCase))
+                {
+                    var cleanTitle = Regex.Replace(title, @"\s*\[foobar2000.*\]\s*$", "", RegexOptions.IgnoreCase).Trim();
+                    return new FallbackPlayerInfo
+                    {
+                        Title = string.IsNullOrWhiteSpace(cleanTitle) ? "Playing audio" : cleanTitle,
+                        Artist = "foobar2000",
+                        App = "foobar2000",
+                        ProcessName = "foobar2000.exe"
+                    };
+                }
+            }
+        }
+        catch { }
+
+        // 4. PotPlayer
+        try
+        {
+            var potProcs = Process.GetProcesses().Where(p => p.ProcessName.Contains("potplayer", StringComparison.OrdinalIgnoreCase)).ToArray();
+            foreach (var p in potProcs)
+            {
+                var title = p.MainWindowTitle?.Trim();
+                if (!string.IsNullOrEmpty(title) && !title.Equals("PotPlayer", StringComparison.OrdinalIgnoreCase))
+                {
+                    var cleanTitle = Regex.Replace(title, @"\s*-\s*PotPlayer.*$", "", RegexOptions.IgnoreCase).Trim();
+                    return new FallbackPlayerInfo
+                    {
+                        Title = string.IsNullOrWhiteSpace(cleanTitle) ? "Playing media" : cleanTitle,
+                        Artist = "PotPlayer",
+                        App = "PotPlayer",
+                        ProcessName = p.ProcessName
+                    };
+                }
+            }
+        }
+        catch { }
+
+        return null;
+    }
+
 }
