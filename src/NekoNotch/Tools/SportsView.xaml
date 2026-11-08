@@ -308,7 +308,7 @@
                     <Grid Grid.Row="0" Margin="0,0,0,6">
                         <Button Style="{StaticResource IconButton}" HorizontalAlignment="Left" Click="OnBackToScheduleClick">
                             <StackPanel Orientation="Horizontal">
-                                <hero:HeroIcon Kind="ArrowLeft" Width="12" Height="12" Margin="0,0,4,0" />
+                                <hero:HeroIcon Kind="ChevronLeft" Width="12" Height="12" Margin="0,0,4,0" />
                                 <TextBlock Text="Back to Games" FontSize="11" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
