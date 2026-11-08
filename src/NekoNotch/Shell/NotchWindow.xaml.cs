@@ -328,6 +328,11 @@ public partial class NotchWindow : Window
 
         _idleRotate.Tick += (_, _) => OnIdleRotate();
 
+        VoiceAssistantService.Instance.WakeWordTriggered += OnVoiceWakeWord;
+        VoiceAssistantService.Instance.SpeechHypothesisUpdated += OnVoiceHypothesis;
+        VoiceAssistantService.Instance.CommandCompleted += OnVoiceCompleted;
+        VoiceAssistantService.Instance.ListeningEnded += OnVoiceEnded;
+
         ProfileService.Changed += () => _idleAvatarLoaded = false;
 
         _peekTimer.Tick += (_, _) => EndPeek();
@@ -1752,6 +1757,7 @@ public partial class NotchWindow : Window
 
     {
 
+        if (_isVoiceActive) return 330;
         if (_brightnessTimer.IsEnabled) return BrightnessW;
 
         if (_volumeTimer.IsEnabled) return VolumeW;
@@ -1905,6 +1911,27 @@ public partial class NotchWindow : Window
             return;
 
         }
+
+        if (_isVoiceActive)
+        {
+            VoicePart.Visibility = Visibility.Visible;
+            BrightnessPart.Visibility = Visibility.Collapsed;
+            VolumePart.Visibility = Visibility.Collapsed;
+            MusicPart.Visibility = Visibility.Collapsed;
+            TimerPart.Visibility = Visibility.Collapsed;
+            ReminderPart.Visibility = Visibility.Collapsed;
+            SportsPart.Visibility = Visibility.Collapsed;
+            IdlePart.Visibility = Visibility.Collapsed;
+            NotchEyes.Visibility = Visibility.Visible;
+            if (!_expanded && !_peeking)
+            {
+                _width.Target = 330;
+                StartAnimation();
+            }
+            return;
+        }
+
+        VoicePart.Visibility = Visibility.Collapsed;
 
         if (_volumeTimer.IsEnabled)
 
@@ -3023,6 +3050,79 @@ public partial class NotchWindow : Window
             StartAnimation();
         };
         resetTimer.Start();
+    }
+
+    private bool _isVoiceActive;
+
+    private void OnVoiceWakeWord()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _isVoiceActive = true;
+            VoiceStatusTitle.Text = "Listening";
+            VoiceStatusTitle.Foreground = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoiceMicIcon.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoicePulseDot.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoiceFeedbackText.Text = "Say a command...";
+
+            // Attentive Mochi happy squint
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(200) });
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(200) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.8, Duration = TimeSpan.FromMilliseconds(200) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.8, Duration = TimeSpan.FromMilliseconds(200) });
+
+            UpdateActivity();
+        });
+    }
+
+    private void OnVoiceHypothesis(string hypothesis)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!_isVoiceActive) return;
+            if (!string.IsNullOrWhiteSpace(hypothesis))
+            {
+                VoiceFeedbackText.Text = hypothesis;
+            }
+        });
+    }
+
+    private void OnVoiceCompleted(string message, bool success)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _isVoiceActive = true;
+            if (success)
+            {
+                VoiceStatusTitle.Text = "Done";
+                VoiceStatusTitle.Foreground = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+                VoiceMicIcon.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+                VoicePulseDot.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+                VoiceFeedbackText.Text = $"\u2713 {message}";
+            }
+            else
+            {
+                VoiceStatusTitle.Text = "Neko";
+                VoiceStatusTitle.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
+                VoiceMicIcon.Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
+                VoicePulseDot.Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
+                VoiceFeedbackText.Text = message;
+            }
+            UpdateActivity();
+        });
+    }
+
+    private void OnVoiceEnded()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _isVoiceActive = false;
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(300) });
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(300) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(300) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(300) });
+            UpdateActivity();
+        });
     }
 
     private void OnMusicPartClick(object sender, MouseButtonEventArgs e)

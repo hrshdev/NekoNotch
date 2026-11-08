@@ -106,6 +106,11 @@ public sealed class AppSettings
     /// <summary>Time-synced lyrics on Now Playing (looked up on LRCLIB).</summary>
     public bool LyricsEnabled { get; set; } = true;
 
+    /// <summary>Voice assistant & "Voice to Done" wake word.</summary>
+    public bool EnableWakeWord { get; set; } = true;
+    public string WakeWord { get; set; } = "Hey Neko";
+    public bool VoiceChime { get; set; } = true;
+
     /// <summary>Action id → gesture such as "Ctrl+Alt+N". Empty gesture = disabled.</summary>
     /// <remarks>
     /// Only the toggle is on by default: global Ctrl+Alt shortcuts are AltGr on many keyboard layouts (Polish

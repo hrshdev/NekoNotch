@@ -342,6 +342,18 @@ public partial class SettingsView : UserControl, IToolView
                 if (on != v) Render(); // Windows refused (e.g. disabled in Task Manager): show why
             }));
 
+        Section("VOICE & ASSISTANT");
+        Row("Wake Word (\"Hey Neko\")", "Offline local voice detection. Say \"Hey Neko\" or \"Hey Notch\" to control apps and music.",
+            Toggle(S.EnableWakeWord, v =>
+            {
+                S.EnableWakeWord = v;
+                Save(false);
+                if (v) VoiceAssistantService.Instance.Start();
+                else VoiceAssistantService.Instance.Stop();
+            }));
+        Row("Listening chime", "Play a subtle audio tone when Neko wakes up.",
+            Toggle(S.VoiceChime, v => { S.VoiceChime = v; Save(false); }));
+
         Section("NOW PLAYING");
         Row("Lyrics", "Show time-synced lyrics on Now Playing. Songs are looked up on LRCLIB, a free lyrics library.",
             Toggle(S.LyricsEnabled, v => { S.LyricsEnabled = v; Save(false); }));

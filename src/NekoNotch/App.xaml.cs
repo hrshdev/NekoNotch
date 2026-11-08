@@ -87,6 +87,7 @@ public partial class App : Application
         _ = PhoneTransferService.Instance.SyncAsync(); // LAN server, only when the user turned it on
         UpdateService.Instance.Start(); // first look a couple of minutes in, then daily
         CalendarFeedService.Instance.Start(); // subscribed calendars, every 30 minutes
+        VoiceAssistantService.Instance.Start(); // offline voice assistant & wake word ("Hey Neko")
 
         // `NekoNotch.exe --open weather` starts with the panel open on a tool.
         var openAt = Array.IndexOf(e.Args, "--open");
@@ -105,6 +106,7 @@ public partial class App : Application
         _tray?.Dispose();
         ShelfService.Instance.Save();
         _ = PhoneTransferService.Instance.StopAsync(); // sockets close with the process anyway
+        VoiceAssistantService.Instance.Stop();
         _wakeupEvent?.Dispose();
         _mutex?.ReleaseMutex();
         base.OnExit(e);

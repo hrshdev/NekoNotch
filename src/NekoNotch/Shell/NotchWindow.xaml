@@ -543,6 +543,34 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- Voice Assistant HUD (Hey Nixi): Mic + Live speech hypothesis / action confirmation -->
+                    <Grid x:Name="VoicePart" Margin="12,0,12,0" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="64" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Group: Mic icon + Listening pulse / indicator -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse x:Name="VoicePulseDot" Width="6" Height="6" Fill="#32D74B" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <Ellipse.Effect><BlurEffect Radius="1.5" /></Ellipse.Effect>
+                            </Ellipse>
+                            <Path x:Name="VoiceMicIcon" Width="12" Height="12" Fill="#32D74B" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0"
+                                  Data="M 12 2 C 10.34 2 9 3.34 9 5 L 9 11 C 9 12.66 10.34 14 12 14 C 13.66 14 15 12.66 15 11 L 15 5 C 15 3.34 13.66 2 12 2 Z M 19 10 C 19 13.53 16.39 16.44 13 16.93 L 13 20 L 16 20 C 16.55 20 17 20.45 17 21 C 17 21.55 16.55 22 16 22 L 8 22 C 7.45 22 7 21.55 7 21 C 7 20.45 7.45 20 8 20 L 11 20 L 11 16.93 C 7.61 16.44 5 13.53 5 10 C 5 9.45 5.45 9 6 9 C 6.55 9 7 9.45 7 10 C 7 12.76 9.24 15 12 15 C 14.76 15 17 12.76 17 10 C 17 9.45 17.45 9 18 9 C 18.55 9 19 9.45 19 10 Z" />
+                            <TextBlock x:Name="VoiceStatusTitle" Text="Listening" FontSize="11" FontWeight="Bold" Foreground="#32D74B" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Column 1 (64px): Center Mochi Desktop Pet -->
+
+                        <!-- Right Group: Speech Hypothesis or Result Feedback -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock x:Name="VoiceFeedbackText" Text="Say a command..." FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="130" />
+                        </StackPanel>
+                    </Grid>
+
                     <!-- Event reminder (compact): calendar tile, "10m", dismiss -->
 
                     <Grid x:Name="ReminderPart" Margin="9,0,7,0" Visibility="Collapsed">
