@@ -47,6 +47,55 @@ public sealed class SportMatch
         : $"{HomeScore} vs {AwayScore}";
 }
 
+
+public sealed class FootballTimelineEvent
+{
+    public string Clock { get; set; } = "";
+    public string Type { get; set; } = ""; // Goal, Yellow Card, Red Card, Sub
+    public string Text { get; set; } = "";
+    public bool IsHomeTeam { get; set; }
+}
+
+public sealed class FootballMatchStats
+{
+    public string HomePossession { get; set; } = "50%";
+    public string AwayPossession { get; set; } = "50%";
+    public string HomeShotsOnTarget { get; set; } = "0";
+    public string AwayShotsOnTarget { get; set; } = "0";
+    public string HomeTotalShots { get; set; } = "0";
+    public string AwayTotalShots { get; set; } = "0";
+    public string HomeCorners { get; set; } = "0";
+    public string AwayCorners { get; set; } = "0";
+    public string HomeFouls { get; set; } = "0";
+    public string AwayFouls { get; set; } = "0";
+}
+
+public sealed class CricketInningScore
+{
+    public string TeamName { get; set; } = "";
+    public string Runs { get; set; } = "0";
+    public string Wickets { get; set; } = "0";
+    public string Overs { get; set; } = "0.0";
+    public bool IsBatting { get; set; }
+    public string Description { get; set; } = "";
+}
+
+public sealed class CricketPlayerEntry
+{
+    public string Name { get; set; } = "";
+    public string TeamName { get; set; } = "";
+    public string Role { get; set; } = "";
+}
+
+public sealed class MatchDetail
+{
+    public string MatchId { get; set; } = "";
+    public List<FootballTimelineEvent> FootballEvents { get; set; } = [];
+    public FootballMatchStats? FootballStats { get; set; }
+    public List<CricketInningScore> CricketInnings { get; set; } = [];
+    public List<CricketPlayerEntry> CricketPlayers { get; set; } = [];
+}
+
 public sealed class FollowedTeam
 {
     public string Id { get; set; } = "";
@@ -97,10 +146,14 @@ public sealed partial class SportsService : ObservableObject
         new() { Id = "fb-liv", Name = "Liverpool", Code = "LIV", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/364.png" },
         new() { Id = "fb-mun", Name = "Manchester United", Code = "MUN", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/360.png" },
         new() { Id = "fb-che", Name = "Chelsea", Code = "CHE", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/363.png" },
-        // Football - La Liga & Champions League
+        // Football - La Liga, Bundesliga, Serie A, ISL
         new() { Id = "fb-rma", Name = "Real Madrid", Code = "RMA", Sport = SportType.Football, LeagueId = "esp.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/86.png" },
         new() { Id = "fb-bar", Name = "Barcelona", Code = "BAR", Sport = SportType.Football, LeagueId = "esp.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/83.png" },
         new() { Id = "fb-bay", Name = "Bayern Munich", Code = "BAY", Sport = SportType.Football, LeagueId = "ger.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/132.png" },
+        new() { Id = "fb-int", Name = "Inter Milan", Code = "INT", Sport = SportType.Football, LeagueId = "ita.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/110.png" },
+        new() { Id = "fb-juv", Name = "Juventus", Code = "JUV", Sport = SportType.Football, LeagueId = "ita.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/111.png" },
+        new() { Id = "fb-kbf", Name = "Kerala Blasters", Code = "KBFC", Sport = SportType.Football, LeagueId = "ind.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/17708.png" },
+        new() { Id = "fb-mbg", Name = "Mohun Bagan SG", Code = "MBSG", Sport = SportType.Football, LeagueId = "ind.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/19088.png" },
         // Cricket - International
         new() { Id = "cr-ind", Name = "India", Code = "IND", Sport = SportType.Cricket, LeagueId = "8039", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/6.png" },
         new() { Id = "cr-aus", Name = "Australia", Code = "AUS", Sport = SportType.Cricket, LeagueId = "8039", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/2.png" },
@@ -108,7 +161,8 @@ public sealed partial class SportsService : ObservableObject
         // Cricket - IPL
         new() { Id = "cr-csk", Name = "Chennai Super Kings", Code = "CSK", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4342.png" },
         new() { Id = "cr-rcb", Name = "Royal Challengers Bengaluru", Code = "RCB", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4340.png" },
-        new() { Id = "cr-mi",  Name = "Mumbai Indians", Code = "MI", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4346.png" }
+        new() { Id = "cr-mi",  Name = "Mumbai Indians", Code = "MI", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4346.png" },
+        new() { Id = "cr-kkr", Name = "Kolkata Knight Riders", Code = "KKR", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4341.png" }
     ];
 
     private SportsService()
@@ -183,11 +237,16 @@ public sealed partial class SportsService : ObservableObject
                 leaguesToQuery.Add((team.Sport, team.LeagueId));
         }
 
-        // Always query premier league, champions league and international cricket
+        // Always query top football and cricket leagues
         leaguesToQuery.Add((SportType.Football, "eng.1"));
         leaguesToQuery.Add((SportType.Football, "uefa.champions"));
+        leaguesToQuery.Add((SportType.Football, "esp.1"));
+        leaguesToQuery.Add((SportType.Football, "ita.1"));
+        leaguesToQuery.Add((SportType.Football, "ger.1"));
+        leaguesToQuery.Add((SportType.Football, "ind.1"));
         leaguesToQuery.Add((SportType.Cricket, "8039"));
         leaguesToQuery.Add((SportType.Cricket, "8048"));
+        leaguesToQuery.Add((SportType.Cricket, "8044"));
 
         var fetched = new List<SportMatch>();
 
@@ -368,4 +427,163 @@ public sealed partial class SportsService : ObservableObject
 
         return result;
     }
+
+    public async Task<MatchDetail?> FetchMatchDetailAsync(SportMatch match)
+    {
+        try
+        {
+            var detail = new MatchDetail { MatchId = match.Id };
+            string url = match.Sport == SportType.Football
+                ? $"https://site.api.espn.com/apis/site/v2/sports/soccer/{match.LeagueId}/summary?event={match.Id}"
+                : $"https://site.api.espn.com/apis/site/v2/sports/cricket/{match.LeagueId}/summary?event={match.Id}";
+
+            var json = await _http.GetStringAsync(url);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (match.Sport == SportType.Football)
+            {
+                if (root.TryGetProperty("keyEvents", out var keList))
+                {
+                    foreach (var k in keList.EnumerateArray())
+                    {
+                        var text = k.TryGetProperty("text", out var tProp) ? tProp.GetString() ?? "" : "";
+                        var typeObj = k.TryGetProperty("type", out var to) ? to : default;
+                        var typeText = typeObj.TryGetProperty("text", out var tt) ? tt.GetString() ?? "" : "";
+                        var clock = k.TryGetProperty("clock", out var clk) && clk.TryGetProperty("displayValue", out var dv)
+                            ? dv.GetString() ?? "" : "";
+
+                        bool isHome = true;
+                        if (k.TryGetProperty("team", out var tObj) && tObj.TryGetProperty("displayName", out var dn))
+                        {
+                            var teamName = dn.GetString() ?? "";
+                            isHome = !string.IsNullOrEmpty(teamName) && match.HomeTeamName.Contains(teamName, StringComparison.OrdinalIgnoreCase);
+                        }
+
+                        if (typeText.Contains("Goal", StringComparison.OrdinalIgnoreCase) ||
+                            typeText.Contains("Card", StringComparison.OrdinalIgnoreCase) ||
+                            typeText.Contains("Substitution", StringComparison.OrdinalIgnoreCase) ||
+                            typeText.Contains("Penalty", StringComparison.OrdinalIgnoreCase))
+                        {
+                            detail.FootballEvents.Add(new FootballTimelineEvent
+                            {
+                                Clock = clock,
+                                Type = typeText,
+                                Text = text,
+                                IsHomeTeam = isHome
+                            });
+                        }
+                    }
+                }
+
+                if (root.TryGetProperty("boxscore", out var box) && box.TryGetProperty("teams", out var teams) && teams.GetArrayLength() >= 2)
+                {
+                    var stats = new FootballMatchStats();
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var t = teams[i];
+                        bool isHome = i == 0;
+                        if (t.TryGetProperty("team", out var tm) && tm.TryGetProperty("homeAway", out var ha))
+                        {
+                            isHome = ha.GetString() == "home";
+                        }
+                        if (t.TryGetProperty("statistics", out var statsList))
+                        {
+                            foreach (var s in statsList.EnumerateArray())
+                            {
+                                var name = s.TryGetProperty("name", out var np) ? np.GetString() : "";
+                                var val = s.TryGetProperty("displayValue", out var vp) ? vp.GetString() ?? "0" : "0";
+                                switch (name)
+                                {
+                                    case "possessionPct":
+                                        if (isHome) stats.HomePossession = val + "%"; else stats.AwayPossession = val + "%";
+                                        break;
+                                    case "shotsOnTarget":
+                                        if (isHome) stats.HomeShotsOnTarget = val; else stats.AwayShotsOnTarget = val;
+                                        break;
+                                    case "totalShots":
+                                        if (isHome) stats.HomeTotalShots = val; else stats.AwayTotalShots = val;
+                                        break;
+                                    case "wonCorners":
+                                        if (isHome) stats.HomeCorners = val; else stats.AwayCorners = val;
+                                        break;
+                                    case "foulsCommitted":
+                                        if (isHome) stats.HomeFouls = val; else stats.AwayFouls = val;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                    detail.FootballStats = stats;
+                }
+            }
+            else // Cricket
+            {
+                if (root.TryGetProperty("header", out var hdr) && hdr.TryGetProperty("competitions", out var comps) && comps.GetArrayLength() > 0)
+                {
+                    var comp = comps[0];
+                    if (comp.TryGetProperty("competitors", out var competitors))
+                    {
+                        foreach (var competitor in competitors.EnumerateArray())
+                        {
+                            var tName = competitor.TryGetProperty("team", out var tm) && tm.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "" : "";
+                            if (competitor.TryGetProperty("linescores", out var linescores))
+                            {
+                                foreach (var ls in linescores.EnumerateArray())
+                                {
+                                    var r = ls.TryGetProperty("runs", out var rp) ? rp.GetInt32().ToString() : "0";
+                                    var w = ls.TryGetProperty("wickets", out var wp) ? wp.GetInt32().ToString() : "0";
+                                    var o = ls.TryGetProperty("overs", out var op) ? op.GetDouble().ToString("0.0") : "0.0";
+                                    var isBatting = ls.TryGetProperty("isBatting", out var bp) && bp.GetBoolean();
+                                    var desc = ls.TryGetProperty("description", out var dp) ? dp.GetString() ?? "" : "";
+                                    detail.CricketInnings.Add(new CricketInningScore
+                                    {
+                                        TeamName = tName,
+                                        Runs = r,
+                                        Wickets = w,
+                                        Overs = o,
+                                        IsBatting = isBatting,
+                                        Description = desc
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (root.TryGetProperty("rosters", out var rosters))
+                {
+                    foreach (var r in rosters.EnumerateArray())
+                    {
+                        var tName = r.TryGetProperty("team", out var tm) && tm.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "" : "";
+                        if (r.TryGetProperty("roster", out var rosterList))
+                        {
+                            foreach (var p in rosterList.EnumerateArray())
+                            {
+                                var pName = p.TryGetProperty("athlete", out var ath) && ath.TryGetProperty("displayName", out var pdn) ? pdn.GetString() ?? "" : "";
+                                var role = p.TryGetProperty("position", out var pos) && pos.TryGetProperty("displayName", out var rdn) ? rdn.GetString() ?? "" : "";
+                                if (!string.IsNullOrEmpty(pName))
+                                {
+                                    detail.CricketPlayers.Add(new CricketPlayerEntry
+                                    {
+                                        Name = pName,
+                                        TeamName = tName,
+                                        Role = role
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return detail;
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+            return null;
+        }
+    }
+
 }

@@ -47,7 +47,7 @@ public static class ToolRegistry
         new("notifications", "Notifications", AppIcon.Bell, W, H, () => new NotificationsView()),
         new("weather", "Weather", AppIcon.Cloud, W, 245, () => new WeatherView()),
         new("system", "System", AppIcon.Signal, W, H, () => new SystemMonitorView()),
-        new("sports", "Sports", AppIcon.Trophy, W, 245, () => new SportsView()),
+        new("sports", "Sports", AppIcon.Trophy, W, 270, () => new SportsView()),
         new("stocks", "Stocks", AppIcon.ChartLine, W, H, () => new StocksView()),
         new("converter", "Converter", AppIcon.ArrowsLeftRight, W, H, () => new ConverterView()),
         new("emoji", "Emoji", AppIcon.FaceSmile, W, 245, () => new EmojiView()),

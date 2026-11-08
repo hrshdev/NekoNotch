@@ -3,18 +3,46 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:hero="clr-namespace:NekoNotch.Shell">
     <UserControl.Resources>
-        <!-- Fallback button chip style -->
+        <Style x:Key="RailBtn" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource SubTextBrush}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="8,7" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="Chip" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="10.5" />
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Padding" Value="7,3" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Focusable" Value="False" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -32,246 +60,396 @@
     </UserControl.Resources>
 
     <Grid Margin="2,0,2,0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <!-- 1. Left Sport Navigation Rail -->
+            <ColumnDefinition Width="110" />
+            <ColumnDefinition Width="10" />
+            <!-- 2. Center Explorer (League selector, Team Search & Follow) -->
+            <ColumnDefinition Width="205" />
+            <ColumnDefinition Width="10" />
+            <!-- 3. Right Game Stage (Schedule Cards or Deep Scorecard) -->
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <!-- Top Header & Controls -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <!-- COLUMN 0: LEFT NAVIGATION RAIL -->
+        <Border Grid.Column="0" Background="{DynamicResource Surface2Brush}" CornerRadius="12" Padding="8,10" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <!-- Sport Filter Chips -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <RadioButton x:Name="FilterAllRadio" Content="All Sports" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" IsChecked="True" Click="OnFilterAll" />
-                <RadioButton x:Name="FilterFootballRadio" Content="⚽ Football" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" Click="OnFilterFootball" />
-                <RadioButton x:Name="FilterCricketRadio" Content="🏏 Cricket" Style="{DynamicResource ChipButton}"
-                             GroupName="SportFilter" Click="OnFilterCricket" />
-            </StackPanel>
+                <!-- Header Title -->
+                <StackPanel Grid.Row="0" Margin="4,0,0,10">
+                    <TextBlock Text="SPORTS HUB" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" />
+                </StackPanel>
 
-            <!-- Status Indicator / Hint -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Ellipse x:Name="LiveIndicator" Width="7" Height="7" Fill="#32D74B" Margin="0,0,6,0" Visibility="Collapsed" />
-                <TextBlock x:Name="StatusText" Text="Live Sports &amp; Scorecards" Style="{StaticResource SubText}" VerticalAlignment="Center" />
-            </StackPanel>
-
-            <!-- Search Field -->
-            <TextBox x:Name="SearchBox" Grid.Column="2" Width="135" Height="26" Margin="0,0,8,0"
-                     Tag="Search team..." Style="{StaticResource InlineField}" FontSize="11"
-                     VerticalContentAlignment="Center" TextChanged="OnSearchChanged" />
-
-            <!-- Actions -->
-            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Style="{StaticResource IconButton}" ToolTip="Refresh Scores" Click="OnRefreshClick"
-                        Foreground="{DynamicResource SubTextBrush}">
-                    <hero:HeroIcon Kind="Refresh" Width="14" Height="14" />
-                </Button>
-            </StackPanel>
-        </Grid>
-
-        <!-- Main Content Area: Split Spotlight Card & Fixture List -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="290" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Left: Featured / Pinned Match Card -->
-            <Border Grid.Column="0" Background="{DynamicResource Surface2Brush}" CornerRadius="12" Padding="14,12" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
-                <Grid>
-                    <!-- Populated State -->
-                    <Grid x:Name="SpotlightPopulatedView" Visibility="Visible">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <!-- League & Status Header -->
-                        <Grid Grid.Row="0" Margin="0,0,0,8">
-                            <TextBlock x:Name="SpotlightLeagueText" Text="LEAGUE" FontSize="10" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" MaxWidth="190" />
-                            <Border x:Name="SpotlightStatusBadge" HorizontalAlignment="Right" Background="#2532D74B" CornerRadius="4" Padding="6,2">
-                                <TextBlock x:Name="SpotlightStatusText" Text="UPCOMING" FontSize="10" FontWeight="Bold" Foreground="#32D74B" />
-                            </Border>
-                        </Grid>
-
-                        <!-- Scoreboard Row -->
-                        <Grid Grid.Row="1" VerticalAlignment="Center">
+                <!-- Navigation items -->
+                <StackPanel Grid.Row="1">
+                    <!-- My Teams -->
+                    <RadioButton x:Name="NavMyTeams" Style="{StaticResource RailBtn}" GroupName="SportsNav" Click="OnNavMyTeamsClick">
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-
-                            <!-- Home Team -->
-                            <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Border Width="36" Height="36" CornerRadius="18" Background="#18FFFFFF" Margin="0,0,0,4">
-                                    <Image x:Name="SpotlightHomeLogo" Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                                </Border>
-                                <TextBlock x:Name="SpotlightHomeName" Text="HOM" FontSize="12" FontWeight="Bold"
-                                           HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="85" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <hero:HeroIcon Kind="Star" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="My Teams" VerticalAlignment="Center" />
                             </StackPanel>
-
-                            <!-- Score Display -->
-                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="6,0">
-                                <TextBlock x:Name="SpotlightScoreText" Text="0 - 0" FontSize="22" FontWeight="Black"
-                                           HorizontalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
-                                <TextBlock x:Name="SpotlightTimeText" Text="Scheduled" FontSize="10"
-                                           HorizontalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,0" />
-                            </StackPanel>
-
-                            <!-- Away Team -->
-                            <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Border Width="36" Height="36" CornerRadius="18" Background="#18FFFFFF" Margin="0,0,0,4">
-                                    <Image x:Name="SpotlightAwayLogo" Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                                </Border>
-                                <TextBlock x:Name="SpotlightAwayName" Text="AWY" FontSize="12" FontWeight="Bold"
-                                           HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="85" />
-                            </StackPanel>
+                            <Border x:Name="MyTeamsBadge" Grid.Column="1" Background="#20FFFFFF" CornerRadius="6" Padding="4,1" Margin="4,0,0,0" Visibility="Collapsed">
+                                <TextBlock x:Name="MyTeamsCountText" Text="0" FontSize="9" FontWeight="Bold" />
+                            </Border>
                         </Grid>
+                    </RadioButton>
 
-                        <!-- Footer: Summary & Pin Button -->
-                        <Grid Grid.Row="2" Margin="0,8,0,0">
-                            <TextBlock x:Name="SpotlightSummaryText" Text="Match details" FontSize="10"
-                                       Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" MaxWidth="170" />
-                            <Button x:Name="PinToNotchBtn" HorizontalAlignment="Right" Style="{StaticResource Chip}"
-                                    Padding="8,4" Click="OnPinToNotchClick" ToolTip="Toggle Pin to Dynamic Island Notch">
-                                <StackPanel Orientation="Horizontal">
-                                    <hero:HeroIcon Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
-                                    <TextBlock x:Name="PinToNotchText" Text="Pin" FontSize="11" />
-                                </StackPanel>
-                            </Button>
+                    <!-- Football -->
+                    <RadioButton x:Name="NavFootball" Style="{StaticResource RailBtn}" GroupName="SportsNav" IsChecked="True" Click="OnNavFootballClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="⚽ Football" VerticalAlignment="Center" />
+                            <Ellipse x:Name="FootballLiveDot" Grid.Column="1" Width="6" Height="6" Fill="#32D74B" VerticalAlignment="Center" Visibility="Collapsed" />
                         </Grid>
-                    </Grid>
+                    </RadioButton>
 
-                    <!-- Empty State (when no match is pinned or active) -->
-                    <StackPanel x:Name="SpotlightEmptyView" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
-                        <Border Width="40" Height="40" CornerRadius="20" Background="#18FFFFFF" HorizontalAlignment="Center" Margin="0,0,0,8">
-                            <hero:HeroIcon Kind="Sparkles" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <TextBlock Text="No Match Pinned" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                        <TextBlock Text="Pin any match or follow a team below to track live scores on your notch."
-                                   Style="{StaticResource SubText}" TextWrapping="Wrap" TextAlignment="Center" FontSize="11" MaxWidth="220" />
+                    <!-- Cricket -->
+                    <RadioButton x:Name="NavCricket" Style="{StaticResource RailBtn}" GroupName="SportsNav" Click="OnNavCricketClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="🏏 Cricket" VerticalAlignment="Center" />
+                            <Ellipse x:Name="CricketLiveDot" Grid.Column="1" Width="6" Height="6" Fill="#32D74B" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </Grid>
+                    </RadioButton>
+                </StackPanel>
+
+                <!-- Refresh at Bottom -->
+                <Button Grid.Row="2" Style="{StaticResource IconButton}" HorizontalAlignment="Left" Margin="4,0,0,0"
+                        ToolTip="Refresh Scores" Click="OnRefreshClick" Foreground="{DynamicResource SubTextBrush}">
+                    <StackPanel Orientation="Horizontal">
+                        <hero:HeroIcon Kind="Refresh" Width="12" Height="12" Margin="0,0,4,0" />
+                        <TextBlock Text="Refresh" FontSize="10" VerticalAlignment="Center" />
                     </StackPanel>
-                </Grid>
-            </Border>
+                </Button>
+            </Grid>
+        </Border>
 
-            <!-- Right: Matches List -->
-            <Grid Grid.Column="2">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <!-- COLUMN 1: CENTER EXPLORER -->
+        <Border Grid.Column="2" Background="{DynamicResource Surface2Brush}" CornerRadius="12" Padding="10,10" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Search Bar -->
+                <TextBox x:Name="SearchBox" Grid.Row="0" Height="26" Margin="0,0,0,8"
+                         Tag="Search teams..." Style="{StaticResource InlineField}" FontSize="11"
+                         VerticalContentAlignment="Center" TextChanged="OnSearchChanged" />
+
+                <!-- League Chips Selector -->
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,8">
+                    <StackPanel x:Name="LeagueChipsPanel" Orientation="Horizontal">
+                        <RadioButton x:Name="LeagueAllRadio" Content="All" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" IsChecked="True" Click="OnLeagueAllClick" Margin="0,0,4,0" />
+                        <RadioButton x:Name="LeaguePLRadio" Content="PL" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" Click="OnLeaguePLClick" Margin="0,0,4,0" />
+                        <RadioButton x:Name="LeagueUCLRadio" Content="UCL" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" Click="OnLeagueUCLClick" Margin="0,0,4,0" />
+                        <RadioButton x:Name="LeagueLaLigaRadio" Content="LaLiga" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" Click="OnLeagueLaLigaClick" Margin="0,0,4,0" />
+                        <RadioButton x:Name="LeagueSerieARadio" Content="SerieA" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" Click="OnLeagueSerieAClick" Margin="0,0,4,0" />
+                        <RadioButton x:Name="LeagueIPLRadio" Content="IPL" Style="{DynamicResource ChipButton}"
+                                     GroupName="LeagueFilter" Click="OnLeagueIPLClick" Margin="0,0,4,0" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Teams List (Preset & Followed) -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <ItemsControl x:Name="MatchesList">
+                        <TextBlock Text="POPULAR &amp; FOLLOWED" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,0,0,4" />
+                        <ItemsControl x:Name="TeamsExplorerList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
-                                            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" Cursor="Hand"
-                                            MouseLeftButtonUp="OnMatchRowClick">
+                                    <Border Background="#10FFFFFF" CornerRadius="6" Padding="6,4" Margin="0,0,0,4"
+                                            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- Sport Icon -->
-                                            <TextBlock Text="{Binding SportEmoji}" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0" />
-
-                                            <!-- Teams -->
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding MatchTitle}" FontWeight="SemiBold" FontSize="11.5"
-                                                           Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding LeagueAndSummary}" FontSize="9.5"
-                                                           Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-
-                                            <!-- Score or Time -->
-                                            <Border Grid.Column="2" Background="{Binding StatusBgBrush}" CornerRadius="4" Padding="6,2" Margin="6,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding StatusOrScoreText}" FontSize="10.5" FontWeight="Bold"
-                                                           Foreground="{Binding StatusFgBrush}" />
+                                            <!-- Logo -->
+                                            <Border Width="18" Height="18" CornerRadius="9" Background="#18FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                <Image Source="{Binding LogoUrl}" Width="14" Height="14" RenderOptions.BitmapScalingMode="HighQuality" />
                                             </Border>
 
-                                            <!-- Pin Button -->
-                                            <Button Grid.Column="3" Style="{StaticResource IconButton}" Width="24" Height="24"
-                                                    ToolTip="Pin / Unpin Match" Click="OnPinItemClick" Tag="{Binding Id}">
-                                                <hero:HeroIcon Kind="Pin" Width="12" Height="12" Foreground="{Binding PinColor}" />
+                                            <!-- Name & Code -->
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" FontWeight="Medium"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                                            <!-- Follow Button -->
+                                            <Button Grid.Column="2" Style="{StaticResource Chip}" Padding="5,2"
+                                                    Click="OnToggleFollowTeamClick" Tag="{Binding Id}">
+                                                <TextBlock Text="{Binding FollowButtonText}" FontSize="9.5" FontWeight="Bold"
+                                                           Foreground="{Binding FollowButtonColor}" />
                                             </Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <!-- No Matches Message -->
-                        <TextBlock x:Name="NoMatchesText" Text="No matches found." Style="{StaticResource SubText}"
-                                   HorizontalAlignment="Center" Margin="0,30,0,0" Visibility="Collapsed" />
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
-        </Grid>
+        </Border>
 
-        <!-- Bottom: Followed Teams & Quick Presets -->
-        <Border Grid.Row="2" Margin="0,8,0,0" Padding="0,4,0,0">
+        <!-- COLUMN 2: RIGHT GAME STAGE -->
+        <Border Grid.Column="4" Background="{DynamicResource Surface2Brush}" CornerRadius="12" Padding="12,10" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+                <!-- MODE A: FIXTURE LIST VIEW -->
+                <Grid x:Name="StageScheduleMode" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
 
-                <!-- Currently Followed Teams -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <TextBlock Text="Followed:" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11" />
-                    <ItemsControl x:Name="FollowedTeamsList">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="6,2" Margin="0,0,4,0">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontSize="10.5" VerticalAlignment="Center" Margin="0,0,4,0" />
-                                        <Button Style="{StaticResource IconButton}" Width="14" Height="14" Padding="0" Click="OnUnfollowTeamClick" Tag="{Binding Id}" ToolTip="Unfollow">
-                                            <TextBlock Text="✕" FontSize="8.5" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Button>
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock x:Name="ScheduleHeaderText" Text="TODAY &amp; LIVE GAMES" FontSize="10.5" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}" />
+                        <TextBlock x:Name="LiveCountBanner" HorizontalAlignment="Right" Text="● LIVE" FontSize="10" FontWeight="Bold"
+                                   Foreground="#32D74B" Visibility="Collapsed" />
+                    </Grid>
+
+                    <!-- Match Cards -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <ItemsControl x:Name="MatchesList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" Cursor="Hand"
+                                                MouseLeftButtonUp="OnMatchCardClick">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Home Team -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Border Width="22" Height="22" CornerRadius="11" Background="#18FFFFFF" Margin="0,0,6,0">
+                                                        <Image Source="{Binding RawMatch.HomeTeamLogo}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding RawMatch.HomeTeamName}" FontWeight="SemiBold" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="85" />
+                                                </StackPanel>
+
+                                                <!-- Scores & Center Status -->
+                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                        <TextBlock Text="{Binding RawMatch.HomeScore}" FontWeight="Black" FontSize="13" />
+                                                        <TextBlock Text=" - " FontWeight="Bold" FontSize="11" Foreground="{DynamicResource SubTextBrush}" Margin="2,0" />
+                                                        <TextBlock Text="{Binding RawMatch.AwayScore}" FontWeight="Black" FontSize="13" />
+                                                    </StackPanel>
+                                                    <Border Background="{Binding StatusBgBrush}" CornerRadius="4" Padding="5,1" Margin="0,2,0,0">
+                                                        <TextBlock Text="{Binding RawMatch.StatusDetail}" FontSize="9.5" FontWeight="Bold" Foreground="{Binding StatusFgBrush}" />
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Away Team -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding RawMatch.AwayTeamName}" FontWeight="SemiBold" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="85" TextAlignment="Right" Margin="0,0,6,0" />
+                                                    <Border Width="22" Height="22" CornerRadius="11" Background="#18FFFFFF">
+                                                        <Image Source="{Binding RawMatch.AwayTeamLogo}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Pin Button -->
+                                                <Button Grid.Column="3" Style="{StaticResource IconButton}" Width="24" Height="24" Margin="6,0,0,0"
+                                                        ToolTip="Pin to Dynamic Island Notch" Click="OnPinItemClick" Tag="{Binding Id}">
+                                                    <hero:HeroIcon Kind="Pin" Width="12" Height="12" Foreground="{Binding PinColor}" />
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Empty message -->
+                            <TextBlock x:Name="NoMatchesText" Text="No matches scheduled for this selection." Style="{StaticResource SubText}"
+                                       HorizontalAlignment="Center" Margin="0,30,0,0" Visibility="Collapsed" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- MODE B: DETAILED SCORECARD VIEW -->
+                <Grid x:Name="StageDetailMode" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Bar: Back & Pin -->
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <Button Style="{StaticResource IconButton}" HorizontalAlignment="Left" Click="OnBackToScheduleClick">
+                            <StackPanel Orientation="Horizontal">
+                                <hero:HeroIcon Kind="ArrowLeft" Width="12" Height="12" Margin="0,0,4,0" />
+                                <TextBlock Text="Back to Games" FontSize="11" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="DetailPinBtn" HorizontalAlignment="Right" Style="{StaticResource Chip}" Click="OnDetailPinClick">
+                            <StackPanel Orientation="Horizontal">
+                                <hero:HeroIcon Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
+                                <TextBlock x:Name="DetailPinText" Text="Pin to Notch" FontSize="10.5" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Big Match Header -->
+                    <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Home -->
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="30" Height="30" CornerRadius="15" Background="#18FFFFFF" Margin="0,0,0,2">
+                                    <Image x:Name="DetailHomeLogo" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <TextBlock x:Name="DetailHomeName" Text="Home" FontSize="11" FontWeight="Bold" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="90" />
+                            </StackPanel>
+
+                            <!-- Score & Clock -->
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10,0">
+                                <TextBlock x:Name="DetailScoreText" Text="0 - 0" FontSize="20" FontWeight="Black" HorizontalAlignment="Center" />
+                                <Border x:Name="DetailStatusBadge" Background="#2032D74B" CornerRadius="4" Padding="6,1" Margin="0,2,0,0" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="DetailStatusText" Text="LIVE" FontSize="9.5" FontWeight="Bold" Foreground="#32D74B" />
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Away -->
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="30" Height="30" CornerRadius="15" Background="#18FFFFFF" Margin="0,0,0,2">
+                                    <Image x:Name="DetailAwayLogo" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <TextBlock x:Name="DetailAwayName" Text="Away" FontSize="11" FontWeight="Bold" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="90" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Deep Detail Body: Football or Cricket -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <!-- Football Stats & Timeline Panel -->
+                            <StackPanel x:Name="FootballDetailPanel" Visibility="Visible">
+                                <!-- Possession & Shots Bar -->
+                                <Border Background="#10FFFFFF" CornerRadius="8" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,4">
+                                            <TextBlock x:Name="HomePossessionText" Text="50%" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Left" />
+                                            <TextBlock Text="Possession" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock x:Name="AwayPossessionText" Text="50%" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <!-- Possession Bar -->
+                                        <Grid Height="6" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition x:Name="HomePossessionCol" Width="50*" />
+                                                <ColumnDefinition x:Name="AwayPossessionCol" Width="50*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{DynamicResource AccentBrush}" CornerRadius="3,0,0,3" />
+                                            <Border Grid.Column="1" Background="#35FFFFFF" CornerRadius="0,3,3,0" />
+                                        </Grid>
+
+                                        <!-- Shots on Target -->
+                                        <Grid>
+                                            <TextBlock x:Name="HomeShotsText" Text="0" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Left" />
+                                            <TextBlock Text="Shots on Target" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock x:Name="AwayShotsText" Text="0" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock x:Name="NoFollowedHint" Text="None yet" Style="{StaticResource SubText}" FontStyle="Italic" FontSize="10.5" VerticalAlignment="Center" />
-                </StackPanel>
 
-                <!-- Quick Presets -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <TextBlock Text="+ Follow:" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11" />
-                    <ItemsControl x:Name="QuickPresetsList">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource Chip}" Margin="0,0,4,0" Padding="6,2"
-                                        Click="OnQuickFollowClick" Tag="{Binding Id}">
-                                    <TextBlock Text="{Binding Label}" FontSize="10.5" />
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                                <!-- Goals & Cards Events Timeline -->
+                                <TextBlock Text="KEY MATCH EVENTS" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,0,0,4" />
+                                <ItemsControl x:Name="FootballEventsList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#10FFFFFF" CornerRadius="6" Padding="8,4" Margin="0,0,0,4">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Background="#25FFFFFF" CornerRadius="4" Padding="4,1" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Clock}" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                    </Border>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <!-- Cricket Innings & Squads Panel -->
+                            <StackPanel x:Name="CricketDetailPanel" Visibility="Collapsed">
+                                <TextBlock Text="INNINGS SUMMARY" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,0,0,4" />
+                                <ItemsControl x:Name="CricketInningsList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#10FFFFFF" CornerRadius="6" Padding="8,6" Margin="0,0,0,4" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding TeamName}" FontWeight="Bold" FontSize="11" />
+                                                        <TextBlock Text="{Binding Description}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayScore}" FontWeight="Black" FontSize="12.5" VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Text="KEY PLAYERS" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,8,0,4" />
+                                <ItemsControl x:Name="CricketPlayersList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#10FFFFFF" CornerRadius="6" Padding="6,3" Margin="0,0,0,2">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="Medium" HorizontalAlignment="Left" />
+                                                    <TextBlock Text="{Binding TeamName}" FontSize="9" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
         </Border>
     </Grid>
