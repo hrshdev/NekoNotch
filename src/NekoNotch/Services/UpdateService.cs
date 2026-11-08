@@ -32,7 +32,7 @@ public sealed partial class UpdateService : ObservableObject
 {
     private const string ReleasesApi = "https://api.github.com/repos/hrshdev/NekoNotch";
     private static readonly TimeSpan FirstCheck = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan Every = TimeSpan.FromHours(2);
+    private static readonly TimeSpan Every = TimeSpan.FromMinutes(15);
 
     public static UpdateService Instance { get; } = new();
 
@@ -82,6 +82,8 @@ public sealed partial class UpdateService : ObservableObject
         }
     }
 
+    private readonly SemaphoreSlim _installLock = new(1, 1);
+
     private UpdateService()
     {
         _timer.Tick += async (_, _) =>
@@ -89,6 +91,47 @@ public sealed partial class UpdateService : ObservableObject
             _timer.Interval = Every;
             await CheckAsync(userAsked: false);
         };
+
+        try
+        {
+            SystemEvents.PowerModeChanged += (_, e) =>
+            {
+                if (e.Mode == PowerModes.Resume)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(5000);
+                        await CheckAsync(userAsked: false);
+                    });
+                }
+            };
+            SystemEvents.SessionSwitch += (_, e) =>
+            {
+                if (e.Reason == SessionSwitchReason.SessionUnlock)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        await CheckAsync(userAsked: false);
+                    });
+                }
+            };
+            System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += (_, e) =>
+            {
+                if (e.IsAvailable)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(5000);
+                        await CheckAsync(userAsked: false);
+                    });
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
     }
 
     public void Start()
@@ -115,8 +158,7 @@ public sealed partial class UpdateService : ObservableObject
             {
                 if (App.Settings.AutoInstallUpdates)
                 {
-                    // Automatic update: notify user via notch and download/apply
-                    Available?.Invoke(LatestVersion);
+                    // Automatic update: download and apply seamlessly in background
                     _ = InstallAsync(silent: true);
                 }
                 else
@@ -190,7 +232,10 @@ public sealed partial class UpdateService : ObservableObject
 
     public async Task InstallAsync(bool silent = false)
     {
-        if (StartupService.IsPackaged)
+        if (!await _installLock.WaitAsync(0)) return;
+        try
+        {
+            if (StartupService.IsPackaged)
         {
             try
             {
@@ -222,6 +267,7 @@ public sealed partial class UpdateService : ObservableObject
             {
                 Status = UpdateStatus.Installing;
                 ReadyToRestart?.Invoke(LatestVersion);
+                await Task.Delay(2000);
                 ApplyExeUpdateAndRestart(currentExe, newExePath);
                 return;
             }
@@ -237,6 +283,8 @@ public sealed partial class UpdateService : ObservableObject
             if (msi is not null)
             {
                 Status = UpdateStatus.Installing;
+                ReadyToRestart?.Invoke(LatestVersion);
+                await Task.Delay(2000);
                 ApplyMsiUpdateAndRestart(msi, currentExe);
                 return;
             }
@@ -246,6 +294,11 @@ public sealed partial class UpdateService : ObservableObject
         if (!silent)
         {
             Open(_releaseUrl ?? "https://github.com/hrshdev/NekoNotch/releases/latest");
+        }
+        }
+        finally
+        {
+            _installLock.Release();
         }
     }
 
@@ -347,7 +400,7 @@ public sealed partial class UpdateService : ObservableObject
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
-                Arguments = $"/c timeout /t 1 /nobreak >nul & move /y \"{newExePath}\" \"{currentExe}\" & start \"\" \"{currentExe}\"",
+                Arguments = $"/c for /l %i in (1,1,15) do (ping 127.0.0.1 -n 2 >nul & move /y \"{newExePath}\" \"{currentExe}\" >nul 2>&1 && (start \"\" \"{currentExe}\" & exit))",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
@@ -368,7 +421,7 @@ public sealed partial class UpdateService : ObservableObject
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
-                Arguments = $"/c start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
+                Arguments = $"/c ping 127.0.0.1 -n 2 >nul & start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
