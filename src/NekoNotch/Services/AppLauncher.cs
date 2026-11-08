@@ -282,13 +282,6 @@ public static class AppLauncher
                             return true;
                         }
 
-                        // 2. LegacyIAccessiblePattern (Chromium / Chrome / Edge tabs!)
-                        if (tab.TryGetCurrentPattern(LegacyIAccessiblePattern.Pattern, out var legPattern) &&
-                            legPattern is LegacyIAccessiblePattern lip)
-                        {
-                            lip.DoDefaultAction();
-                            return true;
-                        }
 
                         // 3. InvokePattern
                         if (tab.TryGetCurrentPattern(InvokePattern.Pattern, out var invPattern) &&
