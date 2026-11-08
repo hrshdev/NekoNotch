@@ -5,8 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Runtime.InteropServices;
 using System.Speech.Recognition;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,7 +36,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
     private readonly Dispatcher _ui = Application.Current.Dispatcher;
     private SpeechRecognitionEngine? _engine;
-    private readonly DispatcherTimer _silenceTimer = new() { Interval = TimeSpan.FromSeconds(6) };
+    private readonly DispatcherTimer _silenceTimer = new() { Interval = TimeSpan.FromSeconds(7) };
 
     [ObservableProperty] private VoiceState _state = VoiceState.Idle;
     [ObservableProperty] private string _liveHypothesis = "";
@@ -48,14 +48,6 @@ public sealed partial class VoiceAssistantService : ObservableObject
     public event Action<string>? SpeechHypothesisUpdated;
     public event Action<string, bool>? CommandCompleted;
     public event Action? ListeningEnded;
-
-    private static readonly HashSet<string> KnownTargets = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "spotify", "chrome", "edge", "firefox", "word", "excel", "powerpoint",
-        "notepad", "calculator", "calc", "settings", "discord", "telegram",
-        "whatsapp", "terminal", "code", "vs code", "weather", "notes",
-        "quicknotes", "clipboard", "sports", "stocks", "ai", "music"
-    };
 
     private VoiceAssistantService()
     {
@@ -156,49 +148,44 @@ public sealed partial class VoiceAssistantService : ObservableObject
         // 1. Wake phrases: "Hey Neko", "Neko", "Hey Notch", "Ok Neko"
         var wakeChoices = new Choices("hey neko", "neko", "hey notch", "ok neko");
         var wakeGb = new GrammarBuilder(wakeChoices);
-        _engine.LoadGrammar(new Grammar(wakeGb) { Name = "WakeWord" });
+        var wakeGrammar = new Grammar(wakeGb) { Name = "WakeWord", Weight = 1.0f };
+        _engine.LoadGrammar(wakeGrammar);
 
-        // 2. Apps and Tools choices
+        // 2. Action verbs & apps for direct or standalone commands
+        var actionVerbs = new Choices(
+            "open", "launch", "go to", "show", "start",
+            "play", "pause", "resume", "stop", "next", "next song", "next track", "skip",
+            "previous", "previous song", "back", "mute", "unmute",
+            "volume up", "volume down", "louder", "quieter"
+        );
+
         var apps = new Choices(
             "spotify", "chrome", "edge", "firefox", "word", "excel",
-            "powerpoint", "notepad", "calculator", "calc", "settings", "discord",
-            "telegram", "whatsapp", "terminal", "code", "vs code", "weather", "notes",
-            "quicknotes", "clipboard", "sports", "stocks", "ai", "music"
+            "powerpoint", "notepad", "calculator", "settings", "discord",
+            "telegram", "whatsapp", "terminal", "code", "weather", "notes",
+            "clipboard", "sports", "stocks", "ai"
         );
 
-        // Standalone App grammar: just saying "spotify", "chrome", etc. once awake
-        _engine.LoadGrammar(new Grammar(new GrammarBuilder(apps)) { Name = "StandaloneApps" });
+        // Combined: "Hey Neko open spotify"
+        var combinedGb = new GrammarBuilder();
+        combinedGb.Append(wakeChoices);
+        combinedGb.Append(actionVerbs);
+        combinedGb.Append(apps, 0, 1);
+        _engine.LoadGrammar(new Grammar(combinedGb) { Name = "CombinedAction", Weight = 1.0f });
 
-        // Direct Wake + App in one sentence: "hey neko spotify"
-        var wakeAppGb = new GrammarBuilder();
-        wakeAppGb.Append(wakeChoices);
-        wakeAppGb.Append(apps);
-        _engine.LoadGrammar(new Grammar(wakeAppGb) { Name = "DirectWakeApp" });
-
-        // 3. Action verbs
-        var actionVerbs = new Choices(
-            "open", "launch", "go to", "switch to", "show", "bring up", "focus", "start", "run",
-            "play", "pause", "resume", "next", "next song", "next track", "skip",
-            "previous", "previous song", "previous track", "back", "mute", "unmute",
-            "volume up", "volume down", "louder", "quieter",
-            "start timer", "set timer", "stop timer", "start pomodoro", "stop pomodoro", "take a screenshot"
-        );
-
-        // App Launch grammar: "hey neko open [app]" or "hey neko switch to [app]"
-        var appLaunchGb = new GrammarBuilder();
-        appLaunchGb.Append(wakeChoices);
-        appLaunchGb.Append(new Choices("open", "launch", "go to", "switch to", "show", "bring up", "focus", "start", "run"));
-        appLaunchGb.Append(apps);
-        _engine.LoadGrammar(new Grammar(appLaunchGb) { Name = "DirectAppLaunch" });
-
-        // Standalone Command grammar (used once awake): "open spotify", "pause", etc.
+        // Standalone action: "open spotify", "pause", "volume up"
         var cmdGb = new GrammarBuilder();
         cmdGb.Append(actionVerbs);
         cmdGb.Append(apps, 0, 1);
-        _engine.LoadGrammar(new Grammar(cmdGb) { Name = "StandaloneCommand" });
+        _engine.LoadGrammar(new Grammar(cmdGb) { Name = "StandaloneCommand", Weight = 1.0f });
 
-        // 4. Free-form Dictation grammar
-        var dictation = new DictationGrammar { Name = "Dictation" };
+        // Standalone app names: "spotify", "chrome", "calculator"
+        var appOnlyGb = new GrammarBuilder(apps);
+        _engine.LoadGrammar(new Grammar(appOnlyGb) { Name = "AppOnly", Weight = 0.9f });
+
+        // Free-form continuous dictation grammar for natural speech & unlisted commands
+        var dictation = new DictationGrammar { Name = "Dictation", Weight = 0.6f };
+        dictation.Enabled = true;
         _engine.LoadGrammar(dictation);
     }
 
@@ -211,25 +198,29 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
         _ui.BeginInvoke(() =>
         {
-            var cleaned = CleanWakePrefix(text);
-            if (!string.IsNullOrWhiteSpace(cleaned))
-            {
-                LiveHypothesis = cleaned;
-                SpeechHypothesisUpdated?.Invoke(cleaned);
-            }
+            // Reset silence timer while user is actively speaking
+            _silenceTimer.Stop();
+            _silenceTimer.Start();
+
+            LiveHypothesis = CleanWakePrefix(text);
+            SpeechHypothesisUpdated?.Invoke(LiveHypothesis);
         });
     }
 
     private void OnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
     {
         var rawText = e.Result.Text?.Trim() ?? "";
-        if (string.IsNullOrEmpty(rawText) || e.Result.Confidence < 0.25f) return;
+        if (string.IsNullOrEmpty(rawText)) return;
+
+        // In idle state, require higher confidence for wake word to avoid false triggers
+        if (State == VoiceState.Idle && e.Result.Confidence < 0.25f) return;
 
         _ui.BeginInvoke(() => ProcessSpeech(rawText));
     }
 
     private void OnRecognizeCompleted(object? sender, RecognizeCompletedEventArgs e)
     {
+        // Keep listening in background
         if (_engine != null && IsAvailable)
         {
             try { _engine.RecognizeAsync(RecognizeMode.Multiple); } catch { }
@@ -253,13 +244,14 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
                 if (!string.IsNullOrWhiteSpace(commandPart))
                 {
-                    // User spoke wake word + command in one sentence! e.g. "hey neko open spotify" or "hey neko spotify"
+                    // User spoke wake word + command in one sentence! e.g. "hey neko open spotify"
                     ExecuteVoiceCommand(commandPart);
                 }
             }
         }
         else if (State == VoiceState.Listening)
         {
+            // Already awake: process command
             var command = CleanWakePrefix(text);
             if (!string.IsNullOrWhiteSpace(command))
             {
@@ -273,6 +265,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
         State = VoiceState.Listening;
         LiveHypothesis = "Listening…";
         _silenceTimer.Stop();
+        _silenceTimer.Interval = TimeSpan.FromSeconds(7);
         _silenceTimer.Start();
 
         // Play subtle wake chime if enabled
@@ -308,34 +301,35 @@ public sealed partial class VoiceAssistantService : ObservableObject
         bool success = true;
         string message = "";
 
-        // Strip common action prefixes: "open spotify", "switch to spotify", "show spotify", "bring up spotify"
-        var cleanTarget = Regex.Replace(cmd, @"^(open|launch|go to|switch to|show|bring up|focus|start|run)\s+", "").Trim();
-
-        // ----------------- 1. APP LAUNCHING / SWITCHING
-        if (KnownTargets.Contains(cleanTarget) ||
-            cmd.StartsWith("open ") || cmd.StartsWith("launch ") || cmd.StartsWith("switch to ") ||
-            cmd.StartsWith("show ") || cmd.StartsWith("bring up ") || cmd.StartsWith("go to "))
-        {
-            var target = string.IsNullOrWhiteSpace(cleanTarget) ? cmd : cleanTarget;
-            (success, message) = ExecuteAppCommand(target);
-        }
-        // ----------------- 2. MEDIA CONTROLS
-        else if (cmd.Contains("pause") || cmd.Contains("play") || cmd == "resume")
+        // ----------------- 1. MEDIA CONTROLS
+        if (cmd.Contains("pause") || cmd == "stop music" || cmd == "stop song")
         {
             NowPlayingService.Instance.PlayPauseCommand.Execute(null);
-            message = "Playback toggled";
+            message = "Paused playback";
+        }
+        else if (cmd.Contains("play") || cmd.Contains("resume"))
+        {
+            if (cmd.Contains("spotify"))
+            {
+                (success, message) = ExecuteAppCommand("spotify");
+            }
+            else
+            {
+                NowPlayingService.Instance.PlayPauseCommand.Execute(null);
+                message = "Resumed playback";
+            }
         }
         else if (cmd.Contains("next") || cmd.Contains("skip"))
         {
             NowPlayingService.Instance.NextCommand.Execute(null);
             message = "Skipped to next";
         }
-        else if (cmd.Contains("previous") || cmd.Contains("back"))
+        else if (cmd.Contains("previous") || cmd.Contains("back track") || cmd.Contains("last song"))
         {
             NowPlayingService.Instance.PreviousCommand.Execute(null);
             message = "Previous track";
         }
-        // ----------------- 3. VOLUME
+        // ----------------- 2. VOLUME
         else if (cmd == "mute" || cmd == "unmute" || cmd.Contains("mute"))
         {
             VolumeService.Instance.ToggleMute();
@@ -365,7 +359,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
                 message = $"Volume set to {Math.Round(lvl * 100)}%";
             }
         }
-        // ----------------- 4. TIMERS & POMODORO
+        // ----------------- 3. TIMERS & POMODORO
         else if (cmd.Contains("timer"))
         {
             if (cmd.Contains("stop") || cmd.Contains("cancel"))
@@ -405,7 +399,96 @@ public sealed partial class VoiceAssistantService : ObservableObject
                 message = "Pomodoro started";
             }
         }
-        // ----------------- 5. VOICE DICTATION / TYPE INTO ACTIVE APP
+        // ----------------- 4. NOTCH TOOLS
+        else if (cmd.Contains("weather"))
+        {
+            OpenNotchTool("weather");
+            message = "Opened Weather";
+        }
+        else if (cmd.Contains("sport"))
+        {
+            OpenNotchTool("sports");
+            message = "Opened Sports Hub";
+        }
+        else if (cmd.Contains("note"))
+        {
+            OpenNotchTool("quicknotes");
+            message = "Opened Notes";
+        }
+        else if (cmd.Contains("clipboard"))
+        {
+            OpenNotchTool("clipboard");
+            message = "Opened Clipboard";
+        }
+        else if (cmd.Contains("stock"))
+        {
+            OpenNotchTool("stocks");
+            message = "Opened Stocks";
+        }
+        else if (cmd.Contains("setting"))
+        {
+            OpenNotchTool("settings");
+            message = "Opened Settings";
+        }
+        // ----------------- 5. APPS
+        else if (cmd.Contains("spotify"))
+        {
+            (success, message) = ExecuteAppCommand("spotify");
+        }
+        else if (cmd.Contains("chrome"))
+        {
+            (success, message) = ExecuteAppCommand("chrome");
+        }
+        else if (cmd.Contains("edge"))
+        {
+            (success, message) = ExecuteAppCommand("edge");
+        }
+        else if (cmd.Contains("notepad"))
+        {
+            (success, message) = ExecuteAppCommand("notepad");
+        }
+        else if (cmd.Contains("calculator") || cmd.Contains("calc"))
+        {
+            (success, message) = ExecuteAppCommand("calculator");
+        }
+        else if (cmd.Contains("word"))
+        {
+            (success, message) = ExecuteAppCommand("word");
+        }
+        else if (cmd.Contains("excel"))
+        {
+            (success, message) = ExecuteAppCommand("excel");
+        }
+        else if (cmd.Contains("powerpoint"))
+        {
+            (success, message) = ExecuteAppCommand("powerpoint");
+        }
+        else if (cmd.Contains("terminal") || cmd.Contains("command prompt"))
+        {
+            (success, message) = ExecuteAppCommand("terminal");
+        }
+        else if (cmd.Contains("discord"))
+        {
+            (success, message) = ExecuteAppCommand("discord");
+        }
+        else if (cmd.Contains("telegram"))
+        {
+            (success, message) = ExecuteAppCommand("telegram");
+        }
+        else if (cmd.Contains("whatsapp"))
+        {
+            (success, message) = ExecuteAppCommand("whatsapp");
+        }
+        else if (cmd.Contains("code") || cmd.Contains("vs code"))
+        {
+            (success, message) = ExecuteAppCommand("code");
+        }
+        else if (cmd.StartsWith("open ") || cmd.StartsWith("launch ") || cmd.StartsWith("go to "))
+        {
+            var target = Regex.Replace(cmd, @"^(open|launch|go to)\s+", "").Trim();
+            (success, message) = ExecuteAppCommand(target);
+        }
+        // ----------------- 6. VOICE DICTATION
         else if (cmd.StartsWith("type ") || cmd.StartsWith("dictate ") || cmd.StartsWith("write "))
         {
             var textToType = Regex.Replace(phrase, @"^(type|dictate|write)\s+", "", RegexOptions.IgnoreCase).Trim();
@@ -413,7 +496,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
             TypeIntoActiveWindow(textToType);
             message = $"Typed: \"{textToType}\"";
         }
-        // ----------------- 6. ASK AI
+        // ----------------- 7. ASK AI
         else if (cmd.StartsWith("ask ai ") || cmd.StartsWith("ask ") || cmd.StartsWith("what is ") || cmd.StartsWith("who is ") || cmd.StartsWith("tell me "))
         {
             OpenNotchTool("ask");
@@ -442,166 +525,128 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
     private (bool, string) ExecuteAppCommand(string target)
     {
-        switch (target.ToLowerInvariant())
+        switch (target)
         {
             case "spotify":
-            case "music":
-                BringAppToFrontOrLaunch("spotify", "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify", "spotify:");
+                try
+                {
+                    Process.Start(new ProcessStartInfo("spotify:") { UseShellExecute = true });
+                }
+                catch
+                {
+                    AppLauncher.Launch("spotify");
+                }
+                RestoreExistingApp("Spotify");
                 return (true, "Opened Spotify");
+
             case "chrome":
-                BringAppToFrontOrLaunch("chrome", null, "chrome");
+                if (!RestoreExistingApp("chrome")) AppLauncher.Launch("chrome");
                 return (true, "Opened Chrome");
+
             case "edge":
-                BringAppToFrontOrLaunch("msedge", "Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge", "msedge");
+                if (!RestoreExistingApp("msedge")) AppLauncher.Launch("msedge");
                 return (true, "Opened Edge");
-            case "firefox":
-                BringAppToFrontOrLaunch("firefox", null, "firefox");
-                return (true, "Opened Firefox");
+
             case "word":
-                BringAppToFrontOrLaunch("winword", null, "winword");
+                if (!RestoreExistingApp("WINWORD")) AppLauncher.Launch("winword");
                 return (true, "Opened MS Word");
+
             case "excel":
-                BringAppToFrontOrLaunch("excel", null, "excel");
+                if (!RestoreExistingApp("EXCEL")) AppLauncher.Launch("excel");
                 return (true, "Opened MS Excel");
+
             case "powerpoint":
-                BringAppToFrontOrLaunch("powerpnt", null, "powerpnt");
+                if (!RestoreExistingApp("POWERPNT")) AppLauncher.Launch("powerpnt");
                 return (true, "Opened PowerPoint");
+
             case "notepad":
-                BringAppToFrontOrLaunch("notepad", null, "notepad");
+                if (!RestoreExistingApp("Notepad")) AppLauncher.Launch("notepad");
                 return (true, "Opened Notepad");
+
             case "calculator":
-            case "calc":
-                BringAppToFrontOrLaunch("calc", "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", "calc:");
+                try
+                {
+                    Process.Start(new ProcessStartInfo("calculator:") { UseShellExecute = true });
+                }
+                catch
+                {
+                    AppLauncher.Launch("calc");
+                }
+                RestoreExistingApp("CalculatorApp");
+                RestoreExistingApp("Calculator");
                 return (true, "Opened Calculator");
+
             case "settings":
-                AppLauncher.Launch("ms-settings:");
-                return (true, "Opened Settings");
+                Process.Start(new ProcessStartInfo("ms-settings:") { UseShellExecute = true });
+                return (true, "Opened Windows Settings");
+
             case "discord":
-                BringAppToFrontOrLaunch("discord", null, "discord");
+                if (!RestoreExistingApp("Discord")) AppLauncher.Launch("discord");
                 return (true, "Opened Discord");
+
             case "telegram":
-                BringAppToFrontOrLaunch("telegram", null, "telegram");
+                if (!RestoreExistingApp("Telegram")) AppLauncher.Launch("telegram");
                 return (true, "Opened Telegram");
+
             case "whatsapp":
-                BringAppToFrontOrLaunch("whatsapp", null, "whatsapp");
+                if (!RestoreExistingApp("WhatsApp")) AppLauncher.Launch("whatsapp");
                 return (true, "Opened WhatsApp");
+
             case "terminal":
-                BringAppToFrontOrLaunch("wt", "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App", "wt");
-                return (true, "Opened Terminal");
+                if (!RestoreExistingApp("WindowsTerminal")) AppLauncher.Launch("wt");
+                return (true, "Opened Windows Terminal");
+
             case "code":
-            case "vs code":
-                BringAppToFrontOrLaunch("code", null, "code");
+                if (!RestoreExistingApp("Code")) AppLauncher.Launch("code");
                 return (true, "Opened VS Code");
-            case "weather":
-                OpenNotchTool("weather");
-                return (true, "Opened Weather");
-            case "sports":
-                OpenNotchTool("sports");
-                return (true, "Opened Sports");
-            case "notes":
-            case "quicknotes":
-                OpenNotchTool("quicknotes");
-                return (true, "Opened Notes");
-            case "clipboard":
-                OpenNotchTool("clipboard");
-                return (true, "Opened Clipboard");
-            case "stocks":
-                OpenNotchTool("stocks");
-                return (true, "Opened Stocks");
-            case "ai":
-                OpenNotchTool("ask");
-                return (true, "Opened Ask AI");
+
             default:
-                AppLauncher.Launch(target);
+                if (!RestoreExistingApp(target)) AppLauncher.Launch(target);
                 return (true, $"Opened {target}");
         }
     }
 
-    private static void BringAppToFrontOrLaunch(string processName, string? aumid, string fallbackCommand)
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    private static bool RestoreExistingApp(string processName)
     {
         try
         {
             var procs = Process.GetProcessesByName(processName);
-            if (procs.Length > 0)
+            if (procs.Length == 0) return false;
+
+            var pids = new HashSet<uint>(procs.Select(p => (uint)p.Id));
+            IntPtr found = IntPtr.Zero;
+
+            EnumWindows((hWnd, _) =>
             {
-                var pids = new HashSet<uint>(procs.Select(p => (uint)p.Id));
-                IntPtr targetHwnd = IntPtr.Zero;
-
-                // 1. Check if any process already has a non-zero MainWindowHandle
-                foreach (var p in procs)
+                GetWindowThreadProcessId(hWnd, out var pid);
+                if (pids.Contains(pid))
                 {
-                    try
-                    {
-                        if (p.MainWindowHandle != IntPtr.Zero)
-                        {
-                            targetHwnd = p.MainWindowHandle;
-                            break;
-                        }
-                    }
-                    catch { }
+                    found = hWnd;
+                    ShowWindow(hWnd, 9 /* SW_RESTORE */);
+                    SetForegroundWindow(hWnd);
+                    return false;
                 }
+                return true;
+            }, IntPtr.Zero);
 
-                // 2. If MainWindowHandle is 0 (typical for CEF / Spotify / Discord when minimized), enumerate all top-level windows
-                if (targetHwnd == IntPtr.Zero)
-                {
-                    EnumWindows((hWnd, _) =>
-                    {
-                        GetWindowThreadProcessId(hWnd, out var pid);
-                        if (pids.Contains(pid))
-                        {
-                            var cls = new StringBuilder(256);
-                            GetClassName(hWnd, cls, 256);
-                            var clsName = cls.ToString();
-                            var title = new StringBuilder(512);
-                            GetWindowText(hWnd, title, 512);
-
-                            // Match main application frame
-                            if (clsName.Contains("Chrome_WidgetWin") || clsName.Contains("ApplicationFrameWindow") ||
-                                title.ToString().Contains(processName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                targetHwnd = hWnd;
-                                return false; // Found
-                            }
-                        }
-                        return true;
-                    }, IntPtr.Zero);
-                }
-
-                if (targetHwnd != IntPtr.Zero)
-                {
-                    // Restore from minimized/tray state and bring to front
-                    ShowWindow(targetHwnd, 9 /* SW_RESTORE */);
-                    ShowWindow(targetHwnd, 5 /* SW_SHOW */);
-                    BringWindowToTop(targetHwnd);
-                    SetForegroundWindow(targetHwnd);
-                    SwitchToThisWindow(targetHwnd, true);
-                    return;
-                }
-            }
-
-            // 3. If process not running or window could not be activated, launch via Store AUMID if present
-            if (!string.IsNullOrWhiteSpace(aumid))
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "explorer.exe",
-                        Arguments = $"shell:AppsFolder\\{aumid}",
-                        UseShellExecute = true
-                    });
-                    return;
-                }
-                catch { }
-            }
-
-            // 4. Fallback to direct process or shell command
-            Process.Start(new ProcessStartInfo(fallbackCommand) { UseShellExecute = true });
+            return found != IntPtr.Zero;
         }
-        catch (Exception ex)
+        catch
         {
-            App.Log(ex);
-            AppLauncher.Launch(fallbackCommand);
+            return false;
         }
     }
 
@@ -627,12 +672,13 @@ public sealed partial class VoiceAssistantService : ObservableObject
         {
             try
             {
-                await Task.Delay(150);
+                await Task.Delay(150); // Small pause for focus
                 _ui.Invoke(() =>
                 {
                     Clipboard.SetText(text + " ");
                 });
 
+                // Send Ctrl+V using Win32 keybd_event
                 keybd_event(0x11 /* VK_CONTROL */, 0, 0, UIntPtr.Zero);
                 keybd_event(0x56 /* V */, 0, 0, UIntPtr.Zero);
                 keybd_event(0x56, 0, 2 /* KEYEVENTF_KEYUP */, UIntPtr.Zero);
@@ -661,31 +707,6 @@ public sealed partial class VoiceAssistantService : ObservableObject
         }
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool BringWindowToTop(IntPtr hWnd);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [DllImport("user32.dll")]
     private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 }
