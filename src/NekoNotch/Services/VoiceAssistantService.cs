@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using NekoNotch.Interop;
+using NekoNotch.Shell;
 
 namespace NekoNotch.Services;
 
