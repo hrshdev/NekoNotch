@@ -40,8 +40,33 @@ public static class HotkeyService
             if (!TryParse(gesture, out var mods, out var key)) continue;
             var id = BaseId + i++;
             var vk = (uint)KeyInterop.VirtualKeyFromKey(key);
-            if (Win32.RegisterHotKey(_hwnd, id, mods | Win32.MOD_NOREPEAT, vk)) Registered[id] = action;
-            else failed.Add(action);
+            if (Win32.RegisterHotKey(_hwnd, id, mods | Win32.MOD_NOREPEAT, vk))
+            {
+                Registered[id] = action;
+            }
+            else
+            {
+                // If requested hotkey is claimed by Windows/another app (e.g. Ctrl+Space error 1409), try intelligent fallbacks
+                bool recovered = false;
+                if (action == "voice")
+                {
+                    uint spaceVk = (uint)KeyInterop.VirtualKeyFromKey(Key.Space);
+                    if (Win32.RegisterHotKey(_hwnd, id, Win32.MOD_CONTROL | Win32.MOD_SHIFT | Win32.MOD_NOREPEAT, spaceVk))
+                    {
+                        Registered[id] = action;
+                        App.Settings.Hotkeys["voice"] = "Ctrl+Shift+Space";
+                        recovered = true;
+                    }
+                    else if (Win32.RegisterHotKey(_hwnd, id, Win32.MOD_CONTROL | Win32.MOD_ALT | Win32.MOD_NOREPEAT, spaceVk))
+                    {
+                        Registered[id] = action;
+                        App.Settings.Hotkeys["voice"] = "Ctrl+Alt+Space";
+                        recovered = true;
+                    }
+                }
+
+                if (!recovered) failed.Add(action);
+            }
         }
         return failed;
     }

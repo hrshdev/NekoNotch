@@ -180,7 +180,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
         if (_engine == null) return;
 
         // 1. Wake phrases: "Hey Neko", "Neko", "Hey Notch", "Ok Neko"
-        var wakeChoices = new Choices("hey neko", "neko", "hey notch", "ok neko");
+        var wakeChoices = new Choices("hey neko", "neko", "hey notch", "ok neko", "hey nicky", "hey nico", "hey nixi", "nixi", "niko", "hey neco", "neco");
         var wakeGb = new GrammarBuilder(wakeChoices);
         var wakeGrammar = new Grammar(wakeGb) { Name = "WakeWord", Weight = 1.0f };
         _engine.LoadGrammar(wakeGrammar);
@@ -247,7 +247,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
         if (string.IsNullOrEmpty(rawText)) return;
 
         // In idle state, require higher confidence for wake word to avoid false triggers
-        if (State == VoiceState.Idle && e.Result.Confidence < 0.25f) return;
+        if (State == VoiceState.Idle && e.Result.Confidence < 0.15f) return;
 
         _ui.BeginInvoke(() => ProcessSpeech(rawText));
     }
@@ -267,7 +267,10 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
         // 1. Check if Wake Word is present in speech
         bool hasWakeWord = text.StartsWith("hey neko") || text.StartsWith("ok neko") ||
-                           text.StartsWith("hey notch") || text.StartsWith("neko");
+                           text.StartsWith("hey notch") || text.StartsWith("neko") ||
+                           text.StartsWith("hey nico") || text.StartsWith("hey nixi") ||
+                           text.StartsWith("hey nicky") || text.StartsWith("nixi") ||
+                           text.StartsWith("niko") || text.StartsWith("neco");
 
         if (State == VoiceState.Idle)
         {
@@ -310,7 +313,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
     private string CleanWakePrefix(string text)
     {
         var cleaned = text.Trim();
-        foreach (var prefix in new[] { "hey neko", "ok neko", "hey notch", "neko" })
+        foreach (var prefix in new[] { "hey neko", "ok neko", "hey notch", "hey nico", "hey nixi", "hey nicky", "neko", "nixi", "niko", "neco" })
         {
             if (cleaned.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {

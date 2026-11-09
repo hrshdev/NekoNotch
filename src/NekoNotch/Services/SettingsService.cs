@@ -161,9 +161,9 @@ public static class SettingsService
     {
         var s = Storage.Load<AppSettings>(FileName);
         bool dirty = false;
-        if (!s.Hotkeys.ContainsKey("voice"))
+        if (!s.Hotkeys.ContainsKey("voice") || s.Hotkeys["voice"] == "Ctrl+Space")
         {
-            s.Hotkeys["voice"] = "Ctrl+Space";
+            s.Hotkeys["voice"] = "Ctrl+Shift+Space";
             dirty = true;
         }
         if (s.SettingsVersion < 3)
