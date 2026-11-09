@@ -2018,8 +2018,6 @@ public partial class NotchWindow : Window
 
         var kind = act.Kind;
 
-        var music = kind == NotchActivityKind.Music;
-
         var reminder = kind == NotchActivityKind.Reminder;
 
         var timer = kind is NotchActivityKind.Timer or NotchActivityKind.Stopwatch or NotchActivityKind.Focus or NotchActivityKind.Break;
