@@ -1816,14 +1816,15 @@ public partial class NotchWindow : Window
 
         if (timer) return _timerW;
 
-                if (_celebratingSportsEvent) return 330;
+                if (_celebratingSportsEvent) return 360;
         var sm = SportsService.Instance.ActiveMatch;
         var sportsLive = sm != null && SportsService.Instance.ShowScoreInNotch;
+
+        if (sportsLive) return sm?.Sport == SportType.Cricket ? 390 : 340;
 
         var music = NotchActivityService.Instance.Kind == NotchActivityKind.Music;
 
         if (music) return _musicW;
-        if (sportsLive) return 280;
         return IdleActive ? IdleWidth() : _idleW;
 
     }
@@ -2023,7 +2024,8 @@ public partial class NotchWindow : Window
 
         var timer = kind is NotchActivityKind.Timer or NotchActivityKind.Stopwatch or NotchActivityKind.Focus or NotchActivityKind.Break;
 
-
+        var sports = !timer && !reminder && SportsService.Instance.ActiveMatch != null && SportsService.Instance.ShowScoreInNotch;
+        var music = !sports && kind == NotchActivityKind.Music;
 
         MusicPart.Visibility = music ? Visibility.Visible : Visibility.Collapsed;
 
@@ -2031,7 +2033,6 @@ public partial class NotchWindow : Window
 
         ReminderPart.Visibility = reminder ? Visibility.Visible : Visibility.Collapsed;
 
-        var sports = !music && !timer && !reminder && SportsService.Instance.ActiveMatch != null && SportsService.Instance.ShowScoreInNotch;
         SportsPart.Visibility = sports ? Visibility.Visible : Visibility.Collapsed;
         if (sports && SportsService.Instance.ActiveMatch is { } actMatch)
         {

@@ -513,32 +513,32 @@
 
 
                     <!-- Sports Live Match Scorecard: Symmetrical around center Mochi pet -->
-                    <Grid x:Name="SportsPart" Margin="12,0,12,0" Visibility="Collapsed" Cursor="Hand"
+                    <Grid x:Name="SportsPart" Margin="10,0,10,0" Visibility="Collapsed" Cursor="Hand"
                           MouseLeftButtonUp="OnSportsPartClick" ToolTip="Click to open Sports">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="88" />
+                            <ColumnDefinition Width="54" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <!-- Left Group: Live Dot / Clock + Home Team & Score -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-                            <Ellipse x:Name="SportsLiveDot" Width="6" Height="6" Fill="#32D74B" Margin="0,0,5,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0">
+                            <Ellipse x:Name="SportsLiveDot" Width="6" Height="6" Fill="#32D74B" Margin="0,0,4,0" VerticalAlignment="Center">
                                 <Ellipse.Effect><BlurEffect Radius="1.2" /></Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock x:Name="SportsTimeBadge" Text="74'" FontSize="11" FontWeight="Bold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBlock x:Name="SportsHomeTeamText" Text="ARS" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
-                            <TextBlock x:Name="SportsHomeScoreText" Text="2" FontWeight="Black" FontSize="13" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
+                            <TextBlock x:Name="SportsTimeBadge" Text="74'" FontSize="10.5" FontWeight="Bold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock x:Name="SportsHomeTeamText" Text="ARS" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="SportsHomeScoreText" Text="2" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
                         </StackPanel>
 
-                        <!-- Column 1 (88px): Dedicated empty zone for center NotchEyes (Mochi stays here!) -->
+                        <!-- Column 1 (54px): Dedicated zone for center Mochi pet -->
 
                         <!-- Right Group: Away Score & Team + Goal/Wicket Tag -->
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0">
-                            <TextBlock x:Name="SportsAwayScoreText" Text="1" FontWeight="Black" FontSize="13" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
-                            <TextBlock x:Name="SportsAwayTeamText" Text="CHE" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
-                            <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="5,1.5" Margin="6,0,0,0" Visibility="Collapsed">
-                                <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="10" FontWeight="Bold" Foreground="#FF8A3D" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0">
+                            <TextBlock x:Name="SportsAwayScoreText" Text="1" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                            <TextBlock x:Name="SportsAwayTeamText" Text="CHE" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                            <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="4,1" Margin="5,0,0,0" Visibility="Collapsed">
+                                <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="9.5" FontWeight="Bold" Foreground="#FF8A3D" VerticalAlignment="Center" />
                             </Border>
                         </StackPanel>
                     </Grid>
