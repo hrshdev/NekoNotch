@@ -1816,17 +1816,40 @@ public partial class NotchWindow : Window
 
         if (timer) return _timerW;
 
-                if (_celebratingSportsEvent) return 360;
         var sm = SportsService.Instance.ActiveMatch;
         var sportsLive = sm != null && SportsService.Instance.ShowScoreInNotch;
 
-        if (sportsLive) return sm?.Sport == SportType.Cricket ? 410 : 340;
+        if (sportsLive) return SportsWidth();
 
         var music = NotchActivityService.Instance.Kind == NotchActivityKind.Music;
 
         if (music) return _musicW;
         return IdleActive ? IdleWidth() : _idleW;
 
+    }
+
+    /// <summary>Dynamically computes the closed-notch width so it precisely hugs the live scorecard with balanced spacing around the center Mochi pet.</summary>
+    private double SportsWidth()
+    {
+        var sm = SportsService.Instance.ActiveMatch;
+        if (sm == null || !SportsService.Instance.ShowScoreInNotch || SportsLeftGroup == null || SportsRightGroup == null) return _idleW;
+
+        SportsLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        SportsRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        var leftW = SportsLeftGroup.DesiredSize.Width;
+        var rightW = SportsRightGroup.DesiredSize.Width;
+
+        var sideMax = Math.Max(leftW, rightW);
+
+        // Center column for Mochi pet (70px) + outer padding left & right (10px + 10px = 20px) + inner margin (8px)
+        const double centerGap = 70;
+        const double paddingAndMargins = 28;
+
+        var needed = sideMax * 2 + centerGap + paddingAndMargins;
+        if (_celebratingSportsEvent) needed = Math.Max(needed, 320);
+
+        return Math.Clamp(Math.Ceiling(needed), 220, 390);
     }
 
 
