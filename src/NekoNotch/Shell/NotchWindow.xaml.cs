@@ -3022,8 +3022,8 @@ public partial class NotchWindow : Window
     private void RenderSportsScorecard(SportMatch m)
     {
         SportsHomeTeamText.Text = m.HomeTeamCode;
-        SportsHomeScoreText.Text = m.HomeScore;
-        SportsAwayScoreText.Text = m.AwayScore;
+        SportsHomeScoreText.Text = m.CompactHomeScore;
+        SportsAwayScoreText.Text = m.CompactAwayScore;
         SportsAwayTeamText.Text = m.AwayTeamCode;
         SportsTimeBadge.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail;
         SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;

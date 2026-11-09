@@ -15,8 +15,9 @@ namespace NekoNotch.Tools;
 public sealed partial class SportsView : UserControl, IToolView
 {
     private bool _isInitialized = false;
-    private string _currentNav = "football"; // "my_teams", "football", "cricket"
+    private string _currentNav = "football"; // "football", "cricket", "my_teams"
     private string _currentLeague = "all";
+    private bool _liveOnly = false;
     private string _searchQuery = "";
     private SportMatch? _detailedMatch;
 
@@ -24,6 +25,17 @@ public sealed partial class SportsView : UserControl, IToolView
     {
         public string Id { get; set; } = "";
         public SportMatch RawMatch { get; set; } = null!;
+        public string LeagueName => RawMatch.LeagueName;
+        public string HomeTeamName => RawMatch.HomeTeamName;
+        public string HomeTeamLogo => RawMatch.HomeTeamLogo;
+        public string HomeScore => RawMatch.HomeScore;
+        public string AwayTeamName => RawMatch.AwayTeamName;
+        public string AwayTeamLogo => RawMatch.AwayTeamLogo;
+        public string AwayScore => RawMatch.AwayScore;
+        public string StatusDetail => RawMatch.StatusDetail;
+        public string Summary => RawMatch.Summary;
+        public bool HasSummary => !string.IsNullOrWhiteSpace(RawMatch.Summary);
+        public bool IsLive => RawMatch.IsLive;
         public Brush StatusBgBrush { get; set; } = Brushes.Transparent;
         public Brush StatusFgBrush { get; set; } = Brushes.White;
         public Brush PinColor { get; set; } = Brushes.Gray;
@@ -50,6 +62,7 @@ public sealed partial class SportsView : UserControl, IToolView
         InitializeComponent();
         _isInitialized = true;
         SportsService.Instance.MatchesUpdated += OnServiceMatchesUpdated;
+        UpdateLeagueChips();
         RefreshUI();
     }
 
@@ -66,18 +79,14 @@ public sealed partial class SportsView : UserControl, IToolView
         Dispatcher.Invoke(RefreshUI);
     }
 
-    // ------------------------------------ NAVIGATION RAIL CLICKS
-    private void OnNavMyTeamsClick(object sender, RoutedEventArgs e)
-    {
-        if (!_isInitialized) return;
-        _currentNav = "my_teams";
-        RefreshUI();
-    }
-
+    // ------------------------------------ NAVIGATION CLICKS
     private void OnNavFootballClick(object sender, RoutedEventArgs e)
     {
         if (!_isInitialized) return;
         _currentNav = "football";
+        _currentLeague = "all";
+        UpdateLeagueChips();
+        ShowScheduleMode();
         RefreshUI();
     }
 
@@ -85,49 +94,26 @@ public sealed partial class SportsView : UserControl, IToolView
     {
         if (!_isInitialized) return;
         _currentNav = "cricket";
-        RefreshUI();
-    }
-
-    // ------------------------------------ LEAGUE SELECTOR CLICKS
-    private void OnLeagueAllClick(object sender, RoutedEventArgs e)
-    {
-        if (!_isInitialized) return;
         _currentLeague = "all";
+        UpdateLeagueChips();
+        ShowScheduleMode();
         RefreshUI();
     }
 
-    private void OnLeaguePLClick(object sender, RoutedEventArgs e)
+    private void OnNavMyTeamsClick(object sender, RoutedEventArgs e)
     {
         if (!_isInitialized) return;
-        _currentLeague = "eng.1";
+        _currentNav = "my_teams";
+        _currentLeague = "all";
+        UpdateLeagueChips();
+        ShowScheduleMode();
         RefreshUI();
     }
 
-    private void OnLeagueUCLClick(object sender, RoutedEventArgs e)
+    private void OnLiveFilterClick(object sender, RoutedEventArgs e)
     {
         if (!_isInitialized) return;
-        _currentLeague = "uefa.champions";
-        RefreshUI();
-    }
-
-    private void OnLeagueLaLigaClick(object sender, RoutedEventArgs e)
-    {
-        if (!_isInitialized) return;
-        _currentLeague = "esp.1";
-        RefreshUI();
-    }
-
-    private void OnLeagueSerieAClick(object sender, RoutedEventArgs e)
-    {
-        if (!_isInitialized) return;
-        _currentLeague = "ita.1";
-        RefreshUI();
-    }
-
-    private void OnLeagueIPLClick(object sender, RoutedEventArgs e)
-    {
-        if (!_isInitialized) return;
-        _currentLeague = "8048";
+        _liveOnly = LiveFilterCheck.IsChecked == true;
         RefreshUI();
     }
 
@@ -135,6 +121,45 @@ public sealed partial class SportsView : UserControl, IToolView
     {
         if (!_isInitialized) return;
         _searchQuery = SearchBox.Text.Trim();
+        RefreshUI();
+    }
+
+    private void OnToggleFollowModeClick(object sender, RoutedEventArgs e)
+    {
+        if (StageFollowMode.Visibility == Visibility.Visible)
+        {
+            ShowScheduleMode();
+        }
+        else
+        {
+            ShowFollowMode();
+        }
+    }
+
+    private void OnBackFromFollowClick(object sender, RoutedEventArgs e)
+    {
+        ShowScheduleMode();
+    }
+
+    private void ShowScheduleMode()
+    {
+        StageScheduleMode.Visibility = Visibility.Visible;
+        StageDetailMode.Visibility = Visibility.Collapsed;
+        StageFollowMode.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowDetailMode()
+    {
+        StageScheduleMode.Visibility = Visibility.Collapsed;
+        StageDetailMode.Visibility = Visibility.Visible;
+        StageFollowMode.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowFollowMode()
+    {
+        StageScheduleMode.Visibility = Visibility.Collapsed;
+        StageDetailMode.Visibility = Visibility.Collapsed;
+        StageFollowMode.Visibility = Visibility.Visible;
         RefreshUI();
     }
 
@@ -165,6 +190,53 @@ public sealed partial class SportsView : UserControl, IToolView
         }
     }
 
+    // ------------------------------------ LEAGUE CHIPS
+    private void UpdateLeagueChips()
+    {
+        LeagueChipsPanel.Children.Clear();
+
+        var chipStyle = (Style)TryFindResource("LeagueChipBtn");
+
+        void AddChip(string label, string leagueTag, bool isDefault = false)
+        {
+            var rb = new RadioButton
+            {
+                Content = label,
+                Tag = leagueTag,
+                Style = chipStyle,
+                GroupName = "DynamicLeagueFilter",
+                IsChecked = isDefault
+            };
+            rb.Click += (s, _) =>
+            {
+                if (s is RadioButton clicked && clicked.Tag is string tag)
+                {
+                    _currentLeague = tag;
+                    RefreshUI();
+                }
+            };
+            LeagueChipsPanel.Children.Add(rb);
+        }
+
+        AddChip("All", "all", true);
+
+        if (_currentNav == "football")
+        {
+            AddChip("Premier League", "eng.1");
+            AddChip("UCL", "uefa.champions");
+            AddChip("La Liga", "esp.1");
+            AddChip("Serie A", "ita.1");
+            AddChip("Bundesliga", "ger.1");
+            AddChip("ISL", "ind.1");
+        }
+        else if (_currentNav == "cricket")
+        {
+            AddChip("International", "international");
+            AddChip("T20 Leagues", "t20");
+            AddChip("Domestic", "domestic");
+        }
+    }
+
     // ------------------------------------ UI REFRESH
     private void RefreshUI()
     {
@@ -174,7 +246,7 @@ public sealed partial class SportsView : UserControl, IToolView
         var followed = SportsService.Instance.FollowedTeams;
         var activeMatch = SportsService.Instance.ActiveMatch;
 
-        // 1. Update Rail Badges & Live Indicators
+        // 1. Badges & Live Indicators
         MyTeamsCountText.Text = followed.Count.ToString();
         MyTeamsBadge.Visibility = followed.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -184,36 +256,34 @@ public sealed partial class SportsView : UserControl, IToolView
         FootballLiveDot.Visibility = hasFootballLive ? Visibility.Visible : Visibility.Collapsed;
         CricketLiveDot.Visibility = hasCricketLive ? Visibility.Visible : Visibility.Collapsed;
 
-        // 2. Populate Teams Explorer
         var accentBrush = (Brush)TryFindResource("AccentBrush") ?? Brushes.DodgerBlue;
         var subTextBrush = (Brush)TryFindResource("SubTextBrush") ?? Brushes.Gray;
 
-        var presetTeams = SportsService.PresetTeams.AsEnumerable();
-        if (_currentNav == "football")
-            presetTeams = presetTeams.Where(t => t.Sport == SportType.Football);
-        else if (_currentNav == "cricket")
-            presetTeams = presetTeams.Where(t => t.Sport == SportType.Cricket);
-
-        if (!string.IsNullOrEmpty(_searchQuery))
+        // 2. Populate Follow Teams Grid if in Follow mode
+        if (StageFollowMode.Visibility == Visibility.Visible)
         {
-            var q = _searchQuery.ToUpperInvariant();
-            presetTeams = presetTeams.Where(t => t.Name.ToUpperInvariant().Contains(q) || t.Code.ToUpperInvariant().Contains(q));
-        }
-
-        var teamVMs = new List<TeamCardViewModel>();
-        foreach (var t in presetTeams)
-        {
-            var isFollowed = followed.Any(f => f.Id == t.Id);
-            teamVMs.Add(new TeamCardViewModel
+            var presetTeams = SportsService.PresetTeams.AsEnumerable();
+            if (!string.IsNullOrEmpty(_searchQuery))
             {
-                Id = t.Id,
-                Name = t.Name,
-                LogoUrl = t.LogoUrl,
-                FollowButtonText = isFollowed ? "✓ Following" : "+ Follow",
-                FollowButtonColor = isFollowed ? accentBrush : subTextBrush
-            });
+                var q = _searchQuery.ToUpperInvariant();
+                presetTeams = presetTeams.Where(t => t.Name.ToUpperInvariant().Contains(q) || t.Code.ToUpperInvariant().Contains(q));
+            }
+
+            var teamVMs = new List<TeamCardViewModel>();
+            foreach (var t in presetTeams)
+            {
+                var isFollowed = followed.Any(f => f.Id == t.Id);
+                teamVMs.Add(new TeamCardViewModel
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    LogoUrl = t.LogoUrl,
+                    FollowButtonText = isFollowed ? "✓ Following" : "+ Follow",
+                    FollowButtonColor = isFollowed ? accentBrush : subTextBrush
+                });
+            }
+            FollowTeamsGrid.ItemsSource = teamVMs;
         }
-        TeamsExplorerList.ItemsSource = teamVMs;
 
         // 3. Filter Match Fixtures
         var filteredMatches = matches.AsEnumerable();
@@ -228,22 +298,46 @@ public sealed partial class SportsView : UserControl, IToolView
                 followedCodes.Contains(m.AwayTeamCode.ToUpperInvariant()) ||
                 followedNames.Any(n => m.HomeTeamName.ToUpperInvariant().Contains(n)) ||
                 followedNames.Any(n => m.AwayTeamName.ToUpperInvariant().Contains(n)));
-            ScheduleHeaderText.Text = "MY TEAMS FIXTURES";
         }
         else if (_currentNav == "football")
         {
             filteredMatches = filteredMatches.Where(m => m.Sport == SportType.Football);
-            ScheduleHeaderText.Text = "FOOTBALL FIXTURES";
         }
         else if (_currentNav == "cricket")
         {
             filteredMatches = filteredMatches.Where(m => m.Sport == SportType.Cricket);
-            ScheduleHeaderText.Text = "CRICKET FIXTURES";
+        }
+
+        if (_liveOnly)
+        {
+            filteredMatches = filteredMatches.Where(m => m.IsLive);
         }
 
         if (_currentLeague != "all")
         {
-            filteredMatches = filteredMatches.Where(m => m.LeagueId.Equals(_currentLeague, StringComparison.OrdinalIgnoreCase));
+            if (_currentLeague == "international")
+            {
+                filteredMatches = filteredMatches.Where(m => m.LeagueName.Contains("tour of", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("Cup", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("ICC", StringComparison.OrdinalIgnoreCase));
+            }
+            else if (_currentLeague == "t20")
+            {
+                filteredMatches = filteredMatches.Where(m => m.LeagueName.Contains("T20", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("Premier League", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("T10", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("BBL", StringComparison.OrdinalIgnoreCase));
+            }
+            else if (_currentLeague == "domestic")
+            {
+                filteredMatches = filteredMatches.Where(m => m.LeagueName.Contains("Trophy", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("Division", StringComparison.OrdinalIgnoreCase) ||
+                                                             m.LeagueName.Contains("Shield", StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                filteredMatches = filteredMatches.Where(m => m.LeagueId.Equals(_currentLeague, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         if (!string.IsNullOrEmpty(_searchQuery))
@@ -258,17 +352,6 @@ public sealed partial class SportsView : UserControl, IToolView
         }
 
         var matchList = filteredMatches.ToList();
-
-        var liveMatches = matchList.Count(m => m.IsLive);
-        if (liveMatches > 0)
-        {
-            LiveCountBanner.Text = $"● {liveMatches} LIVE";
-            LiveCountBanner.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            LiveCountBanner.Visibility = Visibility.Collapsed;
-        }
 
         var liveGreen = new SolidColorBrush(Color.FromRgb(50, 215, 75));
         var liveBg = new SolidColorBrush(Color.FromArgb(40, 50, 215, 75));
@@ -289,10 +372,10 @@ public sealed partial class SportsView : UserControl, IToolView
         }
 
         MatchesList.ItemsSource = matchCards;
-        NoMatchesText.Visibility = matchCards.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        NoMatchesState.Visibility = matchCards.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // If currently in detail view, refresh detail banner
-        if (_detailedMatch != null)
+        // If in detail mode, refresh detail banner
+        if (_detailedMatch != null && StageDetailMode.Visibility == Visibility.Visible)
         {
             var updated = matches.FirstOrDefault(m => m.Id == _detailedMatch.Id);
             if (updated != null) _detailedMatch = updated;
@@ -314,8 +397,7 @@ public sealed partial class SportsView : UserControl, IToolView
         if (sender is FrameworkElement fe && fe.DataContext is MatchCardViewModel vm)
         {
             _detailedMatch = vm.RawMatch;
-            StageScheduleMode.Visibility = Visibility.Collapsed;
-            StageDetailMode.Visibility = Visibility.Visible;
+            ShowDetailMode();
             RenderDetailBanner(_detailedMatch);
             _ = LoadMatchDetailAsync(_detailedMatch);
         }
@@ -323,8 +405,7 @@ public sealed partial class SportsView : UserControl, IToolView
 
     private void OnBackToScheduleClick(object sender, RoutedEventArgs e)
     {
-        StageDetailMode.Visibility = Visibility.Collapsed;
-        StageScheduleMode.Visibility = Visibility.Visible;
+        ShowScheduleMode();
         RefreshUI();
     }
 
