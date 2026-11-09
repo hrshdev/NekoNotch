@@ -19,6 +19,40 @@ public enum SportType
     Cricket
 }
 
+public enum SportsCelebrationType
+{
+    Goal,
+    Wicket,
+    Six,
+    Four,
+    Milestone50,
+    Milestone100
+}
+
+public sealed class SportsCelebrationEvent
+{
+    public SportMatch Match { get; init; } = null!;
+    public SportsCelebrationType Type { get; init; }
+    public string BadgeText { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Detail { get; init; } = "";
+    public string Emoji { get; init; } = "🏆";
+    public string BadgeBackgroundHex { get; init; } = "#35FF8A3D";
+    public string BadgeForegroundHex { get; init; } = "#FF8A3D";
+}
+
+internal sealed class MatchScoreSnapshot
+{
+    public string HomeRaw { get; set; } = "";
+    public string AwayRaw { get; set; } = "";
+    public int HomeRuns { get; set; }
+    public int HomeWickets { get; set; }
+    public int AwayRuns { get; set; }
+    public int AwayWickets { get; set; }
+    public int HomeGoals { get; set; }
+    public int AwayGoals { get; set; }
+}
+
 public sealed class SportMatch
 {
     public string Id { get; set; } = "";
@@ -146,7 +180,7 @@ public sealed partial class SportsService : ObservableObject
 
     private SportsConfig _config = new();
     private readonly List<SportMatch> _matches = [];
-    private readonly ConcurrentDictionary<string, (string homeScore, string awayScore)> _prevScores = new();
+    private readonly ConcurrentDictionary<string, MatchScoreSnapshot> _prevSnapshots = new();
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     [ObservableProperty] private SportMatch? _activeMatch;
@@ -154,6 +188,7 @@ public sealed partial class SportsService : ObservableObject
     [ObservableProperty] private string _latestEventBanner = "";
 
     public event Action<SportMatch, string>? MatchEventOccurred;
+    public event Action<SportsCelebrationEvent>? CelebrationOccurred;
     public event Action? MatchesUpdated;
 
     public IReadOnlyList<SportMatch> Matches => _matches;
@@ -343,23 +378,69 @@ public sealed partial class SportsService : ObservableObject
             .ThenBy(m => m.StartTime)
             .ToList();
 
-        // Check for score changes / events on live matches
+        // Check for celebrations / events on live matches
         foreach (var m in distinctMatches.Where(x => x.IsLive))
         {
-            if (_prevScores.TryGetValue(m.Id, out var prev))
+            if (_prevSnapshots.TryGetValue(m.Id, out var prev))
             {
-                if (prev.homeScore != m.HomeScore || prev.awayScore != m.AwayScore)
+                if (m.Sport == SportType.Football)
                 {
-                    // Event detected!
-                    string bannerText = m.Sport == SportType.Football
-                        ? $"⚽ GOAL! {m.HomeTeamCode} {m.HomeScore} - {m.AwayScore} {m.AwayTeamCode}"
-                        : $"🏏 SCORE UPDATE: {m.HomeTeamCode} {m.CompactHomeScore} vs {m.AwayTeamCode} {m.CompactAwayScore}";
+                    int.TryParse(m.HomeScore, out var currHome);
+                    int.TryParse(m.AwayScore, out var currAway);
 
-                    LatestEventBanner = bannerText;
-                    MatchEventOccurred?.Invoke(m, bannerText);
+                    bool homeGoal = currHome > prev.HomeGoals;
+                    bool awayGoal = currAway > prev.AwayGoals;
+
+                    if (homeGoal || awayGoal)
+                    {
+                        var scoringTeam = homeGoal ? m.HomeTeamName : m.AwayTeamName;
+                        var time = string.IsNullOrWhiteSpace(m.StatusDetail) ? "" : $" ({m.StatusDetail})";
+                        var ev = new SportsCelebrationEvent
+                        {
+                            Match = m,
+                            Type = SportsCelebrationType.Goal,
+                            BadgeText = "⚽ GOAL!",
+                            Title = $"⚽ GOAL! - {scoringTeam}",
+                            Detail = $"{m.HomeTeamCode} {m.HomeScore} - {m.AwayScore} {m.AwayTeamCode}{time}",
+                            Emoji = "⚽",
+                            BadgeBackgroundHex = "#3530D158",
+                            BadgeForegroundHex = "#30D158"
+                        };
+                        LatestEventBanner = ev.BadgeText;
+                        CelebrationOccurred?.Invoke(ev);
+                        MatchEventOccurred?.Invoke(m, ev.BadgeText);
+                    }
+                }
+                else if (m.Sport == SportType.Cricket)
+                {
+                    var (hRuns, hWickets, hValid) = ParseCricketScore(m.HomeScore);
+                    var (aRuns, aWickets, aValid) = ParseCricketScore(m.AwayScore);
+
+                    CheckCricketCelebration(m, isHome: true, prev.HomeRuns, prev.HomeWickets, hRuns, hWickets, hValid, prev.HomeRaw != m.HomeScore);
+                    CheckCricketCelebration(m, isHome: false, prev.AwayRuns, prev.AwayWickets, aRuns, aWickets, aValid, prev.AwayRaw != m.AwayScore);
                 }
             }
-            _prevScores[m.Id] = (m.HomeScore, m.AwayScore);
+
+            var snap = new MatchScoreSnapshot
+            {
+                HomeRaw = m.HomeScore,
+                AwayRaw = m.AwayScore
+            };
+            if (m.Sport == SportType.Football)
+            {
+                if (int.TryParse(m.HomeScore, out var hg)) snap.HomeGoals = hg;
+                if (int.TryParse(m.AwayScore, out var ag)) snap.AwayGoals = ag;
+            }
+            else
+            {
+                var (hRuns, hWickets, _) = ParseCricketScore(m.HomeScore);
+                var (aRuns, aWickets, _) = ParseCricketScore(m.AwayScore);
+                snap.HomeRuns = hRuns;
+                snap.HomeWickets = hWickets;
+                snap.AwayRuns = aRuns;
+                snap.AwayWickets = aWickets;
+            }
+            _prevSnapshots[m.Id] = snap;
         }
 
         var app = System.Windows.Application.Current;
@@ -777,6 +858,155 @@ public sealed partial class SportsService : ObservableObject
         {
             App.Log(ex);
             return null;
+        }
+    }
+
+    public static (int runs, int wickets, bool valid) ParseCricketScore(string? score)
+    {
+        if (string.IsNullOrWhiteSpace(score) || score == "-") return (0, 0, false);
+        var s = score.Trim();
+        if (s.Contains('&'))
+        {
+            var parts = s.Split('&');
+            s = parts[^1].Trim();
+        }
+        if (s.Contains('('))
+        {
+            s = s.Split('(')[0].Trim();
+        }
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"[^\d/]", "").Trim();
+        if (string.IsNullOrEmpty(s)) return (0, 0, false);
+
+        if (s.Contains('/'))
+        {
+            var slashParts = s.Split('/');
+            if (int.TryParse(slashParts[0], out var r))
+            {
+                int w = 0;
+                if (slashParts.Length > 1) int.TryParse(slashParts[1], out w);
+                return (r, w, true);
+            }
+        }
+        else
+        {
+            if (int.TryParse(s, out var r))
+            {
+                return (r, 0, true);
+            }
+        }
+        return (0, 0, false);
+    }
+
+    private void CheckCricketCelebration(SportMatch m, bool isHome, int prevRuns, int prevWickets, int currRuns, int currWickets, bool valid, bool rawChanged)
+    {
+        if (!valid || !rawChanged) return;
+        if (currRuns < prevRuns) return; // Innings rollover
+
+        var teamName = isHome ? m.HomeTeamName : m.AwayTeamName;
+        var teamCode = isHome ? m.HomeTeamCode : m.AwayTeamCode;
+        var currScoreDisplay = isHome ? m.HomeScore : m.AwayScore;
+        var matchSummary = $"{m.HomeTeamCode} {m.CompactHomeScore} vs {m.AwayTeamCode} {m.CompactAwayScore}";
+
+        // 1. Wicket!
+        if (currWickets > prevWickets)
+        {
+            var ev = new SportsCelebrationEvent
+            {
+                Match = m,
+                Type = SportsCelebrationType.Wicket,
+                BadgeText = "🔴 WICKET!",
+                Title = $"🔴 WICKET! - {teamName}",
+                Detail = $"{teamCode} {currScoreDisplay} • {matchSummary}",
+                Emoji = "🔴",
+                BadgeBackgroundHex = "#35FF453A",
+                BadgeForegroundHex = "#FF453A"
+            };
+            LatestEventBanner = ev.BadgeText;
+            CelebrationOccurred?.Invoke(ev);
+            MatchEventOccurred?.Invoke(m, ev.BadgeText);
+            return;
+        }
+
+        var runDelta = currRuns - prevRuns;
+
+        // 2. Six!
+        if (runDelta == 6)
+        {
+            var ev = new SportsCelebrationEvent
+            {
+                Match = m,
+                Type = SportsCelebrationType.Six,
+                BadgeText = "💥 SIX!",
+                Title = $"💥 SIX! - {teamName}",
+                Detail = $"{teamCode} hits a MAXIMUM! • {matchSummary}",
+                Emoji = "💥",
+                BadgeBackgroundHex = "#35FF9F0A",
+                BadgeForegroundHex = "#FF9F0A"
+            };
+            LatestEventBanner = ev.BadgeText;
+            CelebrationOccurred?.Invoke(ev);
+            MatchEventOccurred?.Invoke(m, ev.BadgeText);
+            return;
+        }
+
+        // 3. Four!
+        if (runDelta == 4)
+        {
+            var ev = new SportsCelebrationEvent
+            {
+                Match = m,
+                Type = SportsCelebrationType.Four,
+                BadgeText = "🔥 FOUR!",
+                Title = $"🔥 FOUR! - {teamName}",
+                Detail = $"{teamCode} finds the boundary! • {matchSummary}",
+                Emoji = "🔥",
+                BadgeBackgroundHex = "#35FFD60A",
+                BadgeForegroundHex = "#FFD60A"
+            };
+            LatestEventBanner = ev.BadgeText;
+            CelebrationOccurred?.Invoke(ev);
+            MatchEventOccurred?.Invoke(m, ev.BadgeText);
+            return;
+        }
+
+        // 4. Milestone 100 runs
+        if (prevRuns > 0 && prevRuns < 100 && currRuns >= 100)
+        {
+            var ev = new SportsCelebrationEvent
+            {
+                Match = m,
+                Type = SportsCelebrationType.Milestone100,
+                BadgeText = "💯 CENTURY!",
+                Title = $"💯 100 UP! - {teamName}",
+                Detail = $"{teamCode} crosses 100 runs! • {matchSummary}",
+                Emoji = "💯",
+                BadgeBackgroundHex = "#35BF5AF2",
+                BadgeForegroundHex = "#BF5AF2"
+            };
+            LatestEventBanner = ev.BadgeText;
+            CelebrationOccurred?.Invoke(ev);
+            MatchEventOccurred?.Invoke(m, ev.BadgeText);
+            return;
+        }
+
+        // 5. Milestone 50 runs
+        if (prevRuns > 0 && prevRuns < 50 && currRuns >= 50)
+        {
+            var ev = new SportsCelebrationEvent
+            {
+                Match = m,
+                Type = SportsCelebrationType.Milestone50,
+                BadgeText = "⭐ 50 UP!",
+                Title = $"⭐ 50 UP! - {teamName}",
+                Detail = $"{teamCode} crosses 50 runs! • {matchSummary}",
+                Emoji = "⭐",
+                BadgeBackgroundHex = "#3564D2FF",
+                BadgeForegroundHex = "#64D2FF"
+            };
+            LatestEventBanner = ev.BadgeText;
+            CelebrationOccurred?.Invoke(ev);
+            MatchEventOccurred?.Invoke(m, ev.BadgeText);
+            return;
         }
     }
 

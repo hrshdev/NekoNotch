@@ -379,7 +379,11 @@ public partial class NotchWindow : Window
         BuildTabs();
 
         SportsService.Instance.MatchesUpdated += () => Dispatcher.InvokeAsync(UpdateActivity);
-        SportsService.Instance.MatchEventOccurred += (match, banner) => Dispatcher.InvokeAsync(() => TriggerCheerAnimation(banner));
+        SportsService.Instance.CelebrationOccurred += (ev) => Dispatcher.InvokeAsync(() => HandleSportsCelebration(ev));
+        SportsService.Instance.MatchEventOccurred += (match, banner) => Dispatcher.InvokeAsync(() =>
+        {
+            if (!_celebratingSportsEvent) TriggerCheerAnimation(banner);
+        });
         UpdateActivity();
 
         NotchEyes.Visibility = Visibility.Visible;
@@ -1847,9 +1851,9 @@ public partial class NotchWindow : Window
         const double paddingAndMargins = 28;
 
         var needed = sideMax * 2 + centerGap + paddingAndMargins;
-        if (_celebratingSportsEvent) needed = Math.Max(needed, 320);
+        if (_celebratingSportsEvent) needed = Math.Max(needed, 340);
 
-        return Math.Clamp(Math.Ceiling(needed), 220, 390);
+        return Math.Clamp(Math.Ceiling(needed), 220, 440);
     }
 
 
@@ -3064,7 +3068,59 @@ public partial class NotchWindow : Window
         OpenTool("sports");
     }
 
-    private void TriggerCheerAnimation(string bannerText)
+    private DispatcherTimer? _sportsCelebrationTimer;
+
+    private void HandleSportsCelebration(SportsCelebrationEvent ev)
+    {
+        // 1. Sliding Dynamic Island Peek notification at the top of the screen
+        EnqueuePeek(new PeekRequest(
+            "sports:" + ev.Match.Id,
+            () => CelebrationTile(ev.Emoji, ev.BadgeBackgroundHex),
+            ev.Title,
+            ev.Detail,
+            TimeSpan.FromSeconds(5),
+            OnClick: () => OpenTool("sports")
+        ));
+
+        // Subtle chime for celebration event
+        try { PlayNotificationChime(); } catch { }
+
+        // 2. Trigger island pet cheer + compact badge in the closed notch island
+        TriggerCheerAnimation(ev);
+    }
+
+    private static FrameworkElement CelebrationTile(string emoji, string bgHex)
+    {
+        SolidColorBrush brush;
+        try
+        {
+            var col = (Color)ColorConverter.ConvertFromString(bgHex);
+            brush = new SolidColorBrush(col);
+        }
+        catch
+        {
+            brush = new SolidColorBrush(Color.FromArgb(0x35, 0xFF, 0x8A, 0x3D));
+        }
+
+        var tile = new Border
+        {
+            Width = 40,
+            Height = 40,
+            CornerRadius = new CornerRadius(11),
+            Background = brush
+        };
+        var tb = new TextBlock
+        {
+            Text = emoji,
+            FontSize = 18,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        tile.Child = tb;
+        return tile;
+    }
+
+    private void TriggerCheerAnimation(SportsCelebrationEvent ev)
     {
         if (_expanded || NotchEyes.Visibility != Visibility.Visible) return;
         _isCheering = true;
@@ -3099,17 +3155,27 @@ public partial class NotchWindow : Window
         jump.KeyFrames.Add(new SplineDoubleKeyFrame(1.0, KeyTime.FromPercent(1.0), new KeySpline(0.1, 0.9, 0.2, 1.0)));
         PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, jump);
 
-        // Celebratory banner pop
+        // Badge styling & text
+        try
+        {
+            if (ColorConverter.ConvertFromString(ev.BadgeBackgroundHex) is Color bgCol)
+                SportsEventPill.Background = new SolidColorBrush(bgCol);
+            if (ColorConverter.ConvertFromString(ev.BadgeForegroundHex) is Color fgCol)
+                SportsEventText.Foreground = new SolidColorBrush(fgCol);
+        }
+        catch { }
+
+        SportsEventText.Text = ev.BadgeText;
         SportsEventPill.Visibility = Visibility.Visible;
-        SportsEventText.Text = bannerText;
         _celebratingSportsEvent = true;
         _width.Target = ActivityWidth();
         StartAnimation();
 
-        var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        resetTimer.Tick += (s, e) =>
+        _sportsCelebrationTimer?.Stop();
+        _sportsCelebrationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _sportsCelebrationTimer.Tick += (s, e) =>
         {
-            resetTimer.Stop();
+            _sportsCelebrationTimer.Stop();
             _celebratingSportsEvent = false;
             _isCheering = false;
 
@@ -3122,7 +3188,19 @@ public partial class NotchWindow : Window
             _width.Target = ActivityWidth();
             StartAnimation();
         };
-        resetTimer.Start();
+        _sportsCelebrationTimer.Start();
+    }
+
+    private void TriggerCheerAnimation(string bannerText)
+    {
+        var shortText = bannerText.Length > 12 ? bannerText[..12] : bannerText;
+        TriggerCheerAnimation(new SportsCelebrationEvent
+        {
+            Match = SportsService.Instance.ActiveMatch ?? new SportMatch(),
+            BadgeText = shortText,
+            Title = bannerText,
+            Detail = bannerText
+        });
     }
 
     private void OnVoiceButtonClick(object sender, RoutedEventArgs e)

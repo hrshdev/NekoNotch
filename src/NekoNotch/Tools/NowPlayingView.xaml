@@ -178,7 +178,7 @@
                                 <Path x:Name="LyricsBadgeLinesIcon" Width="10" Height="8" Stretch="Fill"
                                       Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       Data="M 0 0.75 L 10 0.75 M 0 4 L 10 4 M 0 7.25 L 10 7.25"
-                                      Margin="0,0,5,0" VerticalAlignment="Center" Visibility="Collapsed" />
+                                      Margin="0,-1,5,0" VerticalAlignment="Center" Visibility="Collapsed" />
                                 <TextBlock x:Name="LyricsBadgeText" Text="Synced" FontSize="10.5" FontWeight="SemiBold"
                                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                             </StackPanel>
