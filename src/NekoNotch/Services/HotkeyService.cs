@@ -54,13 +54,11 @@ public static class HotkeyService
                     if (Win32.RegisterHotKey(_hwnd, id, Win32.MOD_CONTROL | Win32.MOD_SHIFT | Win32.MOD_NOREPEAT, spaceVk))
                     {
                         Registered[id] = action;
-                        App.Settings.Hotkeys["voice"] = "Ctrl+Shift+Space";
                         recovered = true;
                     }
                     else if (Win32.RegisterHotKey(_hwnd, id, Win32.MOD_CONTROL | Win32.MOD_ALT | Win32.MOD_NOREPEAT, spaceVk))
                     {
                         Registered[id] = action;
-                        App.Settings.Hotkeys["voice"] = "Ctrl+Alt+Space";
                         recovered = true;
                     }
                 }

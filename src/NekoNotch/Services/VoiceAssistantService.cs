@@ -48,6 +48,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
     public event Action<string>? SpeechHypothesisUpdated;
     public event Action<string, bool>? CommandCompleted;
     public event Action? ListeningEnded;
+    public event Action? ReturnedToListening;
 
     private VoiceAssistantService()
     {
@@ -538,13 +539,37 @@ public sealed partial class VoiceAssistantService : ObservableObject
         else
         {
             success = false;
-            message = $"Unrecognized: \"{phrase}\"";
+            message = $"Say again: \"{phrase}\"";
+        }
+
+        if (!success)
+        {
+            // Keep listening state active, show unrecognized message, and seamlessly return to listening
+            State = VoiceState.Listening;
+            FeedbackMessage = message;
+            CommandCompleted?.Invoke(message, false);
+
+            var retryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.8) };
+            retryTimer.Tick += (_, _) =>
+            {
+                retryTimer.Stop();
+                if (State == VoiceState.Listening)
+                {
+                    LiveHypothesis = "Listening…";
+                    _silenceTimer.Stop();
+                    _silenceTimer.Interval = TimeSpan.FromSeconds(7);
+                    _silenceTimer.Start();
+                    ReturnedToListening?.Invoke();
+                }
+            };
+            retryTimer.Start();
+            return;
         }
 
         State = VoiceState.Executed;
         FeedbackMessage = message;
-        if (success) PetSoundService.PlayDone();
-        CommandCompleted?.Invoke(message, success);
+        PetSoundService.PlayDone();
+        CommandCompleted?.Invoke(message, true);
 
         // Reset to Idle after brief confirmation
         var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };

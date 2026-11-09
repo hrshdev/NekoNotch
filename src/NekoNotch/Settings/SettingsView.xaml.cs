@@ -354,6 +354,31 @@ public partial class SettingsView : UserControl, IToolView
         Row("Listening chime", "Play a subtle audio tone when Neko wakes up.",
             Toggle(S.VoiceChime, v => { S.VoiceChime = v; Save(false); }));
 
+        S.Hotkeys.TryGetValue("voice", out var voiceGesture);
+        var recordingVoice = _recordingAction == "voice";
+        var voiceChip = new Button
+        {
+            Content = recordingVoice ? "Press keys…" : string.IsNullOrEmpty(voiceGesture) ? "Not set" : voiceGesture.Replace("+", " + "),
+            MinWidth = 110,
+        };
+        if (recordingVoice) voiceChip.SetResourceReference(BackgroundProperty, "AccentSoftBrush");
+        voiceChip.Click += (_, _) =>
+        {
+            _recordingAction = "voice";
+            Focusable = true;
+            Focus();
+            Render();
+        };
+        var clearVoice = IconButton(AppIcon.XMark, "Remove shortcut", !string.IsNullOrEmpty(voiceGesture), () =>
+        {
+            S.Hotkeys["voice"] = "";
+            SaveHotkeys();
+        });
+        var voiceControls = new StackPanel { Orientation = Orientation.Horizontal };
+        voiceControls.Children.Add(voiceChip);
+        voiceControls.Children.Add(clearVoice);
+        Row("Voice Shortcut", "Global hotkey to activate Voice Assistant directly from anywhere (click and press your custom key combo).", voiceControls);
+
         Section("NOW PLAYING");
         Row("Lyrics", "Show time-synced lyrics on Now Playing. Songs are looked up on LRCLIB, a free lyrics library.",
             Toggle(S.LyricsEnabled, v => { S.LyricsEnabled = v; Save(false); }));

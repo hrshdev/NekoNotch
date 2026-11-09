@@ -332,6 +332,7 @@ public partial class NotchWindow : Window
         VoiceAssistantService.Instance.SpeechHypothesisUpdated += OnVoiceHypothesis;
         VoiceAssistantService.Instance.CommandCompleted += OnVoiceCompleted;
         VoiceAssistantService.Instance.ListeningEnded += OnVoiceEnded;
+        VoiceAssistantService.Instance.ReturnedToListening += OnVoiceReturnedToListening;
 
         ProfileService.Changed += () => _idleAvatarLoaded = false;
 
@@ -3139,6 +3140,26 @@ public partial class NotchWindow : Window
                 VoicePulseDot.Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
                 VoiceFeedbackText.Text = message;
             }
+            UpdateActivity();
+        });
+    }
+
+    private void OnVoiceReturnedToListening()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!_isVoiceActive) return;
+            VoiceStatusTitle.Text = "Listening";
+            VoiceStatusTitle.Foreground = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoiceMicIcon.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoicePulseDot.Fill = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+            VoiceFeedbackText.Text = "Listening…";
+
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(200) });
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(200) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.8, Duration = TimeSpan.FromMilliseconds(200) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.8, Duration = TimeSpan.FromMilliseconds(200) });
+
             UpdateActivity();
         });
     }
