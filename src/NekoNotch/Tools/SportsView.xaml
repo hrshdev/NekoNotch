@@ -445,60 +445,91 @@
                 </ScrollViewer>
             </Grid>
 
-            <!-- MODE C: FOLLOW TEAMS DRAWER / MODAL -->
+            <!-- MODE C: CLUSTERED FOLLOW TEAMS DRAWER / MODAL -->
             <Grid x:Name="StageFollowMode" Visibility="Collapsed">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
-                <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid Grid.Row="0" Margin="0,0,0,6">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Style="{StaticResource IconButton}" Margin="0,0,6,0" Click="OnBackFromFollowClick">
                             <hero:HeroIcon Kind="ChevronLeft" Width="12" Height="12" />
                         </Button>
-                        <TextBlock Text="FOLLOW FAVORITE CLUBS &amp; TEAMS" FontSize="10.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="FollowModeTitle" Text="FOLLOW CLUBS &amp; NATIONAL TEAMS" FontSize="10.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Text="Get live score updates in your notch" FontSize="10" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBox x:Name="TeamSearchBox" Width="140" Height="24" Margin="0,0,6,0"
+                                 Tag="Search teams..." Style="{StaticResource InlineField}" FontSize="10"
+                                 VerticalContentAlignment="Center" TextChanged="OnTeamSearchChanged" />
+                        <Button Style="{StaticResource ActionChip}" Padding="8,3" Click="OnBackFromFollowClick">
+                            <TextBlock Text="✕ Done" FontSize="9.5" FontWeight="Bold" />
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
-                <!-- Teams Grid -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl x:Name="FollowTeamsGrid">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                <!-- Category Filter Chips for Teams -->
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,8">
+                    <StackPanel x:Name="TeamCategoryChipsPanel" Orientation="Horizontal" />
+                </ScrollViewer>
+
+                <!-- Clustered Teams Grid -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="TeamClustersControl">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Width="225" Margin="4,3,4,5" Background="{DynamicResource SurfaceBrush}"
-                                        BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,0,10">
+                                    <!-- Cluster Header with Badge -->
+                                    <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="8,3.5" Margin="4,0,4,6" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                        <Grid>
+                                            <TextBlock Text="{Binding Title}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding CountText}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
 
-                                        <!-- Logo -->
-                                        <Border Width="22" Height="22" CornerRadius="11" Background="#14FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0">
-                                            <Image Source="{Binding LogoUrl}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
-                                        </Border>
+                                    <!-- Teams in this cluster -->
+                                    <ItemsControl ItemsSource="{Binding Teams}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="225" Margin="4,3,4,4" Background="{DynamicResource SurfaceBrush}"
+                                                        BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="8,6">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
 
-                                        <!-- Name -->
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,4,0" />
+                                                        <!-- Logo -->
+                                                        <Border Width="22" Height="22" CornerRadius="11" Background="#14FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                            <Image Source="{Binding LogoUrl}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
+                                                        </Border>
 
-                                        <!-- Follow Button -->
-                                        <Button Grid.Column="2" Style="{StaticResource ActionChip}" Padding="6,2"
-                                                Click="OnToggleFollowTeamClick" Tag="{Binding Id}">
-                                            <TextBlock Text="{Binding FollowButtonText}" FontSize="9.5" FontWeight="Bold"
-                                                       Foreground="{Binding FollowButtonColor}" />
-                                        </Button>
-                                    </Grid>
-                                </Border>
+                                                        <!-- Name -->
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextBrush}"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,4,0" />
+
+                                                        <!-- Follow Button -->
+                                                        <Button Grid.Column="2" Style="{StaticResource ActionChip}" Padding="6,2"
+                                                                Click="OnToggleFollowTeamClick" Tag="{Binding Id}">
+                                                            <TextBlock Text="{Binding FollowButtonText}" FontSize="9.5" FontWeight="Bold"
+                                                                       Foreground="{Binding FollowButtonColor}" />
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

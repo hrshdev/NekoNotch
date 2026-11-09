@@ -19,6 +19,8 @@ public sealed partial class SportsView : UserControl, IToolView
     private string _currentLeague = "all";
     private bool _liveOnly = false;
     private string _searchQuery = "";
+    private string _teamCategoryFilter = "all";
+    private string _teamSearchQuery = "";
     private SportMatch? _detailedMatch;
 
     public sealed class MatchCardViewModel
@@ -48,6 +50,13 @@ public sealed partial class SportsView : UserControl, IToolView
         public string LogoUrl { get; set; } = "";
         public string FollowButtonText { get; set; } = "+ Follow";
         public Brush FollowButtonColor { get; set; } = Brushes.Gray;
+    }
+
+    public sealed class TeamClusterViewModel
+    {
+        public string Title { get; set; } = "";
+        public string CountText { get; set; } = "";
+        public List<TeamCardViewModel> Teams { get; set; } = [];
     }
 
     public sealed class CricketInningViewModel
@@ -160,6 +169,78 @@ public sealed partial class SportsView : UserControl, IToolView
         StageScheduleMode.Visibility = Visibility.Collapsed;
         StageDetailMode.Visibility = Visibility.Collapsed;
         StageFollowMode.Visibility = Visibility.Visible;
+        _teamCategoryFilter = "all";
+        _teamSearchQuery = "";
+        if (TeamSearchBox != null) TeamSearchBox.Text = "";
+
+        if (FollowModeTitle != null)
+        {
+            FollowModeTitle.Text = _currentNav == "cricket"
+                ? "FOLLOW CRICKET TEAMS"
+                : (_currentNav == "football" ? "FOLLOW FOOTBALL CLUBS & TEAMS" : "FOLLOW FAVORITE CLUBS & TEAMS");
+        }
+
+        UpdateTeamCategoryChips();
+        RefreshUI();
+    }
+
+    private void UpdateTeamCategoryChips()
+    {
+        if (TeamCategoryChipsPanel == null) return;
+        TeamCategoryChipsPanel.Children.Clear();
+        var chipStyle = (Style)TryFindResource("LeagueChipBtn");
+
+        void AddCategoryChip(string label, string categoryTag, bool isDefault = false)
+        {
+            var rb = new RadioButton
+            {
+                Content = label,
+                Tag = categoryTag,
+                Style = chipStyle,
+                GroupName = "DynamicTeamCategoryFilter",
+                IsChecked = isDefault
+            };
+            rb.Click += (s, _) =>
+            {
+                if (s is RadioButton clicked && clicked.Tag is string tag)
+                {
+                    _teamCategoryFilter = tag;
+                    RefreshUI();
+                }
+            };
+            TeamCategoryChipsPanel.Children.Add(rb);
+        }
+
+        AddCategoryChip("All", "all", _teamCategoryFilter == "all");
+
+        if (_currentNav == "cricket")
+        {
+            AddCategoryChip("International", "International Teams");
+            AddCategoryChip("IPL", "Indian Premier League (IPL)");
+            AddCategoryChip("BBL", "Big Bash League (BBL)");
+        }
+        else if (_currentNav == "football")
+        {
+            AddCategoryChip("Premier League", "Premier League");
+            AddCategoryChip("La Liga", "La Liga");
+            AddCategoryChip("European Giants", "European Giants");
+            AddCategoryChip("ISL", "Indian Super League (ISL)");
+            AddCategoryChip("National Teams", "National Teams");
+        }
+        else
+        {
+            AddCategoryChip("Premier League", "Premier League");
+            AddCategoryChip("La Liga", "La Liga");
+            AddCategoryChip("ISL", "Indian Super League (ISL)");
+            AddCategoryChip("Cricket Int'l", "International Teams");
+            AddCategoryChip("IPL", "Indian Premier League (IPL)");
+        }
+    }
+
+    private void OnTeamSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_isInitialized) return;
+        _teamSearchQuery = TeamSearchBox.Text.Trim();
         RefreshUI();
     }
 
@@ -263,26 +344,57 @@ public sealed partial class SportsView : UserControl, IToolView
         if (StageFollowMode.Visibility == Visibility.Visible)
         {
             var presetTeams = SportsService.PresetTeams.AsEnumerable();
-            if (!string.IsNullOrEmpty(_searchQuery))
+
+            if (_currentNav == "football")
             {
-                var q = _searchQuery.ToUpperInvariant();
-                presetTeams = presetTeams.Where(t => t.Name.ToUpperInvariant().Contains(q) || t.Code.ToUpperInvariant().Contains(q));
+                presetTeams = presetTeams.Where(t => t.Sport == SportType.Football);
+            }
+            else if (_currentNav == "cricket")
+            {
+                presetTeams = presetTeams.Where(t => t.Sport == SportType.Cricket);
             }
 
-            var teamVMs = new List<TeamCardViewModel>();
-            foreach (var t in presetTeams)
+            if (_teamCategoryFilter != "all")
             {
-                var isFollowed = followed.Any(f => f.Id == t.Id);
-                teamVMs.Add(new TeamCardViewModel
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    LogoUrl = t.LogoUrl,
-                    FollowButtonText = isFollowed ? "✓ Following" : "+ Follow",
-                    FollowButtonColor = isFollowed ? accentBrush : subTextBrush
-                });
+                presetTeams = presetTeams.Where(t => string.Equals(t.Category, _teamCategoryFilter, StringComparison.OrdinalIgnoreCase));
             }
-            FollowTeamsGrid.ItemsSource = teamVMs;
+
+            if (!string.IsNullOrEmpty(_teamSearchQuery))
+            {
+                var q = _teamSearchQuery.ToUpperInvariant();
+                presetTeams = presetTeams.Where(t =>
+                    t.Name.ToUpperInvariant().Contains(q) ||
+                    t.Code.ToUpperInvariant().Contains(q) ||
+                    t.Category.ToUpperInvariant().Contains(q));
+            }
+
+            var clusters = presetTeams
+                .GroupBy(t => string.IsNullOrWhiteSpace(t.Category) ? "Other Teams" : t.Category)
+                .Select(g =>
+                {
+                    var teamCards = g.Select(t =>
+                    {
+                        var isFollowed = followed.Any(f => f.Id == t.Id);
+                        return new TeamCardViewModel
+                        {
+                            Id = t.Id,
+                            Name = t.Name,
+                            LogoUrl = t.LogoUrl,
+                            FollowButtonText = isFollowed ? "✓ Following" : "+ Follow",
+                            FollowButtonColor = isFollowed ? accentBrush : subTextBrush
+                        };
+                    }).ToList();
+
+                    return new TeamClusterViewModel
+                    {
+                        Title = g.Key.ToUpperInvariant(),
+                        CountText = $"{teamCards.Count} teams",
+                        Teams = teamCards
+                    };
+                })
+                .ToList();
+
+            TeamClustersControl.ItemsSource = clusters;
         }
 
         // 3. Filter Match Fixtures

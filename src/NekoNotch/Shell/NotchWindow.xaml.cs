@@ -1820,7 +1820,7 @@ public partial class NotchWindow : Window
         var sm = SportsService.Instance.ActiveMatch;
         var sportsLive = sm != null && SportsService.Instance.ShowScoreInNotch;
 
-        if (sportsLive) return sm?.Sport == SportType.Cricket ? 390 : 340;
+        if (sportsLive) return sm?.Sport == SportType.Cricket ? 410 : 340;
 
         var music = NotchActivityService.Instance.Kind == NotchActivityKind.Music;
 
@@ -3026,7 +3026,14 @@ public partial class NotchWindow : Window
         SportsHomeScoreText.Text = m.CompactHomeScore;
         SportsAwayScoreText.Text = m.CompactAwayScore;
         SportsAwayTeamText.Text = m.AwayTeamCode;
-        SportsTimeBadge.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail;
+        if (m.Sport == SportType.Cricket)
+        {
+            SportsTimeBadge.Text = m.IsLive ? "LIVE" : (m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail);
+        }
+        else
+        {
+            SportsTimeBadge.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail;
+        }
         SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
     }
 

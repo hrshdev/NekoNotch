@@ -122,6 +122,7 @@ public sealed class FollowedTeam
     public string Code { get; set; } = "";
     public SportType Sport { get; set; }
     public string LeagueId { get; set; } = "";
+    public string Category { get; set; } = "";
     public string LogoUrl { get; set; } = "";
 }
 
@@ -160,38 +161,63 @@ public sealed partial class SportsService : ObservableObject
     public static readonly IReadOnlyList<FollowedTeam> PresetTeams =
     [
         // Football - Premier League
-        new() { Id = "fb-ars", Name = "Arsenal", Code = "ARS", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/359.png" },
-        new() { Id = "fb-mci", Name = "Manchester City", Code = "MCI", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/382.png" },
-        new() { Id = "fb-liv", Name = "Liverpool", Code = "LIV", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/364.png" },
-        new() { Id = "fb-mun", Name = "Manchester United", Code = "MUN", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/360.png" },
-        new() { Id = "fb-che", Name = "Chelsea", Code = "CHE", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/363.png" },
-        new() { Id = "fb-tot", Name = "Tottenham Hotspur", Code = "TOT", Sport = SportType.Football, LeagueId = "eng.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/367.png" },
+        new() { Id = "fb-ars", Name = "Arsenal", Code = "ARS", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/359.png" },
+        new() { Id = "fb-mci", Name = "Manchester City", Code = "MCI", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/382.png" },
+        new() { Id = "fb-liv", Name = "Liverpool", Code = "LIV", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/364.png" },
+        new() { Id = "fb-mun", Name = "Manchester United", Code = "MUN", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/360.png" },
+        new() { Id = "fb-che", Name = "Chelsea", Code = "CHE", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/363.png" },
+        new() { Id = "fb-tot", Name = "Tottenham Hotspur", Code = "TOT", Sport = SportType.Football, LeagueId = "eng.1", Category = "Premier League", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/367.png" },
+
+        // Football - La Liga
+        new() { Id = "fb-rma", Name = "Real Madrid", Code = "RMA", Sport = SportType.Football, LeagueId = "esp.1", Category = "La Liga", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/86.png" },
+        new() { Id = "fb-bar", Name = "Barcelona", Code = "BAR", Sport = SportType.Football, LeagueId = "esp.1", Category = "La Liga", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/83.png" },
+        new() { Id = "fb-atm", Name = "Atletico Madrid", Code = "ATM", Sport = SportType.Football, LeagueId = "esp.1", Category = "La Liga", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png" },
+
         // Football - European Giants
-        new() { Id = "fb-rma", Name = "Real Madrid", Code = "RMA", Sport = SportType.Football, LeagueId = "esp.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/86.png" },
-        new() { Id = "fb-bar", Name = "Barcelona", Code = "BAR", Sport = SportType.Football, LeagueId = "esp.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/83.png" },
-        new() { Id = "fb-atm", Name = "Atletico Madrid", Code = "ATM", Sport = SportType.Football, LeagueId = "esp.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png" },
-        new() { Id = "fb-bay", Name = "Bayern Munich", Code = "BAY", Sport = SportType.Football, LeagueId = "ger.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/132.png" },
-        new() { Id = "fb-bvb", Name = "Borussia Dortmund", Code = "BVB", Sport = SportType.Football, LeagueId = "ger.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/124.png" },
-        new() { Id = "fb-psg", Name = "Paris Saint-Germain", Code = "PSG", Sport = SportType.Football, LeagueId = "fra.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/160.png" },
-        new() { Id = "fb-int", Name = "Inter Milan", Code = "INT", Sport = SportType.Football, LeagueId = "ita.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/110.png" },
-        new() { Id = "fb-juv", Name = "Juventus", Code = "JUV", Sport = SportType.Football, LeagueId = "ita.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/111.png" },
-        new() { Id = "fb-kbf", Name = "Kerala Blasters", Code = "KBFC", Sport = SportType.Football, LeagueId = "ind.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/17708.png" },
-        new() { Id = "fb-mbg", Name = "Mohun Bagan SG", Code = "MBSG", Sport = SportType.Football, LeagueId = "ind.1", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/19088.png" },
-        // Cricket - International
-        new() { Id = "cr-ind", Name = "India", Code = "IND", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/6.png" },
-        new() { Id = "cr-aus", Name = "Australia", Code = "AUS", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/2.png" },
-        new() { Id = "cr-eng", Name = "England", Code = "ENG", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/1.png" },
-        new() { Id = "cr-pak", Name = "Pakistan", Code = "PAK", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/7.png" },
-        new() { Id = "cr-sa",  Name = "South Africa", Code = "SA", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/3.png" },
-        new() { Id = "cr-nz",  Name = "New Zealand", Code = "NZ", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5.png" },
-        new() { Id = "cr-wi",  Name = "West Indies", Code = "WI", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4.png" },
-        new() { Id = "cr-ban", Name = "Bangladesh", Code = "BAN", Sport = SportType.Cricket, LeagueId = "cricket", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/25.png" },
-        // Cricket - IPL
-        new() { Id = "cr-csk", Name = "Chennai Super Kings", Code = "CSK", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4342.png" },
-        new() { Id = "cr-rcb", Name = "Royal Challengers Bengaluru", Code = "RCB", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4340.png" },
-        new() { Id = "cr-mi",  Name = "Mumbai Indians", Code = "MI", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4346.png" },
-        new() { Id = "cr-kkr", Name = "Kolkata Knight Riders", Code = "KKR", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4341.png" },
-        new() { Id = "cr-srh", Name = "Sunrisers Hyderabad", Code = "SRH", Sport = SportType.Cricket, LeagueId = "8048", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5143.png" }
+        new() { Id = "fb-bay", Name = "Bayern Munich", Code = "BAY", Sport = SportType.Football, LeagueId = "ger.1", Category = "European Giants", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/132.png" },
+        new() { Id = "fb-bvb", Name = "Borussia Dortmund", Code = "BVB", Sport = SportType.Football, LeagueId = "ger.1", Category = "European Giants", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/124.png" },
+        new() { Id = "fb-psg", Name = "Paris Saint-Germain", Code = "PSG", Sport = SportType.Football, LeagueId = "fra.1", Category = "European Giants", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/160.png" },
+        new() { Id = "fb-int", Name = "Inter Milan", Code = "INT", Sport = SportType.Football, LeagueId = "ita.1", Category = "European Giants", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/110.png" },
+        new() { Id = "fb-juv", Name = "Juventus", Code = "JUV", Sport = SportType.Football, LeagueId = "ita.1", Category = "European Giants", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/111.png" },
+
+        // Football - Indian Super League
+        new() { Id = "fb-kbf", Name = "Kerala Blasters", Code = "KBFC", Sport = SportType.Football, LeagueId = "ind.1", Category = "Indian Super League (ISL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/17708.png" },
+        new() { Id = "fb-mbg", Name = "Mohun Bagan SG", Code = "MBSG", Sport = SportType.Football, LeagueId = "ind.1", Category = "Indian Super League (ISL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/19088.png" },
+
+        // Football - National Teams
+        new() { Id = "fb-arg", Name = "Argentina", Code = "ARG", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/202.png" },
+        new() { Id = "fb-bra", Name = "Brazil", Code = "BRA", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/205.png" },
+        new() { Id = "fb-fra", Name = "France", Code = "FRA", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/476.png" },
+        new() { Id = "fb-esp", Name = "Spain", Code = "ESP", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/164.png" },
+        new() { Id = "fb-eng", Name = "England", Code = "ENG", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/448.png" },
+        new() { Id = "fb-por", Name = "Portugal", Code = "POR", Sport = SportType.Football, LeagueId = "fifa.world", Category = "National Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/soccer/500/468.png" },
+
+        // Cricket - International Teams
+        new() { Id = "cr-ind", Name = "India", Code = "IND", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/6.png" },
+        new() { Id = "cr-aus", Name = "Australia", Code = "AUS", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/2.png" },
+        new() { Id = "cr-eng", Name = "England", Code = "ENG", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/1.png" },
+        new() { Id = "cr-pak", Name = "Pakistan", Code = "PAK", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/7.png" },
+        new() { Id = "cr-sa",  Name = "South Africa", Code = "SA", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/3.png" },
+        new() { Id = "cr-nz",  Name = "New Zealand", Code = "NZ", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5.png" },
+        new() { Id = "cr-wi",  Name = "West Indies", Code = "WI", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4.png" },
+        new() { Id = "cr-ban", Name = "Bangladesh", Code = "BAN", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/25.png" },
+        new() { Id = "cr-sl",  Name = "Sri Lanka", Code = "SL", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/8.png" },
+        new() { Id = "cr-afg", Name = "Afghanistan", Code = "AFG", Sport = SportType.Cricket, LeagueId = "cricket", Category = "International Teams", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/40.png" },
+
+        // Cricket - Indian Premier League (IPL)
+        new() { Id = "cr-csk", Name = "Chennai Super Kings", Code = "CSK", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4342.png" },
+        new() { Id = "cr-rcb", Name = "Royal Challengers Bengaluru", Code = "RCB", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4340.png" },
+        new() { Id = "cr-mi",  Name = "Mumbai Indians", Code = "MI", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4346.png" },
+        new() { Id = "cr-kkr", Name = "Kolkata Knight Riders", Code = "KKR", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4341.png" },
+        new() { Id = "cr-srh", Name = "Sunrisers Hyderabad", Code = "SRH", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5143.png" },
+        new() { Id = "cr-gt",  Name = "Gujarat Titans", Code = "GT", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/1298423.png" },
+        new() { Id = "cr-rr",  Name = "Rajasthan Royals", Code = "RR", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4345.png" },
+        new() { Id = "cr-dc",  Name = "Delhi Capitals", Code = "DC", Sport = SportType.Cricket, LeagueId = "8048", Category = "Indian Premier League (IPL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/4344.png" },
+
+        // Cricket - Big Bash League (BBL)
+        new() { Id = "cr-per", Name = "Perth Scorchers", Code = "PER", Sport = SportType.Cricket, LeagueId = "8044", Category = "Big Bash League (BBL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5239.png" },
+        new() { Id = "cr-syd", Name = "Sydney Sixers", Code = "SYS", Sport = SportType.Cricket, LeagueId = "8044", Category = "Big Bash League (BBL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5241.png" },
+        new() { Id = "cr-mel", Name = "Melbourne Renegades", Code = "MLR", Sport = SportType.Cricket, LeagueId = "8044", Category = "Big Bash League (BBL)", LogoUrl = "https://a.espncdn.com/i/teamlogos/cricket/500/5237.png" }
     ];
 
     private SportsService()
