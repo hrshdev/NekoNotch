@@ -7,6 +7,7 @@ using System.Linq;
 using System.Media;
 using System.Runtime.InteropServices;
 using System.Speech.Recognition;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
