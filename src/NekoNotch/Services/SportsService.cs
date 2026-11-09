@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -145,7 +146,8 @@ public sealed partial class SportsService : ObservableObject
 
     private SportsConfig _config = new();
     private readonly List<SportMatch> _matches = [];
-    private readonly Dictionary<string, (string homeScore, string awayScore)> _prevScores = [];
+    private readonly ConcurrentDictionary<string, (string homeScore, string awayScore)> _prevScores = new();
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     [ObservableProperty] private SportMatch? _activeMatch;
     [ObservableProperty] private bool _isMatchLive;
@@ -285,7 +287,10 @@ public sealed partial class SportsService : ObservableObject
 
     public async Task RefreshMatchesAsync()
     {
-        var fetched = new List<SportMatch>();
+        if (!await _refreshLock.WaitAsync(0)) return;
+        try
+        {
+            var fetched = new List<SportMatch>();
 
         // 1. Fetch Global Cricket Matches (Live, series, tours, leagues)
         try
@@ -357,13 +362,36 @@ public sealed partial class SportsService : ObservableObject
             _prevScores[m.Id] = (m.HomeScore, m.AwayScore);
         }
 
-        System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+        var app = System.Windows.Application.Current;
+        if (app != null && app.Dispatcher != null)
         {
-            _matches.Clear();
-            _matches.AddRange(distinctMatches);
-            UpdateActiveMatch();
-            MatchesUpdated?.Invoke();
-        });
+            app.Dispatcher.Invoke(() =>
+            {
+                _matches.Clear();
+                _matches.AddRange(distinctMatches);
+                UpdateActiveMatch();
+                MatchesUpdated?.Invoke();
+            });
+        }
+        else
+        {
+            lock (_matches)
+            {
+                _matches.Clear();
+                _matches.AddRange(distinctMatches);
+                UpdateActiveMatch();
+                MatchesUpdated?.Invoke();
+            }
+        }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
     }
 
     private void UpdateActiveMatch()
