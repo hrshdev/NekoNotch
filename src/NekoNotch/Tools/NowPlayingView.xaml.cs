@@ -149,7 +149,9 @@ public partial class NowPlayingView : UserControl, IToolView
 
         _lyrics = lyrics;
         var isSynced = lyrics.IsSynced;
-        LyricsBadgeText.Text = isSynced ? "♪ Synced" : "≡ Plain Lyrics";
+        LyricsBadgeMusicIcon.Visibility = isSynced ? Visibility.Visible : Visibility.Collapsed;
+        LyricsBadgeLinesIcon.Visibility = isSynced ? Visibility.Collapsed : Visibility.Visible;
+        LyricsBadgeText.Text = isSynced ? "Synced" : "Plain Lyrics";
         LyricsBadge.Visibility = Visibility.Visible;
         LyricsScroll.OpacityMask = isSynced ? SyncedMask : PlainMask;
         LyricsScroll.ScrollToTop();

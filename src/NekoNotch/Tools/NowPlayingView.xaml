@@ -170,12 +170,20 @@
 
                     <!-- Header: Badge + Close button -->
                     <Grid Grid.Row="0" Margin="4,0,2,8">
-                        <Border x:Name="LyricsBadge" CornerRadius="6" Padding="8,3" HorizontalAlignment="Left"
+                        <Border x:Name="LyricsBadge" CornerRadius="6" Padding="8,3.5" HorizontalAlignment="Left" VerticalAlignment="Center"
                                 Background="{DynamicResource Surface2Brush}">
-                            <TextBlock x:Name="LyricsBadgeText" Text="♪ Synced" FontSize="10.5" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AccentBrush}" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <hero:HeroIcon x:Name="LyricsBadgeMusicIcon" Kind="MusicNote" Width="10" Height="10" Margin="0,0,5,0"
+                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Visibility="Collapsed" />
+                                <Path x:Name="LyricsBadgeLinesIcon" Width="10" Height="8" Stretch="Fill"
+                                      Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M 0 0.75 L 10 0.75 M 0 4 L 10 4 M 0 7.25 L 10 7.25"
+                                      Margin="0,0,5,0" VerticalAlignment="Center" Visibility="Collapsed" />
+                                <TextBlock x:Name="LyricsBadgeText" Text="Synced" FontSize="10.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
                         </Border>
-                        <Button Style="{StaticResource IconButton}" Width="24" Height="24" HorizontalAlignment="Right"
+                        <Button Style="{StaticResource IconButton}" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Center"
                                 ToolTip="Close Lyrics" Click="OnToggleLyrics" Foreground="{DynamicResource SubTextBrush}">
                             <hero:HeroIcon Kind="XMark" Width="12" Height="12" />
                         </Button>
