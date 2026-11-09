@@ -258,6 +258,22 @@ public partial class ControlsView : UserControl, IToolView, IEscapeHandler
         });
     }
 
+    private void OnBrightnessCardMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        var step = e.Delta > 0 ? 5 : -5;
+        var next = Math.Clamp(BrightnessSlider.Value + step, 0, 100);
+        BrightnessSlider.Value = next;
+    }
+
+    private void OnVolumeCardMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        var step = e.Delta > 0 ? 5 : -5;
+        var next = Math.Clamp(VolumeSlider.Value + step, 0, 100);
+        VolumeSlider.Value = next;
+    }
+
     private void OnBrightnessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_updatingFromSystem) return;
