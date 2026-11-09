@@ -258,6 +258,12 @@ public partial class NotchWindow : Window
 
         {
 
+            if (_isVoiceActive)
+            {
+                DismissVoice();
+                return;
+            }
+
             if (!_expanded) Expand(activate: true);
 
         };
@@ -518,9 +524,15 @@ public partial class NotchWindow : Window
 
             case "voice":
 
-                if (_expanded) Collapse();
-
-                VoiceAssistantService.Instance.TriggerWake();
+                if (_isVoiceActive)
+                {
+                    DismissVoice();
+                }
+                else
+                {
+                    if (_expanded) Collapse();
+                    VoiceAssistantService.Instance.TriggerWake();
+                }
 
                 break;
 
@@ -1387,6 +1399,13 @@ public partial class NotchWindow : Window
     private void OnKeyDown(object sender, KeyEventArgs e)
 
     {
+
+        if (_isVoiceActive && e.Key == Key.Escape)
+        {
+            DismissVoice();
+            e.Handled = true;
+            return;
+        }
 
         if (!_expanded) return;
 
@@ -3081,7 +3100,31 @@ public partial class NotchWindow : Window
     {
         e.Handled = true;
         Collapse();
-        VoiceAssistantService.Instance.TriggerWake();
+        if (_isVoiceActive)
+        {
+            DismissVoice();
+        }
+        else
+        {
+            VoiceAssistantService.Instance.TriggerWake();
+        }
+    }
+
+    private void OnVoiceDismissClick(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        DismissVoice();
+    }
+
+    private void DismissVoice()
+    {
+        VoiceAssistantService.Instance.StopListening();
+        _isVoiceActive = false;
+        HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(200) });
+        NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(200) });
+        LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(200) });
+        RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(200) });
+        UpdateActivity();
     }
 
     private bool _isVoiceActive;

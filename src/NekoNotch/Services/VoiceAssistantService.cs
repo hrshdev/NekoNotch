@@ -38,6 +38,8 @@ public sealed partial class VoiceAssistantService : ObservableObject
     private readonly Dispatcher _ui = Application.Current.Dispatcher;
     private SpeechRecognitionEngine? _engine;
     private readonly DispatcherTimer _silenceTimer = new() { Interval = TimeSpan.FromSeconds(7) };
+    private DispatcherTimer? _retryTimer;
+    private int _unrecognizedRetryCount = 0;
 
     [ObservableProperty] private VoiceState _state = VoiceState.Idle;
     [ObservableProperty] private string _liveHypothesis = "";
@@ -104,11 +106,24 @@ public sealed partial class VoiceAssistantService : ObservableObject
         });
     }
 
+    public void StopListening()
+    {
+        _silenceTimer.Stop();
+        _retryTimer?.Stop();
+        _unrecognizedRetryCount = 0;
+        State = VoiceState.Idle;
+        LiveHypothesis = "";
+        FeedbackMessage = "";
+        ListeningEnded?.Invoke();
+    }
+
     public void Stop()
     {
         try
         {
             _silenceTimer.Stop();
+            _retryTimer?.Stop();
+            _unrecognizedRetryCount = 0;
             if (_engine != null)
             {
                 _engine.SpeechHypothesized -= OnSpeechHypothesized;
@@ -301,6 +316,8 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
     public void TriggerWake()
     {
+        _retryTimer?.Stop();
+        _unrecognizedRetryCount = 0;
         State = VoiceState.Listening;
         LiveHypothesis = "Listening…";
         _silenceTimer.Stop();
@@ -329,12 +346,21 @@ public sealed partial class VoiceAssistantService : ObservableObject
     public void ExecuteVoiceCommand(string phrase)
     {
         _silenceTimer.Stop();
+        _retryTimer?.Stop();
         State = VoiceState.Processing;
         LastCommand = phrase;
 
         var cmd = phrase.ToLowerInvariant().Trim();
         bool success = true;
         string message = "";
+
+        // ----------------- 0. CANCEL / CLOSE / STOP LISTENING
+        if (cmd is "cancel" or "stop" or "close" or "exit" or "never mind" or "nevermind" or "dismiss" or "bye" or "shut up" or "quiet"
+            || cmd.StartsWith("cancel ") || cmd.StartsWith("close voice") || cmd.StartsWith("stop listening"))
+        {
+            StopListening();
+            return;
+        }
 
         // ----------------- 1. MEDIA CONTROLS
         if (cmd.Contains("pause") || cmd == "stop music" || cmd == "stop song")
@@ -540,6 +566,13 @@ public sealed partial class VoiceAssistantService : ObservableObject
         else
         {
             success = false;
+            _unrecognizedRetryCount++;
+            if (_unrecognizedRetryCount >= 2)
+            {
+                // Cap retry attempts so ambient mic noise doesn't loop forever
+                StopListening();
+                return;
+            }
             message = $"Say again: \"{phrase}\"";
         }
 
@@ -550,10 +583,11 @@ public sealed partial class VoiceAssistantService : ObservableObject
             FeedbackMessage = message;
             CommandCompleted?.Invoke(message, false);
 
-            var retryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.8) };
-            retryTimer.Tick += (_, _) =>
+            _retryTimer?.Stop();
+            _retryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.8) };
+            _retryTimer.Tick += (_, _) =>
             {
-                retryTimer.Stop();
+                _retryTimer?.Stop();
                 if (State == VoiceState.Listening)
                 {
                     LiveHypothesis = "Listening…";
@@ -563,10 +597,11 @@ public sealed partial class VoiceAssistantService : ObservableObject
                     ReturnedToListening?.Invoke();
                 }
             };
-            retryTimer.Start();
+            _retryTimer.Start();
             return;
         }
 
+        _unrecognizedRetryCount = 0;
         State = VoiceState.Executed;
         FeedbackMessage = message;
         PetSoundService.PlayDone();
