@@ -587,15 +587,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
         switch (target)
         {
             case "spotify":
-                try
-                {
-                    Process.Start(new ProcessStartInfo("spotify:") { UseShellExecute = true });
-                }
-                catch
-                {
-                    AppLauncher.Launch("spotify");
-                }
-                RestoreExistingApp("Spotify");
+                AppLauncher.OpenSpotify();
                 return (true, "Opened Spotify");
 
             case "chrome":
@@ -666,6 +658,21 @@ public sealed partial class VoiceAssistantService : ObservableObject
     }
 
     [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     [DllImport("user32.dll")]
@@ -693,10 +700,26 @@ public sealed partial class VoiceAssistantService : ObservableObject
                 GetWindowThreadProcessId(hWnd, out var pid);
                 if (pids.Contains(pid))
                 {
-                    found = hWnd;
-                    ShowWindow(hWnd, 9 /* SW_RESTORE */);
-                    SetForegroundWindow(hWnd);
-                    return false;
+                    var cb = new StringBuilder(256);
+                    GetClassName(hWnd, cb, 256);
+                    var cls = cb.ToString();
+
+                    var sb = new StringBuilder(512);
+                    GetWindowText(hWnd, sb, 512);
+                    var title = sb.ToString();
+
+                    RECT r;
+                    GetWindowRect(hWnd, out r);
+                    int w = r.Right - r.Left;
+                    int h = r.Bottom - r.Top;
+
+                    // Filter out zero-size hidden Chromium/utility helper windows
+                    if (IsIconic(hWnd) || w > 150 || h > 150 || !string.IsNullOrWhiteSpace(title))
+                    {
+                        found = hWnd;
+                        AppLauncher.BringToFront(hWnd);
+                        return false;
+                    }
                 }
                 return true;
             }, IntPtr.Zero);

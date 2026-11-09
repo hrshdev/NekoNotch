@@ -69,6 +69,12 @@ public static class AppLauncher
         mouse_event(MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
     }
 
+        [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
     private const int SwRestore = 9;
     private const int SwShow = 5;
 
@@ -80,7 +86,7 @@ public static class AppLauncher
         "zen", "firefox", "chrome", "msedge", "brave", "opera", "vivaldi", "arc", "chromium", "waterfox"
     };
 
-    private static bool BringToFront(IntPtr hWnd)
+    public static bool BringToFront(IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero) return false;
         try
@@ -317,6 +323,127 @@ public static class AppLauncher
     /// it searches across open browser tabs, switches directly to that tab, and brings the window to front.
     /// If media is playing in a native app (Spotify, Netflix App, Apple Music, VLC), it activates that app.
     /// </summary>
+        public static bool OpenSpotify()
+    {
+        // 1. If Spotify has a window, unminimize and bring it to front
+        var hWnd = FindSpotifyMainWindow();
+        if (hWnd != IntPtr.Zero)
+        {
+            return BringToFront(hWnd);
+        }
+
+        // 2. If Spotify is running without a window (e.g. minimized to tray) or not running yet:
+        // Try WindowsApps execution alias (Microsoft Store package)
+        try
+        {
+            var winApps = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                @"Microsoft\WindowsApps\Spotify.exe");
+            if (File.Exists(winApps))
+            {
+                Process.Start(new ProcessStartInfo(winApps) { UseShellExecute = true });
+                Thread.Sleep(250);
+                hWnd = FindSpotifyMainWindow();
+                if (hWnd != IntPtr.Zero) BringToFront(hWnd);
+                return true;
+            }
+        }
+        catch { }
+
+        // 3. Try standard AppData desktop installation
+        try
+        {
+            var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                @"Spotify\Spotify.exe");
+            if (File.Exists(appData))
+            {
+                Process.Start(new ProcessStartInfo(appData) { UseShellExecute = true });
+                Thread.Sleep(250);
+                hWnd = FindSpotifyMainWindow();
+                if (hWnd != IntPtr.Zero) BringToFront(hWnd);
+                return true;
+            }
+        }
+        catch { }
+
+        // 4. Try Store AppUserModelID directly via explorer shell:AppsFolder
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "shell:AppsFolder\\SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify",
+                UseShellExecute = true
+            });
+            Thread.Sleep(250);
+            hWnd = FindSpotifyMainWindow();
+            if (hWnd != IntPtr.Zero) BringToFront(hWnd);
+            return true;
+        }
+        catch { }
+
+        // 5. Fallback: spotify: protocol
+        try
+        {
+            Process.Start(new ProcessStartInfo("spotify:") { UseShellExecute = true });
+            Thread.Sleep(250);
+            hWnd = FindSpotifyMainWindow();
+            if (hWnd != IntPtr.Zero) BringToFront(hWnd);
+            return true;
+        }
+        catch { }
+
+        return false;
+    }
+
+    public static IntPtr FindSpotifyMainWindow()
+    {
+        var spotPids = new HashSet<uint>(
+            Process.GetProcesses()
+                   .Where(p => p.ProcessName.IndexOf("Spotify", StringComparison.OrdinalIgnoreCase) >= 0)
+                   .Select(p => (uint)p.Id)
+        );
+
+        if (spotPids.Count == 0) return IntPtr.Zero;
+
+        IntPtr bestWnd = IntPtr.Zero;
+        EnumWindows((hWnd, _) =>
+        {
+            GetWindowThreadProcessId(hWnd, out var pid);
+            if (spotPids.Contains(pid))
+            {
+                var cb = new StringBuilder(256);
+                GetClassName(hWnd, cb, 256);
+                var cls = cb.ToString();
+
+                var sb = new StringBuilder(512);
+                GetWindowText(hWnd, sb, 512);
+                var title = sb.ToString();
+
+                RECT r;
+                GetWindowRect(hWnd, out r);
+                int w = r.Right - r.Left;
+                int h = r.Bottom - r.Top;
+
+                if (cls.IndexOf("Chrome_WidgetWin", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (IsIconic(hWnd) || w > 150 || h > 150 || !string.IsNullOrWhiteSpace(title))
+                    {
+                        bestWnd = hWnd;
+                        return false; // Found real GUI window
+                    }
+                }
+                else if (cls == "SpotifyMainWindow" || (!string.IsNullOrWhiteSpace(title) && title.IndexOf("Spotify", StringComparison.OrdinalIgnoreCase) >= 0))
+                {
+                    bestWnd = hWnd;
+                    return false;
+                }
+            }
+            return true;
+        }, IntPtr.Zero);
+
+        return bestWnd;
+    }
+
     public static void LaunchMediaSource(string? sourceAumid, string? sourceApp, string? title, string? artist)
     {
         var searchTerms = BuildMediaSearchTerms(title, artist, sourceApp, sourceAumid);
