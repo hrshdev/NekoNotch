@@ -302,11 +302,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
         _silenceTimer.Interval = TimeSpan.FromSeconds(7);
         _silenceTimer.Start();
 
-        // Play subtle wake chime if enabled
-        if (App.Settings.VoiceChime)
-        {
-            try { SystemSounds.Asterisk.Play(); } catch { }
-        }
+        PetSoundService.PlayWake();
 
         WakeWordTriggered?.Invoke();
     }
@@ -544,6 +540,7 @@ public sealed partial class VoiceAssistantService : ObservableObject
 
         State = VoiceState.Executed;
         FeedbackMessage = message;
+        if (success) PetSoundService.PlayDone();
         CommandCompleted?.Invoke(message, success);
 
         // Reset to Idle after brief confirmation

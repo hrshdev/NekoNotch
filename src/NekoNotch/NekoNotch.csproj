@@ -31,6 +31,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\emoji-test.txt" />
     <EmbeddedResource Include="Resources\phone.html" />
+    <EmbeddedResource Include="Resources\Sounds\*.wav" />
     <Resource Include="Fonts\*.ttf" />
     <Resource Include="Fonts\*.CompositeFont" />
     <Resource Include="Assets\Brand\NekoNotch.ico" />

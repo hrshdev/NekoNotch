@@ -87,6 +87,7 @@ public partial class App : Application
         _ = PhoneTransferService.Instance.SyncAsync(); // LAN server, only when the user turned it on
         UpdateService.Instance.Start(); // first look a couple of minutes in, then daily
         CalendarFeedService.Instance.Start(); // subscribed calendars, every 30 minutes
+        PetSoundService.Initialize();
         VoiceAssistantService.Instance.Start(); // offline voice assistant & wake word ("Hey Neko")
 
         // `NekoNotch.exe --open weather` starts with the panel open on a tool.

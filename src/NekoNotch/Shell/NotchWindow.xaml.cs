@@ -5141,6 +5141,8 @@ public partial class NotchWindow : Window
 
 
 
+            PetSoundService.PlayPurr();
+
             // Cute happy purr jiggle
 
             var purr = new DoubleAnimation
