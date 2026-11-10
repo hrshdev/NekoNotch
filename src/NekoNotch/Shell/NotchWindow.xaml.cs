@@ -382,7 +382,7 @@ public partial class NotchWindow : Window
         SportsService.Instance.CelebrationOccurred += (ev) => Dispatcher.InvokeAsync(() => HandleSportsCelebration(ev));
         SportsService.Instance.MatchEventOccurred += (match, banner) => Dispatcher.InvokeAsync(() =>
         {
-            if (!_celebratingSportsEvent) TriggerCheerAnimation(banner);
+            if (!_celebratingSportsEvent && SportsService.Instance.ActiveMatch?.Id == match.Id) TriggerCheerAnimation(banner);
         });
         UpdateActivity();
 
@@ -1838,11 +1838,21 @@ public partial class NotchWindow : Window
         var sm = SportsService.Instance.ActiveMatch;
         if (sm == null || !SportsService.Instance.ShowScoreInNotch || SportsLeftGroup == null || SportsRightGroup == null) return _idleW;
 
-        SportsLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        SportsRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-
-        var leftW = SportsLeftGroup.DesiredSize.Width;
-        var rightW = SportsRightGroup.DesiredSize.Width;
+        double leftW, rightW;
+        if (_celebratingSportsEvent && SportsCelebrationLeft != null && SportsCelebrationRight != null)
+        {
+            SportsCelebrationLeft.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            SportsCelebrationRight.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            leftW = SportsCelebrationLeft.DesiredSize.Width;
+            rightW = SportsCelebrationRight.DesiredSize.Width;
+        }
+        else
+        {
+            SportsLeftGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            SportsRightGroup.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            leftW = SportsLeftGroup.DesiredSize.Width;
+            rightW = SportsRightGroup.DesiredSize.Width;
+        }
 
         var sideMax = Math.Max(leftW, rightW);
 
@@ -1851,8 +1861,6 @@ public partial class NotchWindow : Window
         const double paddingAndMargins = 28;
 
         var needed = sideMax * 2 + centerGap + paddingAndMargins;
-        if (_celebratingSportsEvent) needed = Math.Max(needed, 340);
-
         return Math.Clamp(Math.Ceiling(needed), 220, 440);
     }
 
@@ -3076,25 +3084,182 @@ public partial class NotchWindow : Window
         OpenTool("sports");
     }
 
+    private void OnSportsPartRightClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        SportsService.Instance.UnpinMatch();
+    }
+
     private DispatcherTimer? _sportsCelebrationTimer;
 
     private void HandleSportsCelebration(SportsCelebrationEvent ev)
     {
-        // 1. Sliding Dynamic Island Peek notification at the top of the screen
-        EnqueuePeek(new PeekRequest(
-            "sports:" + ev.Match.Id,
-            () => CelebrationTile(ev.Emoji, ev.BadgeBackgroundHex),
-            ev.Title,
-            ev.Detail,
-            TimeSpan.FromSeconds(5),
-            OnClick: () => OpenTool("sports")
-        ));
+        // Only celebrate if closed notch is currently tracking the pinned match
+        var sm = SportsService.Instance.ActiveMatch;
+        if (sm == null || sm.Id != ev.Match.Id) return;
 
-        // Subtle chime for celebration event
+        // Play celebration audio chime
         try { PlayNotificationChime(); } catch { }
 
-        // 2. Trigger island pet cheer + compact badge in the closed notch island
-        TriggerCheerAnimation(ev);
+        // Trigger in-notch spin down celebration transition
+        TriggerSportsSpinAnimation(ev);
+    }
+
+    private void TriggerSportsSpinAnimation(SportsCelebrationEvent ev)
+    {
+        if (_expanded || SportsPart == null || SportsLeftGroup == null || SportsRightGroup == null ||
+            SportsCelebrationLeft == null || SportsCelebrationRight == null) return;
+
+        _celebratingSportsEvent = true;
+
+        // Set celebration text & badge colors
+        SportsCelebrationBadgeText.Text = ev.BadgeText;
+        SportsCelebrationDetailText.Text = ev.Detail;
+        try
+        {
+            if (ColorConverter.ConvertFromString(ev.BadgeBackgroundHex) is Color bgCol)
+            {
+                SportsCelebrationPill.Background = new SolidColorBrush(bgCol);
+            }
+            if (ColorConverter.ConvertFromString(ev.BadgeForegroundHex) is Color fgCol)
+            {
+                SportsCelebrationBadgeText.Foreground = new SolidColorBrush(fgCol);
+                SportsCelebrationPill.BorderBrush = new SolidColorBrush(Color.FromArgb(120, fgCol.R, fgCol.G, fgCol.B));
+            }
+        }
+        catch { }
+
+        // 1. Normal scorecard spins / rolls down and fades out
+        var rollOutScore = new DoubleAnimation
+        {
+            From = 0,
+            To = 24,
+            Duration = TimeSpan.FromMilliseconds(260),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        var fadeOutScore = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(200)
+        };
+
+        SportsLeftShift.BeginAnimation(TranslateTransform.YProperty, rollOutScore);
+        SportsRightShift.BeginAnimation(TranslateTransform.YProperty, rollOutScore);
+        SportsLeftGroup.BeginAnimation(UIElement.OpacityProperty, fadeOutScore);
+        SportsRightGroup.BeginAnimation(UIElement.OpacityProperty, fadeOutScore);
+
+        // 2. Celebration rolls in from the top into view
+        SportsCelebrationLeft.Visibility = Visibility.Visible;
+        SportsCelebrationRight.Visibility = Visibility.Visible;
+
+        var rollInCelebration = new DoubleAnimation
+        {
+            From = -24,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(320),
+            EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut }
+        };
+        var fadeInCelebration = new DoubleAnimation
+        {
+            From = 0.0,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(260)
+        };
+
+        SportsCelebrationLeftShift.BeginAnimation(TranslateTransform.YProperty, rollInCelebration);
+        SportsCelebrationRightShift.BeginAnimation(TranslateTransform.YProperty, rollInCelebration);
+        SportsCelebrationLeft.BeginAnimation(UIElement.OpacityProperty, fadeInCelebration);
+        SportsCelebrationRight.BeginAnimation(UIElement.OpacityProperty, fadeInCelebration);
+
+        // Center Mochi pet cheers with victory eyes and bouncy jump
+        _isCheering = true;
+        HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { From = 0.0, To = 1.0, Duration = TimeSpan.FromMilliseconds(250) });
+        NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { From = 1.0, To = 0.0, Duration = TimeSpan.FromMilliseconds(250) });
+        LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.95, Duration = TimeSpan.FromMilliseconds(200) });
+        RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.95, Duration = TimeSpan.FromMilliseconds(200) });
+
+        var jump = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(1500),
+            RepeatBehavior = new RepeatBehavior(2)
+        };
+        jump.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromPercent(0.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(1.22, KeyTime.FromPercent(0.3), new KeySpline(0.1, 0.9, 0.2, 1.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(0.92, KeyTime.FromPercent(0.6), new KeySpline(0.2, 0.0, 0.2, 1.0)));
+        jump.KeyFrames.Add(new SplineDoubleKeyFrame(1.0, KeyTime.FromPercent(1.0), new KeySpline(0.1, 0.9, 0.2, 1.0)));
+        PetBreatheScale.BeginAnimation(ScaleTransform.ScaleYProperty, jump);
+
+        // Smoothly adjust notch width for celebration
+        _width.Target = ActivityWidth();
+        StartAnimation();
+
+        // 3. Hold for 3.5 seconds, then spin celebration down and roll normal score back in from top
+        _sportsCelebrationTimer?.Stop();
+        _sportsCelebrationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
+        _sportsCelebrationTimer.Tick += (s, e) =>
+        {
+            _sportsCelebrationTimer.Stop();
+
+            // Celebration rolls down out of view
+            var rollOutCelebration = new DoubleAnimation
+            {
+                From = 0,
+                To = 24,
+                Duration = TimeSpan.FromMilliseconds(240),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            var fadeOutCelebration = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(180)
+            };
+
+            SportsCelebrationLeftShift.BeginAnimation(TranslateTransform.YProperty, rollOutCelebration);
+            SportsCelebrationRightShift.BeginAnimation(TranslateTransform.YProperty, rollOutCelebration);
+            SportsCelebrationLeft.BeginAnimation(UIElement.OpacityProperty, fadeOutCelebration);
+            SportsCelebrationRight.BeginAnimation(UIElement.OpacityProperty, fadeOutCelebration);
+
+            // Re-render latest score if match updated
+            if (SportsService.Instance.ActiveMatch is { } latest)
+            {
+                RenderSportsScorecard(latest);
+            }
+
+            // Normal score rolls in from top
+            var rollInScore = new DoubleAnimation
+            {
+                From = -24,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(300),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            var fadeInScore = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(260)
+            };
+
+            SportsLeftShift.BeginAnimation(TranslateTransform.YProperty, rollInScore);
+            SportsRightShift.BeginAnimation(TranslateTransform.YProperty, rollInScore);
+            SportsLeftGroup.BeginAnimation(UIElement.OpacityProperty, fadeInScore);
+            SportsRightGroup.BeginAnimation(UIElement.OpacityProperty, fadeInScore);
+
+            // Pet eyes back to normal
+            _celebratingSportsEvent = false;
+            _isCheering = false;
+            HappyEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.0, Duration = TimeSpan.FromMilliseconds(350) });
+            NormalEyes.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 1.0, Duration = TimeSpan.FromMilliseconds(350) });
+            LeftBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(350) });
+            RightBlush.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation { To = 0.45, Duration = TimeSpan.FromMilliseconds(350) });
+
+            // Restore normal notch width
+            _width.Target = ActivityWidth();
+            StartAnimation();
+        };
+        _sportsCelebrationTimer.Start();
     }
 
     private static FrameworkElement CelebrationTile(string emoji, string bgHex)

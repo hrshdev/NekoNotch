@@ -239,7 +239,7 @@
                                                         <TextBlock Text="{Binding StatusDetail}" FontSize="9" FontWeight="Bold" Foreground="{Binding StatusFgBrush}" />
                                                     </Border>
                                                     <Button Style="{StaticResource IconButton}" Width="18" Height="18"
-                                                            ToolTip="Pin to Dynamic Island" Click="OnPinItemClick" Tag="{Binding Id}">
+                                                            ToolTip="{Binding PinToolTip}" Click="OnPinItemClick" Tag="{Binding Id}">
                                                         <hero:HeroIcon Kind="Pin" Width="10" Height="10" Foreground="{Binding PinColor}" />
                                                     </Button>
                                                 </StackPanel>
@@ -310,7 +310,7 @@
 
                     <Button x:Name="DetailPinBtn" HorizontalAlignment="Right" Style="{StaticResource ActionChip}" Click="OnDetailPinClick">
                         <StackPanel Orientation="Horizontal">
-                            <hero:HeroIcon Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
+                            <hero:HeroIcon x:Name="DetailPinIcon" Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
                             <TextBlock x:Name="DetailPinText" Text="Pin to Notch" FontSize="10" />
                         </StackPanel>
                     </Button>

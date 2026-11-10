@@ -41,6 +41,8 @@ public sealed partial class SportsView : UserControl, IToolView
         public Brush StatusBgBrush { get; set; } = Brushes.Transparent;
         public Brush StatusFgBrush { get; set; } = Brushes.White;
         public Brush PinColor { get; set; } = Brushes.Gray;
+        public bool IsPinned { get; set; }
+        public string PinToolTip => IsPinned ? "Unpin from Notch" : "Pin to Notch";
     }
 
     public sealed class TeamCardViewModel
@@ -470,16 +472,18 @@ public sealed partial class SportsView : UserControl, IToolView
         var grayBg = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
 
         var matchCards = new List<MatchCardViewModel>();
+        var pinnedId = SportsService.Instance.PinnedMatchId;
         foreach (var m in matchList)
         {
-            var isPinned = activeMatch?.Id == m.Id;
+            var isPinned = !string.IsNullOrEmpty(pinnedId) && m.Id == pinnedId;
             matchCards.Add(new MatchCardViewModel
             {
                 Id = m.Id,
                 RawMatch = m,
                 StatusBgBrush = m.IsLive ? liveBg : grayBg,
                 StatusFgBrush = m.IsLive ? liveGreen : subTextBrush,
-                PinColor = isPinned ? accentBrush : subTextBrush
+                PinColor = isPinned ? accentBrush : subTextBrush,
+                IsPinned = isPinned
             });
         }
 
@@ -561,8 +565,14 @@ public sealed partial class SportsView : UserControl, IToolView
             try { DetailAwayLogo.Source = new BitmapImage(new Uri(m.AwayTeamLogo)); } catch { }
         }
 
-        var isPinned = SportsService.Instance.ActiveMatch?.Id == m.Id;
-        DetailPinText.Text = isPinned ? "Pinned ✓" : "Pin to Notch";
+        var pinnedId = SportsService.Instance.PinnedMatchId;
+        var isPinned = !string.IsNullOrEmpty(pinnedId) && pinnedId == m.Id;
+        DetailPinText.Text = isPinned ? "Unpin from Notch" : "Pin to Notch";
+        DetailPinBtn.ToolTip = isPinned ? "Unpin live match from Notch" : "Pin live match to Notch";
+        var pinAccent = (Brush)TryFindResource("AccentBrush") ?? Brushes.DeepSkyBlue;
+        var normalText = (Brush)TryFindResource("TextBrush") ?? Brushes.White;
+        DetailPinIcon.Foreground = isPinned ? pinAccent : normalText;
+        DetailPinText.Foreground = isPinned ? pinAccent : normalText;
 
         if (m.Sport == SportType.Football)
         {

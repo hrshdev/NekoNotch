@@ -513,8 +513,9 @@
 
 
                     <!-- Sports Live Match Scorecard: Symmetrical around center Mochi pet -->
-                    <Grid x:Name="SportsPart" Margin="10,0,10,0" Visibility="Collapsed" Cursor="Hand"
-                          MouseLeftButtonUp="OnSportsPartClick" ToolTip="Click to open Sports">
+                    <Grid x:Name="SportsPart" Margin="10,0,10,0" Visibility="Collapsed" Cursor="Hand" ClipToBounds="True"
+                          MouseLeftButtonUp="OnSportsPartClick" MouseRightButtonUp="OnSportsPartRightClick"
+                          ToolTip="Click to open Sports • Right-click to unpin">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="70" />
@@ -523,6 +524,9 @@
 
                         <!-- Left Group: Live Dot / Clock + Home Team & Score -->
                         <StackPanel x:Name="SportsLeftGroup" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="SportsLeftShift" Y="0" />
+                            </StackPanel.RenderTransform>
                             <Ellipse x:Name="SportsLiveDot" Width="6" Height="6" Fill="#32D74B" Margin="0,0,4,0" VerticalAlignment="Center">
                                 <Ellipse.Effect><BlurEffect Radius="1.2" /></Ellipse.Effect>
                             </Ellipse>
@@ -531,15 +535,36 @@
                             <TextBlock x:Name="SportsHomeScoreText" Text="2" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
                         </StackPanel>
 
+                        <!-- In-Notch Celebration Left: Event Pill (e.g. ⚽ GOAL! / 💥 SIX!) -->
+                        <StackPanel x:Name="SportsCelebrationLeft" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0" Opacity="0" Visibility="Collapsed">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="SportsCelebrationLeftShift" Y="-24" />
+                            </StackPanel.RenderTransform>
+                            <Border x:Name="SportsCelebrationPill" CornerRadius="6" Padding="6,2" Background="#35FF8A3D" BorderBrush="#80FF8A3D" BorderThickness="1">
+                                <TextBlock x:Name="SportsCelebrationBadgeText" Text="⚽ GOAL!" FontSize="11" FontWeight="Black" Foreground="#FF8A3D" VerticalAlignment="Center" />
+                            </Border>
+                        </StackPanel>
+
                         <!-- Column 1 (70px): Dedicated zone for center Mochi pet with comfortable breathing room -->
 
                         <!-- Right Group: Away Score & Team + Goal/Wicket Tag -->
                         <StackPanel x:Name="SportsRightGroup" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="SportsRightShift" Y="0" />
+                            </StackPanel.RenderTransform>
                             <TextBlock x:Name="SportsAwayScoreText" Text="1" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
                             <TextBlock x:Name="SportsAwayTeamText" Text="CHE" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                             <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="4,1" Margin="5,0,0,0" Visibility="Collapsed">
                                 <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="9.5" FontWeight="Bold" Foreground="#FF8A3D" VerticalAlignment="Center" />
                             </Border>
+                        </StackPanel>
+
+                        <!-- In-Notch Celebration Right: Detail (e.g. ARS (2-1) 74' / IND +6 (84)) -->
+                        <StackPanel x:Name="SportsCelebrationRight" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4,0,0,0" Opacity="0" Visibility="Collapsed">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform x:Name="SportsCelebrationRightShift" Y="-24" />
+                            </StackPanel.RenderTransform>
+                            <TextBlock x:Name="SportsCelebrationDetailText" Text="ARS (2-1) 74'" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
 

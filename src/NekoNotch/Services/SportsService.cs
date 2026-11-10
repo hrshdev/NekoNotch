@@ -305,9 +305,19 @@ public sealed partial class SportsService : ObservableObject
         Task.Run(RefreshMatchesAsync);
     }
 
+    public string? PinnedMatchId => _config.PinnedMatchId;
+
+    public void UnpinMatch()
+    {
+        _config.PinnedMatchId = null;
+        SaveConfig();
+        UpdateActiveMatch();
+        MatchesUpdated?.Invoke();
+    }
+
     public void PinMatch(string? matchId)
     {
-        if (_config.PinnedMatchId == matchId)
+        if (string.IsNullOrEmpty(matchId) || _config.PinnedMatchId == matchId)
         {
             _config.PinnedMatchId = null;
         }
@@ -378,49 +388,55 @@ public sealed partial class SportsService : ObservableObject
             .ThenBy(m => m.StartTime)
             .ToList();
 
-        // Check for celebrations / events on live matches
-        foreach (var m in distinctMatches.Where(x => x.IsLive))
+        // Check for celebrations / events ONLY on the explicitly pinned match!
+        var pinnedId = _config.PinnedMatchId;
+        if (!string.IsNullOrEmpty(pinnedId))
         {
-            if (_prevSnapshots.TryGetValue(m.Id, out var prev))
+            var pinnedMatch = distinctMatches.FirstOrDefault(x => x.Id == pinnedId && x.IsLive);
+            if (pinnedMatch != null && _prevSnapshots.TryGetValue(pinnedMatch.Id, out var prev))
             {
-                if (m.Sport == SportType.Football)
+                if (pinnedMatch.Sport == SportType.Football)
                 {
-                    int.TryParse(m.HomeScore, out var currHome);
-                    int.TryParse(m.AwayScore, out var currAway);
+                    int.TryParse(pinnedMatch.HomeScore, out var currHome);
+                    int.TryParse(pinnedMatch.AwayScore, out var currAway);
 
                     bool homeGoal = currHome > prev.HomeGoals;
                     bool awayGoal = currAway > prev.AwayGoals;
 
                     if (homeGoal || awayGoal)
                     {
-                        var scoringTeam = homeGoal ? m.HomeTeamName : m.AwayTeamName;
-                        var time = string.IsNullOrWhiteSpace(m.StatusDetail) ? "" : $" ({m.StatusDetail})";
+                        var scoringTeam = homeGoal ? pinnedMatch.HomeTeamName : pinnedMatch.AwayTeamName;
+                        var scoringCode = homeGoal ? pinnedMatch.HomeTeamCode : pinnedMatch.AwayTeamCode;
+                        var time = string.IsNullOrWhiteSpace(pinnedMatch.StatusDetail) ? "" : $" {pinnedMatch.StatusDetail}";
                         var ev = new SportsCelebrationEvent
                         {
-                            Match = m,
+                            Match = pinnedMatch,
                             Type = SportsCelebrationType.Goal,
                             BadgeText = "⚽ GOAL!",
                             Title = $"⚽ GOAL! - {scoringTeam}",
-                            Detail = $"{m.HomeTeamCode} {m.HomeScore} - {m.AwayScore} {m.AwayTeamCode}{time}",
+                            Detail = $"{scoringCode} ({pinnedMatch.HomeScore}-{pinnedMatch.AwayScore}){time}",
                             Emoji = "⚽",
                             BadgeBackgroundHex = "#3530D158",
                             BadgeForegroundHex = "#30D158"
                         };
                         LatestEventBanner = ev.BadgeText;
                         CelebrationOccurred?.Invoke(ev);
-                        MatchEventOccurred?.Invoke(m, ev.BadgeText);
+                        MatchEventOccurred?.Invoke(pinnedMatch, ev.BadgeText);
                     }
                 }
-                else if (m.Sport == SportType.Cricket)
+                else if (pinnedMatch.Sport == SportType.Cricket)
                 {
-                    var (hRuns, hWickets, hValid) = ParseCricketScore(m.HomeScore);
-                    var (aRuns, aWickets, aValid) = ParseCricketScore(m.AwayScore);
+                    var (hRuns, hWickets, hValid) = ParseCricketScore(pinnedMatch.HomeScore);
+                    var (aRuns, aWickets, aValid) = ParseCricketScore(pinnedMatch.AwayScore);
 
-                    CheckCricketCelebration(m, isHome: true, prev.HomeRuns, prev.HomeWickets, hRuns, hWickets, hValid, prev.HomeRaw != m.HomeScore);
-                    CheckCricketCelebration(m, isHome: false, prev.AwayRuns, prev.AwayWickets, aRuns, aWickets, aValid, prev.AwayRaw != m.AwayScore);
+                    CheckCricketCelebration(pinnedMatch, isHome: true, prev.HomeRuns, prev.HomeWickets, hRuns, hWickets, hValid, prev.HomeRaw != pinnedMatch.HomeScore);
+                    CheckCricketCelebration(pinnedMatch, isHome: false, prev.AwayRuns, prev.AwayWickets, aRuns, aWickets, aValid, prev.AwayRaw != pinnedMatch.AwayScore);
                 }
             }
+        }
 
+        foreach (var m in distinctMatches.Where(x => x.IsLive))
+        {
             var snap = new MatchScoreSnapshot
             {
                 HomeRaw = m.HomeScore,
@@ -479,26 +495,11 @@ public sealed partial class SportsService : ObservableObject
     {
         SportMatch? selected = null;
 
-        // 1. Pinned match if exists
+        // ONLY show the explicitly pinned match! No auto-pinning or auto-fallback to other matches!
         if (!string.IsNullOrEmpty(_config.PinnedMatchId))
         {
             selected = _matches.FirstOrDefault(m => m.Id == _config.PinnedMatchId);
         }
-
-        // 2. Live match involving a followed team ONLY
-        if (selected == null && _config.FollowedTeams.Count > 0)
-        {
-            var followedCodes = _config.FollowedTeams.Select(t => t.Code.ToUpperInvariant()).ToHashSet();
-            var followedNames = _config.FollowedTeams.Select(t => t.Name.ToUpperInvariant()).ToHashSet();
-
-            selected = _matches.FirstOrDefault(m => m.IsLive &&
-                (followedCodes.Contains(m.HomeTeamCode.ToUpperInvariant()) ||
-                 followedCodes.Contains(m.AwayTeamCode.ToUpperInvariant()) ||
-                 followedNames.Any(n => m.HomeTeamName.ToUpperInvariant().Contains(n)) ||
-                 followedNames.Any(n => m.AwayTeamName.ToUpperInvariant().Contains(n))));
-        }
-
-        // NO fallback to random matches! Only show if pinned or if followed team is live.
 
         ActiveMatch = selected;
         IsMatchLive = selected?.IsLive == true;
@@ -916,7 +917,7 @@ public sealed partial class SportsService : ObservableObject
                 Type = SportsCelebrationType.Wicket,
                 BadgeText = "🔴 WICKET!",
                 Title = $"🔴 WICKET! - {teamName}",
-                Detail = $"{teamCode} {currScoreDisplay} • {matchSummary}",
+                Detail = $"{teamCode} {m.CompactHomeScore}",
                 Emoji = "🔴",
                 BadgeBackgroundHex = "#35FF453A",
                 BadgeForegroundHex = "#FF453A"
@@ -938,7 +939,7 @@ public sealed partial class SportsService : ObservableObject
                 Type = SportsCelebrationType.Six,
                 BadgeText = "💥 SIX!",
                 Title = $"💥 SIX! - {teamName}",
-                Detail = $"{teamCode} hits a MAXIMUM! • {matchSummary}",
+                Detail = $"{teamCode} +6 ({currRuns})",
                 Emoji = "💥",
                 BadgeBackgroundHex = "#35FF9F0A",
                 BadgeForegroundHex = "#FF9F0A"
@@ -958,7 +959,7 @@ public sealed partial class SportsService : ObservableObject
                 Type = SportsCelebrationType.Four,
                 BadgeText = "🔥 FOUR!",
                 Title = $"🔥 FOUR! - {teamName}",
-                Detail = $"{teamCode} finds the boundary! • {matchSummary}",
+                Detail = $"{teamCode} +4 ({currRuns})",
                 Emoji = "🔥",
                 BadgeBackgroundHex = "#35FFD60A",
                 BadgeForegroundHex = "#FFD60A"
