@@ -376,12 +376,34 @@ public sealed partial class UpdateService : ObservableObject
             var path = Path.Combine(dir, $"NekoNotch-{version}-setup.msi");
             var part = path + ".part";
 
+            if (File.Exists(path) && asset.Size.HasValue && asset.Size.Value > 0)
+            {
+                var fi = new FileInfo(path);
+                if (fi.Length == asset.Size.Value)
+                {
+                    return path;
+                }
+            }
+
+            if (File.Exists(part))
+            {
+                try { File.Delete(part); } catch { }
+            }
+
             using var response = await Download.GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
+            await using (var stream = await response.Content.ReadAsStreamAsync())
             await using (var file = File.Create(part))
             {
-                await response.Content.CopyToAsync(file);
+                await stream.CopyToAsync(file);
+            }
+
+            var downloadInfo = new FileInfo(part);
+            if (asset.Size.HasValue && asset.Size.Value > 0 && downloadInfo.Length != asset.Size.Value)
+            {
+                try { File.Delete(part); } catch { }
+                return null;
             }
 
             File.Move(part, path, overwrite: true);
@@ -443,13 +465,13 @@ public sealed partial class UpdateService : ObservableObject
             Directory.CreateDirectory(updateDir);
             var scriptPath = Path.Combine(updateDir, "update-msi.cmd");
 
-            // Reliable external script that terminates any running instance, runs silent MSI upgrade, and restarts NekoNotch
+            // Reliable external script that terminates any running instance, waits for silent MSI upgrade to complete, and restarts NekoNotch
             var script =
                 "@echo off\r\n" +
                 "timeout /t 2 /nobreak >nul\r\n" +
                 "taskkill /F /IM NekoNotch.exe >nul 2>&1\r\n" +
                 "timeout /t 1 /nobreak >nul\r\n" +
-                "msiexec.exe /i \"%~1\" /qn REBOOT=ReallySuppress LAUNCHAPP=0\r\n" +
+                "start /wait msiexec.exe /i \"%~1\" /qn REBOOT=ReallySuppress LAUNCHAPP=0\r\n" +
                 "timeout /t 2 /nobreak >nul\r\n" +
                 "start \"\" \"%~2\"\r\n" +
                 "exit /b 0\r\n";
