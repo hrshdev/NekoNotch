@@ -31,16 +31,20 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        var isStartupLaunch = e.Args.Contains("--startup") || e.Args.Contains("--background");
         _mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            try
+            if (!isStartupLaunch)
             {
-                using var wakeup = EventWaitHandle.OpenExisting(WakeupEventName);
-                wakeup.Set();
-            }
-            catch
-            {
+                try
+                {
+                    using var wakeup = EventWaitHandle.OpenExisting(WakeupEventName);
+                    wakeup.Set();
+                }
+                catch
+                {
+                }
             }
             _mutex = null;
             Shutdown();

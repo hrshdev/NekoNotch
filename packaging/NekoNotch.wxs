@@ -57,6 +57,7 @@
       </Directory>
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="StartupFolder" />
   </Package>
 
   <Fragment>
@@ -76,7 +77,13 @@
 
       <Component Id="OpenAtLogin" Directory="INSTALLFOLDER" Bitness="always64">
         <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="NekoNotch"
-                       Value="&quot;[INSTALLFOLDER]NekoNotch.exe&quot;" Type="string" KeyPath="yes" />
+                       Value="&quot;[INSTALLFOLDER]NekoNotch.exe&quot; --startup" Type="string" KeyPath="yes" />
+      </Component>
+
+      <Component Id="StartupShortcut" Directory="StartupFolder" Bitness="always64">
+        <RegistryValue Root="HKCU" Key="Software\NekoNotch" Name="StartupShortcut" Value="1" Type="integer" KeyPath="yes" />
+        <Shortcut Id="StartupShortcutLnk" Name="NekoNotch" Target="[#MainExe]" Arguments="--startup"
+                  WorkingDirectory="INSTALLFOLDER" Icon="ProductIcon" Advertise="no" />
       </Component>
     </ComponentGroup>
   </Fragment>

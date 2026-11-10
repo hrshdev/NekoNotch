@@ -253,9 +253,27 @@ public sealed partial class UpdateService : ObservableObject
             return;
         }
 
-        // Direct self-update for standalone NekoNotch.exe
         var currentExe = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
-        if (_exeAsset is not null && File.Exists(currentExe))
+
+        // 1. MSI update if installed via MSI (must take precedence over portable exe update)
+        if (IsMsiInstall && _msiAsset is not null)
+        {
+            Status = UpdateStatus.Downloading;
+            Downloading?.Invoke(LatestVersion);
+            var msi = await DownloadMsiAsync(_msiAsset, LatestVersion);
+            if (msi is not null)
+            {
+                Status = UpdateStatus.Installing;
+                ReadyToRestart?.Invoke(LatestVersion);
+                await Task.Delay(1000);
+                ApplyMsiUpdateAndRestart(msi, currentExe);
+                return;
+            }
+            Status = UpdateStatus.Failed;
+        }
+
+        // 2. Direct self-update for standalone portable NekoNotch.exe
+        if (!IsMsiInstall && _exeAsset is not null && File.Exists(currentExe))
         {
             Status = UpdateStatus.Downloading;
             Downloading?.Invoke(LatestVersion);
@@ -267,25 +285,8 @@ public sealed partial class UpdateService : ObservableObject
             {
                 Status = UpdateStatus.Installing;
                 ReadyToRestart?.Invoke(LatestVersion);
-                await Task.Delay(2000);
+                await Task.Delay(1000);
                 ApplyExeUpdateAndRestart(currentExe, newExePath);
-                return;
-            }
-            Status = UpdateStatus.Failed;
-        }
-
-        // MSI update if installed via MSI
-        if (IsMsiInstall && _msiAsset is not null)
-        {
-            Status = UpdateStatus.Downloading;
-            Downloading?.Invoke(LatestVersion);
-            var msi = await DownloadMsiAsync(_msiAsset, LatestVersion);
-            if (msi is not null)
-            {
-                Status = UpdateStatus.Installing;
-                ReadyToRestart?.Invoke(LatestVersion);
-                await Task.Delay(2000);
-                ApplyMsiUpdateAndRestart(msi, currentExe);
                 return;
             }
             Status = UpdateStatus.Failed;
@@ -397,10 +398,30 @@ public sealed partial class UpdateService : ObservableObject
     {
         try
         {
+            var updateDir = Path.Combine(Path.GetTempPath(), "NekoNotch-update");
+            Directory.CreateDirectory(updateDir);
+            var scriptPath = Path.Combine(updateDir, "update-exe.cmd");
+
+            var script =
+                "@echo off\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                "taskkill /F /IM NekoNotch.exe >nul 2>&1\r\n" +
+                "timeout /t 1 /nobreak >nul\r\n" +
+                ":retry\r\n" +
+                "move /y \"%~1\" \"%~2\" >nul 2>&1\r\n" +
+                "if not errorlevel 1 goto success\r\n" +
+                "timeout /t 1 /nobreak >nul\r\n" +
+                "goto retry\r\n" +
+                ":success\r\n" +
+                "start \"\" \"%~2\"\r\n" +
+                "exit /b 0\r\n";
+
+            File.WriteAllText(scriptPath, script);
+
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
-                Arguments = $"/c for /l %i in (1,1,15) do (ping 127.0.0.1 -n 2 >nul & move /y \"{newExePath}\" \"{currentExe}\" >nul 2>&1 && (start \"\" \"{currentExe}\" & exit))",
+                Arguments = $"/c \"\"{scriptPath}\" \"{newExePath}\" \"{currentExe}\"\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
@@ -418,10 +439,27 @@ public sealed partial class UpdateService : ObservableObject
     {
         try
         {
+            var updateDir = Path.Combine(Path.GetTempPath(), "NekoNotch-update");
+            Directory.CreateDirectory(updateDir);
+            var scriptPath = Path.Combine(updateDir, "update-msi.cmd");
+
+            // Reliable external script that terminates any running instance, runs silent MSI upgrade, and restarts NekoNotch
+            var script =
+                "@echo off\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                "taskkill /F /IM NekoNotch.exe >nul 2>&1\r\n" +
+                "timeout /t 1 /nobreak >nul\r\n" +
+                "msiexec.exe /i \"%~1\" /qn REBOOT=ReallySuppress LAUNCHAPP=0\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                "start \"\" \"%~2\"\r\n" +
+                "exit /b 0\r\n";
+
+            File.WriteAllText(scriptPath, script);
+
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
-                Arguments = $"/c ping 127.0.0.1 -n 2 >nul & start /wait \"\" msiexec.exe /i \"{msi}\" /passive & start \"\" \"{exePath}\"",
+                Arguments = $"/c \"\"{scriptPath}\" \"{msi}\" \"{exePath}\"\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden

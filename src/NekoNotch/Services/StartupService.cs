@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Microsoft.Win32;
 using Windows.ApplicationModel;
@@ -5,21 +6,21 @@ using Windows.ApplicationModel;
 namespace NekoNotch.Services;
 
 /// <summary>
-/// "Open at login". Two mechanisms, because Windows treats the two install types differently:
-/// <list type="bullet">
-/// <item>MSIX / Microsoft Store build (has package identity): the manifest's StartupTask
-/// (<c>NekoNotchAutostart</c>). Windows enables it after the first launch; the user can turn it off in
-/// Task Manager, and then only they can turn it back on.</item>
-/// <item>MSI / portable exe: the per-user Run key, pointing at the exe that is running now (so it follows
-/// the app when an update or a move changes its path).</item>
-/// </list>
-/// On by default for new installs; <see cref="SyncAsync"/> runs at every launch to apply the setting.
+/// "Open at login". Manages instant startup upon user logon:
+/// - Windows Startup folder shortcut (executes immediately on desktop load, avoiding sequential Run delays)
+/// - Per-user Run registry key (standard fallback)
+/// - StartupApproved registration (marks explicitly enabled in Task Manager / Windows Explorer)
+/// - Disable Explorer startup delay (StartupDelayInMSec = 0)
+/// - Packaged MSIX StartupTask when running as a packaged app
 /// </summary>
 public static class StartupService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "NekoNotch";
-    private const string TaskId = "NekoNotchAutostart"; // Package.appxmanifest → desktop:StartupTask
+    private const string TaskId = "NekoNotchAutostart";
+    private const string StartupApprovedRunKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+    private const string StartupApprovedFolderKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder";
+    private const string SerializeKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize";
 
     /// <summary>True when running from an MSIX package (Store or sideloaded).</summary>
     public static bool IsPackaged { get; } = DetectPackage();
@@ -35,7 +36,7 @@ public static class StartupService
         }
         catch
         {
-            return false; // no package identity
+            return false;
         }
     }
 
@@ -62,7 +63,7 @@ public static class StartupService
             else if (!settings.LaunchAtStartup && enabled) await ApplyAsync(false);
             else if (DisabledByUser && settings.LaunchAtStartup)
             {
-                settings.LaunchAtStartup = false; // reflect the user's choice in Task Manager
+                settings.LaunchAtStartup = false;
                 SettingsService.Save(notify: false);
             }
             return;
@@ -89,28 +90,99 @@ public static class StartupService
                 return state is StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy;
             }
 
-            using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
-            if (key is null) return false;
+            var exePath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
+            var startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            var shortcutPath = Path.Combine(startupFolder, "NekoNotch.lnk");
 
-            // Clean up any legacy or stale entry under the old name
-            try { key.DeleteValue("OrixNotch", throwOnMissingValue: false); } catch { }
-
-            if (enabled)
+            // 1. Manage Startup folder shortcut (instant launch on login, no sequential queue delays)
+            if (enabled && File.Exists(exePath))
             {
-                var exePath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "NekoNotch.exe");
-                var command = $"\"{exePath}\"";
-                key.SetValue(ValueName, command);
+                CreateShortcut(shortcutPath, exePath, Path.GetDirectoryName(exePath) ?? "");
+                SetStartupApproved(StartupApprovedFolderKey, "NekoNotch.lnk", true);
             }
             else
             {
-                key.DeleteValue(ValueName, throwOnMissingValue: false);
+                try { if (File.Exists(shortcutPath)) File.Delete(shortcutPath); } catch { }
+                SetStartupApproved(StartupApprovedFolderKey, "NekoNotch.lnk", false);
             }
+
+            // 2. Manage HKCU Run key (fallback)
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
+            if (key is not null)
+            {
+                try { key.DeleteValue("OrixNotch", throwOnMissingValue: false); } catch { }
+
+                if (enabled)
+                {
+                    var command = $"\"{exePath}\" --startup";
+                    key.SetValue(ValueName, command);
+                    SetStartupApproved(StartupApprovedRunKey, ValueName, true);
+                    DisableWindowsStartupDelay();
+                }
+                else
+                {
+                    key.DeleteValue(ValueName, throwOnMissingValue: false);
+                    SetStartupApproved(StartupApprovedRunKey, ValueName, false);
+                }
+            }
+
             return enabled;
         }
         catch (Exception ex)
         {
             App.Log(ex);
             return false;
+        }
+    }
+
+    private static void CreateShortcut(string shortcutPath, string targetPath, string workingDir)
+    {
+        try
+        {
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null) return;
+            dynamic shell = Activator.CreateInstance(shellType)!;
+            dynamic shortcut = shell.CreateShortcut(shortcutPath);
+            shortcut.TargetPath = targetPath;
+            shortcut.Arguments = "--startup";
+            shortcut.WorkingDirectory = workingDir;
+            shortcut.Description = "NekoNotch Dynamic Island";
+            shortcut.Save();
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+    }
+
+    private static void SetStartupApproved(string keyPath, string valueName, bool enabled)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(keyPath, writable: true);
+            if (key == null) return;
+            // 0x02 indicates explicitly enabled in Windows Explorer / Task Manager, 0x03 indicates disabled
+            byte[] bytes = enabled
+                ? [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+                : [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+            key.SetValue(valueName, bytes, RegistryValueKind.Binary);
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
+    }
+
+    private static void DisableWindowsStartupDelay()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(SerializeKey, writable: true);
+            key?.SetValue("StartupDelayInMSec", 0, RegistryValueKind.DWord);
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
         }
     }
 
