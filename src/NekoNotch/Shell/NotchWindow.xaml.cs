@@ -1968,6 +1968,10 @@ public partial class NotchWindow : Window
 
             IdlePart.Visibility = Visibility.Collapsed;
 
+            SportsPart.Visibility = Visibility.Collapsed;
+
+            VoicePart.Visibility = Visibility.Collapsed;
+
             NotchEyes.Visibility = Visibility.Collapsed;
 
             if (!_expanded && !_peeking)
@@ -2020,6 +2024,10 @@ public partial class NotchWindow : Window
             ReminderPart.Visibility = Visibility.Collapsed;
 
             IdlePart.Visibility = Visibility.Collapsed;
+
+            SportsPart.Visibility = Visibility.Collapsed;
+
+            VoicePart.Visibility = Visibility.Collapsed;
 
             NotchEyes.Visibility = Visibility.Collapsed;
 
@@ -3677,6 +3685,10 @@ public partial class NotchWindow : Window
 
         ReminderPart.Visibility = Visibility.Collapsed;
 
+        SportsPart.Visibility = Visibility.Collapsed;
+
+        VoicePart.Visibility = Visibility.Collapsed;
+
         VolumePart.Visibility = Visibility.Visible;
 
 
@@ -3732,6 +3744,10 @@ public partial class NotchWindow : Window
         IdlePart.Visibility = Visibility.Collapsed;
 
         ReminderPart.Visibility = Visibility.Collapsed;
+
+        SportsPart.Visibility = Visibility.Collapsed;
+
+        VoicePart.Visibility = Visibility.Collapsed;
 
         BrightnessPart.Visibility = Visibility.Visible;
 
