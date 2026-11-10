@@ -74,6 +74,8 @@ public static class ThemeService
         new("sunset", "Sunset", C("#130A12"), C("#20121A"), C("#2B1922"), C("#38222C"), C("#FAEEEB"), C("#B0928F"), false, "sunrise", C("#3A1A1C")),
         new("abyss", "Abyss", C("#02060F"), C("#0A1220"), C("#111B2C"), C("#1A2639"), C("#E9EEF7"), C("#8995A8"), false, "neon", C("#0A2340")),
         new("dawn", "Dawn", C("#FFF7F0"), C("#F5EDE8"), C("#ECE2DD"), C("#E0D4CF"), C("#241C1A"), C("#7A6B66"), true, "flamingo", C("#F3E6FA")),
+        new("blur-glass", "Blur Glass", C("#0C0E14"), C("#151822"), C("#1E2230"), C("#282D3E"), C("#F5F6FA"), C("#8E94A8"), false, "amethyst", C("#181B26")),
+        new("frosted-obsidian", "Obsidian Glass", C("#06070A"), C("#101218"), C("#181B24"), C("#222632"), C("#FFFFFF"), C("#858B9C"), false, "amethyst", C("#13151F")),
     ];
 
     public static IReadOnlyList<AccentColor> Accents { get; } =
@@ -103,6 +105,7 @@ public static class ThemeService
         new("berry", "Berry", C("#C471F5"), C("#C471F5"), C("#FA71CD")),
         new("ember", "Ember", C("#F83600"), C("#F83600"), C("#F9D423")),
         new("lagoon", "Lagoon", C("#43E97B"), C("#43E97B"), C("#38F9D7")),
+        new("amethyst", "Amethyst", C("#8A7CFB"), C("#7060E6"), C("#8A7CFB"), C("#B79CFF")),
     ];
 
     public static event Action? Changed;
@@ -227,7 +230,7 @@ public static class ThemeService
         res["SubTextBrush"] = Solid(s.SubText);
         res["TrackBrush"] = Solid(WithAlpha(s.Text, (byte)(s.IsLight ? 0x22 : 0x2A)));
         res["StrokeBrush"] = IsGlass
-            ? Gradient([WithAlpha(s.IsLight ? Colors.White : s.Text, 0x48), WithAlpha(s.Text, 0x12)], vertical: true)
+            ? Gradient([WithAlpha(s.IsLight ? Colors.White : Colors.White, (byte)(s.Id is "blur-glass" or "frosted-obsidian" ? 0x55 : 0x48)), WithAlpha(s.Text, 0x12)], vertical: true)
             : Solid(WithAlpha(s.Text, (byte)(s.IsLight ? 0x1A : 0x16)));
         res["ThumbBrush"] = Solid(WithAlpha(s.Text, 0x40));
         res["AccentBrush"] = a.Brush();
@@ -253,7 +256,7 @@ public static class ThemeService
     }
 
     /// <summary>The notch is frosted glass (Settings › Appearance › Glass).</summary>
-    public static bool IsGlass => App.Settings.Glass;
+    public static bool IsGlass => App.Settings.Glass || CurrentScheme.Id is "blur-glass" or "frosted-obsidian";
 
     /// <summary>Alpha of the notch tint while glass is on: more see-through as the strength drops.
     /// Light schemes keep more tint so dark text stays readable over dark wallpapers.</summary>
@@ -274,6 +277,10 @@ public static class ThemeService
     public static void SetScheme(string id)
     {
         App.Settings.ThemeScheme = id;
+        if (id is "blur-glass" or "frosted-obsidian")
+        {
+            App.Settings.Glass = true;
+        }
         SettingsService.Save(notify: false);
         Apply();
     }

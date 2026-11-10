@@ -18,12 +18,12 @@ public partial class NotchWindow
         GlassSheen.Visibility = GlassGlow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         GlassSheen.Data = GlassGlow.Data = on ? Shape.Data : null;
         var accent = ThemeService.CurrentAccent.Mean;
-        GlassGlow.Fill = new RadialGradientBrush(Color.FromArgb(0x1C, accent.R, accent.G, accent.B), Color.FromArgb(0, accent.R, accent.G, accent.B))
+        GlassGlow.Fill = new RadialGradientBrush(Color.FromArgb(0x24, accent.R, accent.G, accent.B), Color.FromArgb(0, accent.R, accent.G, accent.B))
         {
             Center = new Point(0.5, 1.05),
             GradientOrigin = new Point(0.5, 1.05),
-            RadiusX = 0.6,
-            RadiusY = 0.7,
+            RadiusX = 0.65,
+            RadiusY = 0.75,
         };
     }
 }
