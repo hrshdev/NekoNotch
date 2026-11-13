@@ -585,7 +585,7 @@
                                 <StackPanel>
                                     <Grid Cursor="Hand" MouseLeftButtonUp="OnToggleSquadsClick" Background="Transparent">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <hero:HeroIcon Kind="Users" Width="13" Height="13" Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                            <hero:HeroIcon Kind="User" Width="13" Height="13" Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                                             <TextBlock x:Name="SquadsToggleTitle" Text="PLAYING XI &amp; SQUADS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
                                         <Border Background="#20FFFFFF" CornerRadius="4" Padding="6,2" HorizontalAlignment="Right" VerticalAlignment="Center">
