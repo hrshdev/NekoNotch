@@ -3067,15 +3067,53 @@ public partial class NotchWindow : Window
         SportsHomeScoreText.Text = m.CompactHomeScore;
         SportsAwayScoreText.Text = m.CompactAwayScore;
         SportsAwayTeamText.Text = m.AwayTeamCode;
+
         if (m.Sport == SportType.Cricket)
         {
-            SportsTimeBadge.Text = m.IsLive ? "LIVE" : (m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail);
+            SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
+
+            var homeOvers = m.HomeOvers;
+            var awayOvers = m.AwayOvers;
+
+            if (!string.IsNullOrEmpty(homeOvers))
+            {
+                SportsHomeOversText.Text = homeOvers;
+                SportsHomeOversText.Visibility = Visibility.Visible;
+                SportsAwayOversText.Visibility = Visibility.Collapsed;
+                SportsTimeBadge.Visibility = Visibility.Collapsed;
+            }
+            else if (!string.IsNullOrEmpty(awayOvers))
+            {
+                SportsAwayOversText.Text = awayOvers;
+                SportsAwayOversText.Visibility = Visibility.Visible;
+                SportsHomeOversText.Visibility = Visibility.Collapsed;
+                SportsTimeBadge.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                SportsHomeOversText.Visibility = Visibility.Collapsed;
+                SportsAwayOversText.Visibility = Visibility.Collapsed;
+                if (!string.IsNullOrEmpty(m.StatusDetail) && !m.StatusDetail.Equals("LIVE", StringComparison.OrdinalIgnoreCase))
+                {
+                    SportsTimeBadge.Text = m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail;
+                    SportsTimeBadge.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    SportsTimeBadge.Visibility = Visibility.Collapsed;
+                }
+            }
         }
-        else
+        else // Football
         {
-            SportsTimeBadge.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail;
+            SportsHomeOversText.Visibility = Visibility.Collapsed;
+            SportsAwayOversText.Visibility = Visibility.Collapsed;
+            SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
+            SportsTimeBadge.Visibility = Visibility.Visible;
+            SportsTimeBadge.Text = !string.IsNullOrEmpty(m.LiveClock)
+                ? m.LiveClock
+                : (string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail);
         }
-        SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnSportsPartClick(object sender, MouseButtonEventArgs e)
@@ -3092,17 +3130,62 @@ public partial class NotchWindow : Window
 
     private DispatcherTimer? _sportsCelebrationTimer;
 
+    private static FrameworkElement SportsCelebrationTile(SportsCelebrationEvent ev)
+    {
+        var tile = new Border
+        {
+            Width = 40,
+            Height = 40,
+            CornerRadius = new CornerRadius(11),
+            Background = new SolidColorBrush(Color.FromArgb(45, 255, 138, 61))
+        };
+
+        try
+        {
+            if (ColorConverter.ConvertFromString(ev.BadgeBackgroundHex) is Color bgCol)
+            {
+                tile.Background = new SolidColorBrush(bgCol);
+            }
+        }
+        catch { }
+
+        var text = new TextBlock
+        {
+            Text = ev.Emoji,
+            FontSize = 20,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        tile.Child = text;
+        return tile;
+    }
+
     private void HandleSportsCelebration(SportsCelebrationEvent ev)
     {
-        // Only celebrate if closed notch is currently tracking the pinned match
-        var sm = SportsService.Instance.ActiveMatch;
-        if (sm == null || sm.Id != ev.Match.Id) return;
-
-        // Play celebration audio chime
+        // 1. Play celebration audio chime
         try { PlayNotificationChime(); } catch { }
 
-        // Trigger in-notch spin down celebration transition
-        TriggerSportsSpinAnimation(ev);
+        // 2. Enqueue dynamic island Peek notification so the user NEVER misses the event
+        var peekKey = $"sports:{ev.Match.Id}:{ev.Type}:{DateTime.UtcNow.Ticks}";
+        var subText = !string.IsNullOrWhiteSpace(ev.Detail) ? ev.Detail : ev.Match.ScoreDisplay;
+        EnqueuePeek(new PeekRequest(
+            peekKey,
+            () => SportsCelebrationTile(ev),
+            ev.Title,
+            subText,
+            TimeSpan.FromSeconds(5),
+            OnClick: () =>
+            {
+                EndPeek();
+                OpenTool("sports");
+            }));
+
+        // 3. If closed notch is currently tracking the pinned match, also trigger in-notch spin transition
+        var sm = SportsService.Instance.ActiveMatch;
+        if (sm != null && sm.Id == ev.Match.Id && !_expanded && SportsPart?.Visibility == Visibility.Visible)
+        {
+            TriggerSportsSpinAnimation(ev);
+        }
     }
 
     private void TriggerSportsSpinAnimation(SportsCelebrationEvent ev)

@@ -563,6 +563,14 @@ public sealed partial class SportsView : UserControl, IToolView
         RefreshUI();
     }
 
+    private void OnTestCelebrationClick(object sender, RoutedEventArgs e)
+    {
+        if (_detailedMatch != null)
+        {
+            SportsService.Instance.TriggerTestCelebration(_detailedMatch);
+        }
+    }
+
     private void OnDetailPinClick(object sender, RoutedEventArgs e)
     {
         if (_detailedMatch != null)

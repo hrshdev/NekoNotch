@@ -308,12 +308,21 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="DetailPinBtn" HorizontalAlignment="Right" Style="{StaticResource ActionChip}" Click="OnDetailPinClick">
-                        <StackPanel Orientation="Horizontal">
-                            <hero:HeroIcon x:Name="DetailPinIcon" Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
-                            <TextBlock x:Name="DetailPinText" Text="Pin to Notch" FontSize="10" />
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="TestCelebrationBtn" Style="{StaticResource ActionChip}" Margin="0,0,6,0" Padding="8,4" Click="OnTestCelebrationClick" ToolTip="Test celebration notification &amp; in-notch spin">
+                            <StackPanel Orientation="Horizontal">
+                                <hero:HeroIcon Kind="Sparkles" Width="11" Height="11" Margin="0,0,4,0" />
+                                <TextBlock Text="Test Alert" FontSize="10" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="DetailPinBtn" Style="{StaticResource ActionChip}" Click="OnDetailPinClick">
+                            <StackPanel Orientation="Horizontal">
+                                <hero:HeroIcon x:Name="DetailPinIcon" Kind="Pin" Width="11" Height="11" Margin="0,0,4,0" />
+                                <TextBlock x:Name="DetailPinText" Text="Pin to Notch" FontSize="10" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Big Match Header -->
