@@ -1839,7 +1839,7 @@ public partial class NotchWindow : Window
         if (sm == null || !SportsService.Instance.ShowScoreInNotch || SportsLeftGroup == null || SportsRightGroup == null) return _idleW;
 
         double leftW, rightW;
-        if (_celebratingSportsEvent && SportsCelebrationLeft != null && SportsCelebrationRight != null)
+        if (_celebratingSportsEvent && SportsCelebrationLeft != null && SportsCelebrationRight != null && SportsCelebrationLeft.Visibility == Visibility.Visible)
         {
             SportsCelebrationLeft.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             SportsCelebrationRight.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -1861,7 +1861,7 @@ public partial class NotchWindow : Window
         const double paddingAndMargins = 28;
 
         var needed = sideMax * 2 + centerGap + paddingAndMargins;
-        return Math.Clamp(Math.Ceiling(needed), 220, 440);
+        return Math.Clamp(Math.Ceiling(needed), 220, 500);
     }
 
 
@@ -3440,11 +3440,10 @@ public partial class NotchWindow : Window
 
     private void TriggerCheerAnimation(string bannerText)
     {
-        var shortText = bannerText.Length > 12 ? bannerText[..12] : bannerText;
         TriggerCheerAnimation(new SportsCelebrationEvent
         {
             Match = SportsService.Instance.ActiveMatch ?? new SportMatch(),
-            BadgeText = shortText,
+            BadgeText = bannerText,
             Title = bannerText,
             Detail = bannerText
         });

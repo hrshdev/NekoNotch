@@ -1129,6 +1129,9 @@ public sealed partial class SportsService : ObservableObject
                                         }
                                     }
 
+                                    // Only reconstruct batters from FOW and partnerships if detailed matchcard batting was not already loaded
+                                    bool hasDetailedBatting = card.Batters.Count > 0;
+
                                     // Fall of wickets
                                     if (ls.TryGetProperty("fow", out var fowList))
                                     {
@@ -1153,8 +1156,8 @@ public sealed partial class SportsService : ObservableObject
                                                 });
                                             }
 
-                                            // Reconstruct all out batters for this inning
-                                            if (!string.IsNullOrEmpty(athName) && !card.Batters.Any(b => b.PlayerName == athName))
+                                            // Reconstruct all out batters for this inning if no detailed matchcards
+                                            if (!hasDetailedBatting && !string.IsNullOrEmpty(athName) && !card.Batters.Any(b => b.PlayerName == athName))
                                             {
                                                 var scored = f.TryGetProperty("runsScored", out var rsp) ? ParseInt(rsp) : 0;
                                                 var faced = f.TryGetProperty("ballsFaced", out var bfp) ? ParseInt(bfp) : 0;
@@ -1195,7 +1198,7 @@ public sealed partial class SportsService : ObservableObject
                                                     {
                                                         bParts.Add($"{bName} {br} ({bb})");
                                                         // If not in Batters yet, they are currently batting (not out)!
-                                                        if (!card.Batters.Any(x => x.PlayerName == bName))
+                                                        if (!hasDetailedBatting && !card.Batters.Any(x => x.PlayerName == bName))
                                                         {
                                                             int.TryParse(br, out var rVal);
                                                             int.TryParse(bb, out var bVal);
@@ -1221,6 +1224,54 @@ public sealed partial class SportsService : ObservableObject
                                                     Overs = pOvers,
                                                     Batsmen = string.Join(", ", bParts)
                                                 });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Extract live bowlers from leaders if bowling matchcards not yet populated (e.g. current live inning)
+                if (root.TryGetProperty("leaders", out var leadersList))
+                {
+                    foreach (var teamLead in leadersList.EnumerateArray())
+                    {
+                        if (teamLead.TryGetProperty("linescores", out var lsl))
+                        {
+                            foreach (var lsObj in lsl.EnumerateArray())
+                            {
+                                var lPeriod = lsObj.TryGetProperty("period", out var lpp) ? ParseInt(lpp, 1) : 1;
+                                if (!inningMap.TryGetValue(lPeriod, out var targetCard) || targetCard.Bowlers.Count > 0) continue;
+
+                                if (lsObj.TryGetProperty("leaders", out var lArr))
+                                {
+                                    foreach (var lead in lArr.EnumerateArray())
+                                    {
+                                        var lName = lead.TryGetProperty("name", out var lnp) ? lnp.GetString() ?? "" : "";
+                                        if (lName.Equals("wickets", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            if (lead.TryGetProperty("leaders", out var athArr))
+                                            {
+                                                foreach (var aItem in athArr.EnumerateArray())
+                                                {
+                                                    var athName = aItem.TryGetProperty("athlete", out var ap) && ap.TryGetProperty("displayName", out var adn)
+                                                        ? adn.GetString() ?? "" : "";
+                                                    var val = aItem.TryGetProperty("displayValue", out var dvp) ? dvp.GetString() ?? "0" : "0";
+                                                    int.TryParse(val, out var wCount);
+                                                    if (!string.IsNullOrEmpty(athName) && !targetCard.Bowlers.Any(b => b.BowlerName == athName))
+                                                    {
+                                                        targetCard.Bowlers.Add(new CricketBowlingEntry
+                                                        {
+                                                            BowlerName = athName,
+                                                            Wickets = wCount,
+                                                            Overs = "-",
+                                                            RunsConceded = 0,
+                                                            Economy = "-"
+                                                        });
+                                                    }
+                                                }
                                             }
                                         }
                                     }
