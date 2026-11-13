@@ -411,8 +411,13 @@
                                 <StackPanel x:Name="CricketInningsTabsPanel" Orientation="Horizontal" />
                             </ScrollViewer>
 
+                            <!-- Loading State -->
+                            <StackPanel x:Name="CricketLoadingPanel" HorizontalAlignment="Center" Margin="0,20,0,20" Visibility="Collapsed">
+                                <TextBlock Text="Loading match scorecard..." FontSize="10.5" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Center" FontStyle="Italic" />
+                            </StackPanel>
+
                             <!-- Selected Inning Scorecard Card -->
-                            <Border x:Name="CricketScorecardCard" Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                            <Border x:Name="CricketScorecardCard" Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" Visibility="Collapsed">
                                 <StackPanel>
                                     <!-- Inning Title & Score Header -->
                                     <Grid Margin="0,0,0,8">
@@ -461,10 +466,7 @@
                                                             <ColumnDefinition Width="48" />
                                                         </Grid.ColumnDefinitions>
                                                         <!-- Batter Name with Not Out indicator -->
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding DisplayName}" FontSize="10.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="138" />
-                                                            <TextBlock Text="*" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding IsNotOut, Converter={StaticResource BoolToVis}}" Margin="2,0,0,0" />
-                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="0" Text="{Binding DisplayNameWithStar}" FontSize="10.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="145" VerticalAlignment="Center" />
                                                         <!-- Dismissal -->
                                                         <TextBlock Grid.Column="1" Text="{Binding Dismissal}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="4,0,8,0" />
                                                         <!-- Runs -->
@@ -569,29 +571,68 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- SQUADS & PLAYERS SECTION (clean collapsible) -->
-                            <Expander x:Name="CricketSquadsExpander" Header="SQUAD &amp; PLAYING XI" IsExpanded="False" Foreground="{DynamicResource SubTextBrush}" FontSize="9.5" FontWeight="Bold" Margin="0,2,0,4">
-                                <ItemsControl x:Name="CricketPlayersList" Margin="0,6,0,0">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Width="165" Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="6,4" Margin="0,0,6,4" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
-                                                <Grid>
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Text="{Binding Role}" FontSize="8.5" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding TeamName}" FontSize="8.5" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Expander>
+                            <!-- SQUADS & PLAYING XI ACCORDION -->
+                            <Border x:Name="SquadsAccordionCard" Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,8" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid Cursor="Hand" MouseLeftButtonUp="OnToggleSquadsClick" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <hero:HeroIcon Kind="Users" Width="13" Height="13" Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="SquadsToggleTitle" Text="PLAYING XI &amp; SQUADS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Border Background="#20FFFFFF" CornerRadius="4" Padding="6,2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock x:Name="SquadsToggleBtnText" Text="Show" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,4,0" />
+                                                <hero:HeroIcon x:Name="SquadsToggleArrow" Kind="ChevronDown" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Expanded Squads Content -->
+                                    <StackPanel x:Name="SquadsContentPanel" Visibility="Collapsed" Margin="0,10,0,2">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="14" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Home Team XI -->
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock x:Name="HomeSquadTitle" Text="Home Team" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,5" />
+                                                <ItemsControl x:Name="HomeSquadList">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#14FFFFFF" CornerRadius="5" Padding="7,4" Margin="0,0,0,3">
+                                                                <Grid>
+                                                                    <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="140" />
+                                                                    <TextBlock Text="{Binding Role}" FontSize="8.5" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <!-- Away Team XI -->
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock x:Name="AwaySquadTitle" Text="Away Team" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="2,0,0,5" />
+                                                <ItemsControl x:Name="AwaySquadList">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#14FFFFFF" CornerRadius="5" Padding="7,4" Margin="0,0,0,3">
+                                                                <Grid>
+                                                                    <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="140" />
+                                                                    <TextBlock Text="{Binding Role}" FontSize="8.5" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

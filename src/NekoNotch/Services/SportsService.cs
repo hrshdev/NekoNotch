@@ -853,12 +853,12 @@ public sealed partial class SportsService : ObservableObject
             {
                 var inningMap = new Dictionary<int, CricketInningScorecard>();
 
-                // 1. Parse matchcards (Active / primary batting & bowling scorecards)
+                // 1. Parse matchcards (Active / primary batting, bowling, and partnership scorecards)
                 if (root.TryGetProperty("matchcards", out var mcList))
                 {
                     foreach (var mc in mcList.EnumerateArray())
                     {
-                        var innNum = mc.TryGetProperty("inningsNumber", out var inProp) ? inProp.GetInt32() : 1;
+                        var innNum = mc.TryGetProperty("inningsNumber", out var inProp) ? ParseInt(inProp, 1) : 1;
                         if (!inningMap.TryGetValue(innNum, out var card))
                         {
                             card = new CricketInningScorecard { InningNumber = innNum };
@@ -937,6 +937,32 @@ public sealed partial class SportsService : ObservableObject
                                 }
                             }
                         }
+                        else if (headline.Contains("Partnerships", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (mc.TryGetProperty("playerDetails", out var pDetails))
+                            {
+                                foreach (var p in pDetails.EnumerateArray())
+                                {
+                                    var p1 = p.TryGetProperty("player1Name", out var p1p) ? p1p.GetString() ?? "" : "";
+                                    var p1r = p.TryGetProperty("player1Runs", out var p1rp) ? (p1rp.ValueKind == JsonValueKind.Number ? p1rp.GetInt32().ToString() : p1rp.GetString() ?? "0") : "0";
+                                    var p2 = p.TryGetProperty("player2Name", out var p2p) ? p2p.GetString() ?? "" : "";
+                                    var p2r = p.TryGetProperty("player2Runs", out var p2rp) ? (p2rp.ValueKind == JsonValueKind.Number ? p2rp.GetInt32().ToString() : p2rp.GetString() ?? "0") : "0";
+                                    var pruns = ParseIntProperty(p, "partnershipRuns");
+                                    var povers = p.TryGetProperty("partnershipOvers", out var pop)
+                                        ? (pop.ValueKind == JsonValueKind.Number ? pop.GetDouble().ToString("0.0") : pop.GetString() ?? "0.0")
+                                        : "0.0";
+                                    var pwkt = p.TryGetProperty("partnershipWicketName", out var pwp) ? pwp.GetString() ?? "" : "";
+
+                                    card.Partnerships.Add(new CricketPartnershipEntry
+                                    {
+                                        WicketName = pwkt,
+                                        Runs = pruns,
+                                        Overs = povers,
+                                        Batsmen = $"{p1} {p1r}, {p2} {p2r}"
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -953,10 +979,10 @@ public sealed partial class SportsService : ObservableObject
                             {
                                 foreach (var ls in linescores.EnumerateArray())
                                 {
-                                    var innPeriod = ls.TryGetProperty("period", out var pp) ? pp.GetInt32() : 1;
-                                    var r = ls.TryGetProperty("runs", out var rp) ? rp.GetInt32().ToString() : "0";
-                                    var w = ls.TryGetProperty("wickets", out var wp) ? wp.GetInt32().ToString() : "0";
-                                    var o = ls.TryGetProperty("overs", out var op) ? op.GetDouble().ToString("0.0") : "0.0";
+                                    var innPeriod = ls.TryGetProperty("period", out var pp) ? ParseInt(pp, 1) : 1;
+                                    var r = ls.TryGetProperty("runs", out var rp) ? (rp.ValueKind == JsonValueKind.Number ? rp.GetInt32().ToString() : rp.GetString() ?? "0") : "0";
+                                    var w = ls.TryGetProperty("wickets", out var wp) ? (wp.ValueKind == JsonValueKind.Number ? wp.GetInt32().ToString() : wp.GetString() ?? "0") : "0";
+                                    var o = ls.TryGetProperty("overs", out var op) ? (op.ValueKind == JsonValueKind.Number ? op.GetDouble().ToString("0.0") : op.GetString() ?? "0.0") : "0.0";
                                     var isBatting = ls.TryGetProperty("isBatting", out var bp) && bp.GetBoolean();
                                     var desc = ls.TryGetProperty("description", out var dp) ? dp.GetString() ?? "" : "";
                                     var score = ls.TryGetProperty("score", out var sp) ? sp.GetString() ?? $"{r}/{w}" : $"{r}/{w}";
@@ -992,11 +1018,11 @@ public sealed partial class SportsService : ObservableObject
                                     {
                                         foreach (var f in fowList.EnumerateArray())
                                         {
-                                            var wNum = f.TryGetProperty("wicketNumber", out var wn) ? wn.GetInt32() : 0;
+                                            var wNum = f.TryGetProperty("wicketNumber", out var wn) ? ParseInt(wn) : 0;
                                             var wOv = f.TryGetProperty("wicketOver", out var wo)
                                                 ? (wo.ValueKind == JsonValueKind.Number ? wo.GetDouble().ToString("0.0") : wo.GetString() ?? "0.0")
                                                 : "0.0";
-                                            var fRuns = f.TryGetProperty("runs", out var fr) ? fr.GetInt32() : 0;
+                                            var fRuns = f.TryGetProperty("runs", out var fr) ? ParseInt(fr) : 0;
                                             var athName = f.TryGetProperty("athlete", out var ath) && ath.TryGetProperty("displayName", out var adn)
                                                 ? adn.GetString() ?? "" : "";
 
@@ -1011,8 +1037,8 @@ public sealed partial class SportsService : ObservableObject
                                             // Reconstruct older innings batters if matchcard wasn't provided for this inning
                                             if (card.Batters.Count == 0 && !string.IsNullOrEmpty(athName))
                                             {
-                                                var scored = f.TryGetProperty("runsScored", out var rsp) ? rsp.GetInt32() : 0;
-                                                var faced = f.TryGetProperty("ballsFaced", out var bfp) ? bfp.GetInt32() : 0;
+                                                var scored = f.TryGetProperty("runsScored", out var rsp) ? ParseInt(rsp) : 0;
+                                                var faced = f.TryGetProperty("ballsFaced", out var bfp) ? ParseInt(bfp) : 0;
                                                 var fowType = f.TryGetProperty("fowType", out var ftp) ? ftp.GetString() ?? "out" : "out";
                                                 var sr = faced > 0 ? ((double)scored / faced * 100).ToString("0.0") : "0.0";
                                                 card.Batters.Add(new CricketBattingEntry
@@ -1028,12 +1054,12 @@ public sealed partial class SportsService : ObservableObject
                                     }
 
                                     // Partnerships
-                                    if (ls.TryGetProperty("partnerships", out var partList))
+                                    if (card.Partnerships.Count == 0 && ls.TryGetProperty("partnerships", out var partList))
                                     {
                                         foreach (var part in partList.EnumerateArray())
                                         {
                                             var wName = part.TryGetProperty("wicketName", out var wnp) ? wnp.GetString() ?? "" : "";
-                                            var pRuns = part.TryGetProperty("runs", out var prp) ? prp.GetInt32() : 0;
+                                            var pRuns = part.TryGetProperty("runs", out var prp) ? ParseInt(prp) : 0;
                                             var pOvers = part.TryGetProperty("overs", out var pop)
                                                 ? (pop.ValueKind == JsonValueKind.Number ? pop.GetDouble().ToString("0.0") : pop.GetString() ?? "0.0")
                                                 : "0.0";
@@ -1050,7 +1076,7 @@ public sealed partial class SportsService : ObservableObject
                                                 }
                                             }
                                             card.Partnerships.Add(new CricketPartnershipEntry
-                                            {
+                                             {
                                                 WicketName = wName,
                                                 Runs = pRuns,
                                                 Overs = pOvers,
@@ -1109,14 +1135,20 @@ public sealed partial class SportsService : ObservableObject
         }
     }
 
-    private static int ParseIntProperty(JsonElement element, string propName)
+    private static int ParseInt(JsonElement el, int fallback = 0)
+    {
+        if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n)) return n;
+        if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out var val)) return val;
+        return fallback;
+    }
+
+    private static int ParseIntProperty(JsonElement element, string propName, int fallback = 0)
     {
         if (element.TryGetProperty(propName, out var prop))
         {
-            if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var n)) return n;
-            if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var val)) return val;
+            return ParseInt(prop, fallback);
         }
-        return 0;
+        return fallback;
     }
 
     public static (int runs, int wickets, bool valid) ParseCricketScore(string? score)

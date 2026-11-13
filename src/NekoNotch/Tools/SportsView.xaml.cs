@@ -28,6 +28,7 @@ public sealed partial class SportsView : UserControl, IToolView
     public sealed class CricketBatterViewModel
     {
         public string DisplayName { get; set; } = "";
+        public string DisplayNameWithStar => IsNotOut ? $"{DisplayName} *" : DisplayName;
         public string Dismissal { get; set; } = "";
         public int Runs { get; set; }
         public int Balls { get; set; }
@@ -576,9 +577,20 @@ public sealed partial class SportsView : UserControl, IToolView
     {
         DetailHomeName.Text = m.HomeTeamName;
         DetailAwayName.Text = m.AwayTeamName;
-        DetailScoreText.Text = m.Sport == SportType.Football
-            ? $"{m.HomeScore} - {m.AwayScore}"
-            : $"{m.HomeScore} vs {m.AwayScore}";
+
+        if (m.Sport == SportType.Football)
+        {
+            DetailScoreText.Text = $"{m.HomeScore} - {m.AwayScore}";
+        }
+        else
+        {
+            if (m.HomeScore == "-" && m.AwayScore != "-")
+                DetailScoreText.Text = $"{m.AwayTeamCode} {m.AwayScore}";
+            else if (m.AwayScore == "-" && m.HomeScore != "-")
+                DetailScoreText.Text = $"{m.HomeTeamCode} {m.HomeScore}";
+            else
+                DetailScoreText.Text = $"{m.HomeScore} vs {m.AwayScore}";
+        }
 
         DetailStatusText.Text = string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "Scheduled") : m.StatusDetail;
 
@@ -623,10 +635,39 @@ public sealed partial class SportsView : UserControl, IToolView
         }
     }
 
+    private void OnToggleSquadsClick(object sender, MouseButtonEventArgs e)
+    {
+        if (SquadsContentPanel.Visibility == Visibility.Visible)
+        {
+            SquadsContentPanel.Visibility = Visibility.Collapsed;
+            SquadsToggleBtnText.Text = "Show";
+            SquadsToggleArrow.Kind = HeroIconKind.ChevronDown;
+        }
+        else
+        {
+            SquadsContentPanel.Visibility = Visibility.Visible;
+            SquadsToggleBtnText.Text = "Hide";
+            SquadsToggleArrow.Kind = HeroIconKind.ChevronUp;
+        }
+    }
+
     private async Task LoadMatchDetailAsync(SportMatch match)
     {
+        if (match.Sport == SportType.Cricket)
+        {
+            CricketLoadingPanel.Visibility = Visibility.Visible;
+            CricketScorecardCard.Visibility = Visibility.Collapsed;
+        }
+
         var detail = await SportsService.Instance.FetchMatchDetailAsync(match);
-        if (detail == null || _detailedMatch?.Id != match.Id) return;
+        if (detail == null || _detailedMatch?.Id != match.Id)
+        {
+            if (match.Sport == SportType.Cricket)
+            {
+                CricketLoadingPanel.Visibility = Visibility.Collapsed;
+            }
+            return;
+        }
 
         Dispatcher.Invoke(() =>
         {
@@ -651,9 +692,38 @@ public sealed partial class SportsView : UserControl, IToolView
             }
             else // Cricket
             {
+                CricketLoadingPanel.Visibility = Visibility.Collapsed;
                 _currentScorecards = detail.CricketScorecards;
                 _selectedInningIndex = Math.Max(0, _currentScorecards.Count - 1);
-                CricketPlayersList.ItemsSource = detail.CricketPlayers;
+
+                // Populate Playing XI in home & away columns
+                var homeSquad = detail.CricketPlayers
+                    .Where(p => !string.IsNullOrEmpty(p.TeamName) && match.HomeTeamName.Contains(p.TeamName, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var awaySquad = detail.CricketPlayers
+                    .Where(p => !string.IsNullOrEmpty(p.TeamName) && match.AwayTeamName.Contains(p.TeamName, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (homeSquad.Count == 0 && awaySquad.Count == 0 && detail.CricketPlayers.Count > 0)
+                {
+                    var teams = detail.CricketPlayers.Select(p => p.TeamName).Distinct().ToList();
+                    if (teams.Count >= 2)
+                    {
+                        homeSquad = detail.CricketPlayers.Where(p => p.TeamName == teams[0]).ToList();
+                        awaySquad = detail.CricketPlayers.Where(p => p.TeamName == teams[1]).ToList();
+                    }
+                    else
+                    {
+                        homeSquad = detail.CricketPlayers;
+                    }
+                }
+
+                HomeSquadTitle.Text = string.IsNullOrEmpty(match.HomeTeamName) ? "Home Playing XI" : $"{match.HomeTeamName} XI";
+                AwaySquadTitle.Text = string.IsNullOrEmpty(match.AwayTeamName) ? "Away Playing XI" : $"{match.AwayTeamName} XI";
+                HomeSquadList.ItemsSource = homeSquad;
+                AwaySquadList.ItemsSource = awaySquad;
+                SquadsToggleTitle.Text = $"PLAYING XI & SQUADS ({detail.CricketPlayers.Count})";
+
                 RenderCricketScorecards();
             }
         });
@@ -665,15 +735,19 @@ public sealed partial class SportsView : UserControl, IToolView
 
         if (_currentScorecards.Count == 0)
         {
-            // If no detailed scorecards yet (e.g. pre-match), show squads expanded
+            // If no detailed scorecards yet (e.g. pre-match), auto-expand squads
             CricketInningsTabsScroll.Visibility = Visibility.Collapsed;
             CricketScorecardCard.Visibility = Visibility.Collapsed;
-            CricketSquadsExpander.IsExpanded = true;
+            SquadsContentPanel.Visibility = Visibility.Visible;
+            SquadsToggleBtnText.Text = "Hide";
+            SquadsToggleArrow.Kind = HeroIconKind.ChevronUp;
             return;
         }
 
         CricketScorecardCard.Visibility = Visibility.Visible;
-        CricketSquadsExpander.IsExpanded = false;
+        SquadsContentPanel.Visibility = Visibility.Collapsed;
+        SquadsToggleBtnText.Text = "Show";
+        SquadsToggleArrow.Kind = HeroIconKind.ChevronDown;
 
         // If multiple innings, show tabs selector
         if (_currentScorecards.Count > 1)
