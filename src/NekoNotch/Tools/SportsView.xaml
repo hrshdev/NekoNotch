@@ -134,8 +134,8 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <hero:HeroIcon Kind="Star" Width="11" Height="11" Margin="0,0,4,0" VerticalAlignment="Center" />
                         <TextBlock Text="Following" VerticalAlignment="Center" />
-                        <Border x:Name="MyTeamsBadge" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="4,1" Margin="5,0,0,0" Visibility="Collapsed">
-                            <TextBlock x:Name="MyTeamsCountText" Text="0" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                        <Border x:Name="MyTeamsBadge" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="5,1,5,2" Margin="5,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock x:Name="MyTeamsCountText" Text="0" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                         </Border>
                     </StackPanel>
                 </RadioButton>
@@ -235,8 +235,9 @@
                                                            Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis"
                                                            MaxWidth="200" HorizontalAlignment="Left" VerticalAlignment="Center" />
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                    <Border Background="{Binding StatusBgBrush}" CornerRadius="4" Padding="5,1" Margin="0,0,4,0">
-                                                        <TextBlock Text="{Binding StatusDetail}" FontSize="9" FontWeight="Bold" Foreground="{Binding StatusFgBrush}" />
+                                                    <Border Background="{Binding StatusBgBrush}" CornerRadius="4" Padding="5,1,5,2" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding StatusDetail}" FontSize="9" FontWeight="Bold" Foreground="{Binding StatusFgBrush}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                                                     </Border>
                                                     <Button Style="{StaticResource IconButton}" Width="18" Height="18"
                                                             ToolTip="{Binding PinToolTip}" Click="OnPinItemClick" Tag="{Binding Id}">
@@ -345,8 +346,9 @@
                         <!-- Score & Clock -->
                         <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0">
                             <TextBlock x:Name="DetailScoreText" Text="0 - 0" FontSize="18" FontWeight="Black" HorizontalAlignment="Center" />
-                            <Border x:Name="DetailStatusBadge" Background="#2032D74B" CornerRadius="4" Padding="6,1.5" Margin="0,3,0,0" HorizontalAlignment="Center">
-                                <TextBlock x:Name="DetailStatusText" Text="LIVE" FontSize="9.5" FontWeight="Bold" Foreground="#32D74B" />
+                            <Border x:Name="DetailStatusBadge" Background="#2032D74B" CornerRadius="4" Padding="7,1.5,7,2.5" Margin="0,3,0,0" HorizontalAlignment="Center">
+                                <TextBlock x:Name="DetailStatusText" Text="LIVE" FontSize="9.5" FontWeight="Bold" Foreground="#32D74B"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                             </Border>
                         </StackPanel>
 
@@ -402,8 +404,9 @@
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
-                                                <Border Background="#25FFFFFF" CornerRadius="4" Padding="4,1" Margin="0,0,8,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Clock}" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                                <Border Background="#25FFFFFF" CornerRadius="4" Padding="5,1,5,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Clock}" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                                                 </Border>
                                                 <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" />
                                             </Grid>
@@ -556,8 +559,9 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,2.5" Margin="0,0,5,4">
-                                                        <TextBlock Text="{Binding Formatted}" FontSize="9" Foreground="{DynamicResource SubTextBrush}" />
+                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,2,6,3" Margin="0,0,5,4" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Formatted}" FontSize="9" Foreground="{DynamicResource SubTextBrush}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -570,8 +574,9 @@
                                         <ItemsControl x:Name="CricketPartnershipsList">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,3" Margin="0,0,0,3">
-                                                        <TextBlock Text="{Binding Formatted}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" />
+                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,2,6,3" Margin="0,0,0,3" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Formatted}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -588,10 +593,11 @@
                                             <hero:HeroIcon Kind="User" Width="13" Height="13" Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                                             <TextBlock x:Name="SquadsToggleTitle" Text="PLAYING XI &amp; SQUADS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
-                                        <Border Background="#20FFFFFF" CornerRadius="4" Padding="6,2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Border Background="#20FFFFFF" CornerRadius="4" Padding="6,1.5,6,2.5" HorizontalAlignment="Right" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock x:Name="SquadsToggleBtnText" Text="Show" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,4,0" />
-                                                <hero:HeroIcon x:Name="SquadsToggleArrow" Kind="ChevronDown" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" />
+                                                <TextBlock x:Name="SquadsToggleBtnText" Text="Show" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}"
+                                                           VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,4,0" />
+                                                <hero:HeroIcon x:Name="SquadsToggleArrow" Kind="ChevronDown" Width="10" Height="10" Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Border>
                                     </Grid>

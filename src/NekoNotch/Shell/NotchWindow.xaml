@@ -541,8 +541,9 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform x:Name="SportsCelebrationLeftShift" Y="-24" />
                             </StackPanel.RenderTransform>
-                            <Border x:Name="SportsCelebrationPill" CornerRadius="6" Padding="6,2" Background="#35FF8A3D" BorderBrush="#80FF8A3D" BorderThickness="1">
-                                <TextBlock x:Name="SportsCelebrationBadgeText" Text="⚽ GOAL!" FontSize="11" FontWeight="Black" Foreground="#FF8A3D" VerticalAlignment="Center" />
+                            <Border x:Name="SportsCelebrationPill" CornerRadius="6" Padding="6,1.5,6,2.5" Background="#35FF8A3D" BorderBrush="#80FF8A3D" BorderThickness="1">
+                                <TextBlock x:Name="SportsCelebrationBadgeText" Text="⚽ GOAL!" FontSize="11" FontWeight="Black" Foreground="#FF8A3D"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                             </Border>
                         </StackPanel>
 
@@ -556,8 +557,9 @@
                             <TextBlock x:Name="SportsAwayScoreText" Text="1" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
                             <TextBlock x:Name="SportsAwayOversText" Text="(4.3/20)" FontSize="10" FontWeight="SemiBold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,1,4,0" Visibility="Collapsed" />
                             <TextBlock x:Name="SportsAwayTeamText" Text="CHE" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
-                            <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="4,1" Margin="5,0,0,0" Visibility="Collapsed">
-                                <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="9.5" FontWeight="Bold" Foreground="#FF8A3D" VerticalAlignment="Center" />
+                            <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="5,1,5,2" Margin="5,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="9.5" FontWeight="Bold" Foreground="#FF8A3D"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                             </Border>
                         </StackPanel>
 

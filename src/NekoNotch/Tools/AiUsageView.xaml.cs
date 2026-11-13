@@ -157,6 +157,8 @@ public partial class AiUsageView : UserControl, IToolView
             Text = p.Badge ?? (p.SessionPercent is not null || p.WeeklyPercent is not null ? "Plan" : "Local"),
             FontSize = 10.5,
             VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
             MaxWidth = 120,
         };
