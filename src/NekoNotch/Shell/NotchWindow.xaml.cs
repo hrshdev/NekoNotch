@@ -3068,11 +3068,15 @@ public partial class NotchWindow : Window
         SportsAwayScoreText.Text = m.CompactAwayScore;
         SportsAwayTeamText.Text = m.AwayTeamCode;
 
+        var liveBrush = new SolidColorBrush(Color.FromRgb(0x32, 0xD7, 0x4B));
+        var subTextBrush = (Brush)FindResource("SubTextBrush");
+
         if (m.Sport == SportType.Cricket)
         {
             SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
             SportsTimeBadge.Visibility = Visibility.Visible;
-            SportsTimeBadge.Text = m.IsLive ? "LIVE" : (m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail);
+            SportsTimeBadge.Text = m.IsLive ? "LIVE" : (string.IsNullOrWhiteSpace(m.StatusDetail) ? "FINAL" : (m.StatusDetail.Length > 8 ? m.StatusDetail[..8].ToUpperInvariant() : m.StatusDetail.ToUpperInvariant()));
+            SportsTimeBadge.Foreground = m.IsLive ? liveBrush : subTextBrush;
 
             var homeOvers = m.HomeOvers;
             var awayOvers = m.AwayOvers;
@@ -3081,12 +3085,14 @@ public partial class NotchWindow : Window
             {
                 SportsHomeOversText.Text = homeOvers;
                 SportsHomeOversText.Visibility = Visibility.Visible;
+                SportsHomeOversText.Foreground = m.IsLive ? liveBrush : subTextBrush;
                 SportsAwayOversText.Visibility = Visibility.Collapsed;
             }
             else if (!string.IsNullOrEmpty(awayOvers))
             {
                 SportsAwayOversText.Text = awayOvers;
                 SportsAwayOversText.Visibility = Visibility.Visible;
+                SportsAwayOversText.Foreground = m.IsLive ? liveBrush : subTextBrush;
                 SportsHomeOversText.Visibility = Visibility.Collapsed;
             }
             else
@@ -3101,9 +3107,10 @@ public partial class NotchWindow : Window
             SportsAwayOversText.Visibility = Visibility.Collapsed;
             SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
             SportsTimeBadge.Visibility = Visibility.Visible;
+            SportsTimeBadge.Foreground = m.IsLive ? liveBrush : subTextBrush;
             SportsTimeBadge.Text = !string.IsNullOrEmpty(m.LiveClock)
-                ? (m.IsLive ? $"LIVE {m.LiveClock}" : m.LiveClock)
-                : (string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail);
+                ? (m.IsLive ? $"LIVE {m.LiveClock}" : m.LiveClock.ToUpperInvariant())
+                : (string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "FT") : m.StatusDetail.ToUpperInvariant());
         }
     }
 

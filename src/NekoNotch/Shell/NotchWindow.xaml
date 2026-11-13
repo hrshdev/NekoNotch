@@ -530,10 +530,10 @@
                             <Ellipse x:Name="SportsLiveDot" Width="6" Height="6" Fill="#32D74B" Margin="0,0,4,0" VerticalAlignment="Center">
                                 <Ellipse.Effect><BlurEffect Radius="1.2" /></Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock x:Name="SportsTimeBadge" Text="(79:12)" FontSize="10.5" FontWeight="Bold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock x:Name="SportsTimeBadge" Text="(79:12)" FontSize="10.5" FontWeight="Bold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,1,5,0" />
                             <TextBlock x:Name="SportsHomeTeamText" Text="ARS" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                             <TextBlock x:Name="SportsHomeScoreText" Text="2" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
-                            <TextBlock x:Name="SportsHomeOversText" Text="(4.3/20)" FontSize="10" FontWeight="SemiBold" Foreground="#32D74B" VerticalAlignment="Center" Margin="4,0,0,0" Visibility="Collapsed" />
+                            <TextBlock x:Name="SportsHomeOversText" Text="(4.3/20)" FontSize="10" FontWeight="SemiBold" Foreground="#32D74B" VerticalAlignment="Center" Margin="4,1,0,0" Visibility="Collapsed" />
                         </StackPanel>
 
                         <!-- In-Notch Celebration Left: Event Pill (e.g. ⚽ GOAL! / 💥 SIX!) -->
@@ -554,7 +554,7 @@
                                 <TranslateTransform x:Name="SportsRightShift" Y="0" />
                             </StackPanel.RenderTransform>
                             <TextBlock x:Name="SportsAwayScoreText" Text="1" FontWeight="Black" FontSize="12.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
-                            <TextBlock x:Name="SportsAwayOversText" Text="(4.3/20)" FontSize="10" FontWeight="SemiBold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,0,4,0" Visibility="Collapsed" />
+                            <TextBlock x:Name="SportsAwayOversText" Text="(4.3/20)" FontSize="10" FontWeight="SemiBold" Foreground="#32D74B" VerticalAlignment="Center" Margin="0,1,4,0" Visibility="Collapsed" />
                             <TextBlock x:Name="SportsAwayTeamText" Text="CHE" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                             <Border x:Name="SportsEventPill" Background="#35FF8A3D" CornerRadius="4" Padding="4,1" Margin="5,0,0,0" Visibility="Collapsed">
                                 <TextBlock x:Name="SportsEventText" Text="⚽ GOAL!" FontSize="9.5" FontWeight="Bold" Foreground="#FF8A3D" VerticalAlignment="Center" />

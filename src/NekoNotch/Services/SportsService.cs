@@ -103,10 +103,10 @@ public sealed class SportMatch
         return "";
     }
 
-    public string CompactHomeScore => GetCompactScore(HomeScore);
-    public string CompactAwayScore => GetCompactScore(AwayScore);
+    public string CompactHomeScore => GetCompactScore(HomeScore, State, Sport);
+    public string CompactAwayScore => GetCompactScore(AwayScore, State, Sport);
 
-    private static string GetCompactScore(string score)
+    private static string GetCompactScore(string score, string state = "", SportType sport = SportType.Football)
     {
         if (string.IsNullOrWhiteSpace(score) || score == "-") return "-";
         var s = score.Trim();
@@ -115,11 +115,23 @@ public sealed class SportMatch
             var parts = s.Split('&');
             s = parts[^1].Trim();
         }
-        if (s.Contains('('))
+
+        bool hasOvers = s.Contains('(');
+        var rawBeforeParen = hasOvers ? s.Split('(')[0].Trim() : s;
+
+        // In cricket, if a team has not reached target and overs < full allotted overs in a finished match, they were all out (/10)
+        if (sport == SportType.Cricket && state == "post" && hasOvers && !rawBeforeParen.Contains('/'))
         {
-            s = s.Split('(')[0].Trim();
+            if (s.Contains("/50") || s.Contains("/20") || s.Contains("/100") || s.Contains("target"))
+            {
+                if (int.TryParse(rawBeforeParen, out _))
+                {
+                    rawBeforeParen += "/10";
+                }
+            }
         }
-        return s.Length > 9 ? s[..9] : s;
+
+        return rawBeforeParen.Length > 9 ? rawBeforeParen[..9] : rawBeforeParen;
     }
 }
 
