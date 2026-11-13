@@ -22,6 +22,32 @@ public sealed partial class SportsView : UserControl, IToolView
     private string _teamCategoryFilter = "all";
     private string _teamSearchQuery = "";
     private SportMatch? _detailedMatch;
+    private List<CricketInningScorecard> _currentScorecards = [];
+    private int _selectedInningIndex = 0;
+
+    public sealed class CricketBatterViewModel
+    {
+        public string DisplayName { get; set; } = "";
+        public string Dismissal { get; set; } = "";
+        public int Runs { get; set; }
+        public int Balls { get; set; }
+        public int Fours { get; set; }
+        public int Sixes { get; set; }
+        public string StrikeRate { get; set; } = "0.0";
+        public bool IsNotOut { get; set; }
+        public Brush RunsBrush { get; set; } = Brushes.White;
+    }
+
+    public sealed class CricketBowlerViewModel
+    {
+        public string BowlerName { get; set; } = "";
+        public string Overs { get; set; } = "0.0";
+        public int Maidens { get; set; }
+        public int RunsConceded { get; set; }
+        public int Wickets { get; set; }
+        public string Economy { get; set; } = "0.0";
+        public Brush WicketsBrush { get; set; } = Brushes.White;
+    }
 
     public sealed class MatchCardViewModel
     {
@@ -157,6 +183,9 @@ public sealed partial class SportsView : UserControl, IToolView
         StageScheduleMode.Visibility = Visibility.Visible;
         StageDetailMode.Visibility = Visibility.Collapsed;
         StageFollowMode.Visibility = Visibility.Collapsed;
+        if (LeagueChipsScroll != null) LeagueChipsScroll.Visibility = Visibility.Visible;
+        if (SearchBox != null) SearchBox.Visibility = Visibility.Visible;
+        if (FollowTeamsBtn != null) FollowTeamsBtn.Visibility = Visibility.Visible;
     }
 
     private void ShowDetailMode()
@@ -164,6 +193,9 @@ public sealed partial class SportsView : UserControl, IToolView
         StageScheduleMode.Visibility = Visibility.Collapsed;
         StageDetailMode.Visibility = Visibility.Visible;
         StageFollowMode.Visibility = Visibility.Collapsed;
+        if (LeagueChipsScroll != null) LeagueChipsScroll.Visibility = Visibility.Collapsed;
+        if (SearchBox != null) SearchBox.Visibility = Visibility.Collapsed;
+        if (FollowTeamsBtn != null) FollowTeamsBtn.Visibility = Visibility.Collapsed;
     }
 
     private void ShowFollowMode()
@@ -171,6 +203,9 @@ public sealed partial class SportsView : UserControl, IToolView
         StageScheduleMode.Visibility = Visibility.Collapsed;
         StageDetailMode.Visibility = Visibility.Collapsed;
         StageFollowMode.Visibility = Visibility.Visible;
+        if (LeagueChipsScroll != null) LeagueChipsScroll.Visibility = Visibility.Collapsed;
+        if (SearchBox != null) SearchBox.Visibility = Visibility.Collapsed;
+        if (FollowTeamsBtn != null) FollowTeamsBtn.Visibility = Visibility.Collapsed;
         _teamCategoryFilter = "all";
         _teamSearchQuery = "";
         if (TeamSearchBox != null) TeamSearchBox.Text = "";
@@ -513,6 +548,8 @@ public sealed partial class SportsView : UserControl, IToolView
         if (sender is FrameworkElement fe && fe.DataContext is MatchCardViewModel vm)
         {
             _detailedMatch = vm.RawMatch;
+            _selectedInningIndex = 0;
+            _currentScorecards.Clear();
             ShowDetailMode();
             RenderDetailBanner(_detailedMatch);
             _ = LoadMatchDetailAsync(_detailedMatch);
@@ -614,16 +651,171 @@ public sealed partial class SportsView : UserControl, IToolView
             }
             else // Cricket
             {
-                var inningVMs = detail.CricketInnings.Select(i => new CricketInningViewModel
-                {
-                    TeamName = i.TeamName,
-                    Description = i.Description,
-                    DisplayScore = $"{i.Runs}/{i.Wickets} ({i.Overs} ov)"
-                }).ToList();
-
-                CricketInningsList.ItemsSource = inningVMs;
+                _currentScorecards = detail.CricketScorecards;
+                _selectedInningIndex = Math.Max(0, _currentScorecards.Count - 1);
                 CricketPlayersList.ItemsSource = detail.CricketPlayers;
+                RenderCricketScorecards();
             }
         });
+    }
+
+    private void RenderCricketScorecards()
+    {
+        CricketInningsTabsPanel.Children.Clear();
+
+        if (_currentScorecards.Count == 0)
+        {
+            // If no detailed scorecards yet (e.g. pre-match), show squads expanded
+            CricketInningsTabsScroll.Visibility = Visibility.Collapsed;
+            CricketScorecardCard.Visibility = Visibility.Collapsed;
+            CricketSquadsExpander.IsExpanded = true;
+            return;
+        }
+
+        CricketScorecardCard.Visibility = Visibility.Visible;
+        CricketSquadsExpander.IsExpanded = false;
+
+        // If multiple innings, show tabs selector
+        if (_currentScorecards.Count > 1)
+        {
+            CricketInningsTabsScroll.Visibility = Visibility.Visible;
+            var chipStyle = (Style)TryFindResource("LeagueChipBtn");
+
+            for (int i = 0; i < _currentScorecards.Count; i++)
+            {
+                var sc = _currentScorecards[i];
+                var tabIndex = i;
+                var shortTitle = string.IsNullOrEmpty(sc.TeamName) ? sc.InningTitle : $"{sc.TeamName} ({sc.ScoreSummary})";
+                var rb = new RadioButton
+                {
+                    Content = shortTitle,
+                    Tag = tabIndex,
+                    Style = chipStyle,
+                    GroupName = "CricketInningTabs",
+                    IsChecked = tabIndex == _selectedInningIndex
+                };
+                rb.Click += (s, _) =>
+                {
+                    if (s is RadioButton btn && btn.Tag is int idx)
+                    {
+                        _selectedInningIndex = idx;
+                        DisplaySelectedInningScorecard();
+                    }
+                };
+                CricketInningsTabsPanel.Children.Add(rb);
+            }
+        }
+        else
+        {
+            CricketInningsTabsScroll.Visibility = Visibility.Collapsed;
+        }
+
+        if (_selectedInningIndex >= _currentScorecards.Count)
+        {
+            _selectedInningIndex = _currentScorecards.Count - 1;
+        }
+
+        DisplaySelectedInningScorecard();
+    }
+
+    private void DisplaySelectedInningScorecard()
+    {
+        if (_currentScorecards.Count == 0 || _selectedInningIndex < 0 || _selectedInningIndex >= _currentScorecards.Count)
+        {
+            CricketScorecardCard.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var card = _currentScorecards[_selectedInningIndex];
+        CricketScorecardCard.Visibility = Visibility.Visible;
+
+        InningHeaderTitle.Text = card.InningTitle;
+        InningHeaderScore.Text = card.ScoreSummary;
+        InningHeaderExtras.Text = string.IsNullOrEmpty(card.Extras) ? "" : $"Extras: {card.Extras}";
+
+        var textBrush = (Brush)TryFindResource("TextBrush") ?? Brushes.White;
+        var subTextBrush = (Brush)TryFindResource("SubTextBrush") ?? Brushes.Gray;
+        var accentBrush = (Brush)TryFindResource("AccentBrush") ?? Brushes.DeepSkyBlue;
+        var centuryBrush = new SolidColorBrush(Color.FromRgb(255, 215, 0)); // Gold
+        var fiftyBrush = new SolidColorBrush(Color.FromRgb(100, 210, 255)); // Light cyan
+        var wicketBrush = new SolidColorBrush(Color.FromRgb(50, 215, 75)); // Green
+
+        // Batters
+        if (card.Batters.Count > 0)
+        {
+            BattingHeading.Visibility = Visibility.Visible;
+            BattingTableHeader.Visibility = Visibility.Visible;
+            NoBattersText.Visibility = Visibility.Collapsed;
+
+            var batterVMs = card.Batters.Select(b => new CricketBatterViewModel
+            {
+                DisplayName = b.PlayerName,
+                Dismissal = b.Dismissal,
+                Runs = b.Runs,
+                Balls = b.Balls,
+                Fours = b.Fours,
+                Sixes = b.Sixes,
+                StrikeRate = b.StrikeRate,
+                IsNotOut = b.IsNotOut,
+                RunsBrush = b.Runs >= 100 ? centuryBrush : (b.Runs >= 50 ? fiftyBrush : textBrush)
+            }).ToList();
+
+            CricketBattersList.ItemsSource = batterVMs;
+        }
+        else
+        {
+            CricketBattersList.ItemsSource = null;
+            NoBattersText.Visibility = Visibility.Visible;
+            BattingTableHeader.Visibility = Visibility.Collapsed;
+        }
+
+        // Bowlers
+        if (card.Bowlers.Count > 0)
+        {
+            BowlingHeading.Visibility = Visibility.Visible;
+            BowlingTableHeader.Visibility = Visibility.Visible;
+            CricketBowlersList.Visibility = Visibility.Visible;
+
+            var bowlerVMs = card.Bowlers.Select(bw => new CricketBowlerViewModel
+            {
+                BowlerName = bw.BowlerName,
+                Overs = bw.Overs,
+                Maidens = bw.Maidens,
+                RunsConceded = bw.RunsConceded,
+                Wickets = bw.Wickets,
+                Economy = bw.Economy,
+                WicketsBrush = bw.Wickets >= 3 ? wicketBrush : (bw.Wickets > 0 ? accentBrush : textBrush)
+            }).ToList();
+
+            CricketBowlersList.ItemsSource = bowlerVMs;
+        }
+        else
+        {
+            BowlingHeading.Visibility = Visibility.Collapsed;
+            BowlingTableHeader.Visibility = Visibility.Collapsed;
+            CricketBowlersList.Visibility = Visibility.Collapsed;
+        }
+
+        // Fall of Wickets
+        if (card.FallOfWickets.Count > 0)
+        {
+            FowSection.Visibility = Visibility.Visible;
+            CricketFowList.ItemsSource = card.FallOfWickets;
+        }
+        else
+        {
+            FowSection.Visibility = Visibility.Collapsed;
+        }
+
+        // Partnerships
+        if (card.Partnerships.Count > 0)
+        {
+            PartnershipsSection.Visibility = Visibility.Visible;
+            CricketPartnershipsList.ItemsSource = card.Partnerships;
+        }
+        else
+        {
+            PartnershipsSection.Visibility = Visibility.Collapsed;
+        }
     }
 }

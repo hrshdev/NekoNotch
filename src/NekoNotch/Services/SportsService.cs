@@ -134,6 +134,61 @@ public sealed class CricketInningScore
     public string Description { get; set; } = "";
 }
 
+public sealed class CricketBattingEntry
+{
+    public string PlayerName { get; set; } = "";
+    public string Dismissal { get; set; } = "not out";
+    public int Runs { get; set; }
+    public int Balls { get; set; }
+    public int Fours { get; set; }
+    public int Sixes { get; set; }
+    public string StrikeRate { get; set; } = "0.0";
+    public bool IsNotOut => Dismissal.Equals("not out", StringComparison.OrdinalIgnoreCase) ||
+                            Dismissal.Equals("batting", StringComparison.OrdinalIgnoreCase) ||
+                            string.IsNullOrWhiteSpace(Dismissal);
+}
+
+public sealed class CricketBowlingEntry
+{
+    public string BowlerName { get; set; } = "";
+    public string Overs { get; set; } = "0.0";
+    public int Maidens { get; set; }
+    public int RunsConceded { get; set; }
+    public int Wickets { get; set; }
+    public string Economy { get; set; } = "0.0";
+}
+
+public sealed class CricketFowEntry
+{
+    public int WicketNumber { get; set; }
+    public string WicketOver { get; set; } = "0.0";
+    public int Score { get; set; }
+    public string BatterName { get; set; } = "";
+    public string Formatted => $"{Score}/{WicketNumber} ({BatterName}, {WicketOver} ov)";
+}
+
+public sealed class CricketPartnershipEntry
+{
+    public string WicketName { get; set; } = "";
+    public int Runs { get; set; }
+    public string Overs { get; set; } = "0.0";
+    public string Batsmen { get; set; } = "";
+    public string Formatted => $"{WicketName} wkt: {Runs} runs ({Overs} ov) • {Batsmen}";
+}
+
+public sealed class CricketInningScorecard
+{
+    public int InningNumber { get; set; }
+    public string TeamName { get; set; } = "";
+    public string InningTitle { get; set; } = "";
+    public string ScoreSummary { get; set; } = "";
+    public string Extras { get; set; } = "";
+    public List<CricketBattingEntry> Batters { get; set; } = [];
+    public List<CricketBowlingEntry> Bowlers { get; set; } = [];
+    public List<CricketFowEntry> FallOfWickets { get; set; } = [];
+    public List<CricketPartnershipEntry> Partnerships { get; set; } = [];
+}
+
 public sealed class CricketPlayerEntry
 {
     public string Name { get; set; } = "";
@@ -148,6 +203,7 @@ public sealed class MatchDetail
     public FootballMatchStats? FootballStats { get; set; }
     public List<CricketInningScore> CricketInnings { get; set; } = [];
     public List<CricketPlayerEntry> CricketPlayers { get; set; } = [];
+    public List<CricketInningScorecard> CricketScorecards { get; set; } = [];
 }
 
 public sealed class FollowedTeam
@@ -795,6 +851,96 @@ public sealed partial class SportsService : ObservableObject
             }
             else // Cricket
             {
+                var inningMap = new Dictionary<int, CricketInningScorecard>();
+
+                // 1. Parse matchcards (Active / primary batting & bowling scorecards)
+                if (root.TryGetProperty("matchcards", out var mcList))
+                {
+                    foreach (var mc in mcList.EnumerateArray())
+                    {
+                        var innNum = mc.TryGetProperty("inningsNumber", out var inProp) ? inProp.GetInt32() : 1;
+                        if (!inningMap.TryGetValue(innNum, out var card))
+                        {
+                            card = new CricketInningScorecard { InningNumber = innNum };
+                            inningMap[innNum] = card;
+                        }
+
+                        var headline = mc.TryGetProperty("headline", out var hl) ? hl.GetString() ?? "" : "";
+                        var teamName = mc.TryGetProperty("teamName", out var tn) ? tn.GetString() ?? "" : "";
+                        var runsStr = mc.TryGetProperty("runs", out var rp)
+                            ? (rp.ValueKind == JsonValueKind.Number ? rp.GetInt32().ToString() : rp.GetString() ?? "")
+                            : "";
+                        var totalStr = mc.TryGetProperty("total", out var tp) ? tp.GetString() ?? "" : "";
+                        var extrasStr = mc.TryGetProperty("extras", out var ep) ? ep.GetString() ?? "" : "";
+
+                        if (headline.Contains("Batting", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!string.IsNullOrEmpty(teamName)) card.TeamName = teamName;
+                            card.ScoreSummary = $"{runsStr} {totalStr}".Trim();
+                            if (!string.IsNullOrWhiteSpace(extrasStr)) card.Extras = extrasStr;
+
+                            if (mc.TryGetProperty("playerDetails", out var pDetails))
+                            {
+                                foreach (var p in pDetails.EnumerateArray())
+                                {
+                                    var pName = p.TryGetProperty("playerName", out var pnp) ? pnp.GetString() ?? "" : "";
+                                    if (string.IsNullOrWhiteSpace(pName)) continue;
+
+                                    var dismissal = p.TryGetProperty("dismissal", out var dp) ? dp.GetString() ?? "not out" : "not out";
+                                    var runs = ParseIntProperty(p, "runs");
+                                    var balls = ParseIntProperty(p, "ballsFaced");
+                                    var fours = ParseIntProperty(p, "fours");
+                                    var sixes = ParseIntProperty(p, "sixes");
+                                    var sr = balls > 0 ? ((double)runs / balls * 100).ToString("0.0") : "0.0";
+
+                                    card.Batters.Add(new CricketBattingEntry
+                                    {
+                                        PlayerName = pName,
+                                        Dismissal = dismissal,
+                                        Runs = runs,
+                                        Balls = balls,
+                                        Fours = fours,
+                                        Sixes = sixes,
+                                        StrikeRate = sr
+                                    });
+                                }
+                            }
+                        }
+                        else if (headline.Contains("Bowling", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (mc.TryGetProperty("playerDetails", out var pDetails))
+                            {
+                                foreach (var p in pDetails.EnumerateArray())
+                                {
+                                    var pName = p.TryGetProperty("playerName", out var pnp) ? pnp.GetString() ?? "" : "";
+                                    if (string.IsNullOrWhiteSpace(pName)) continue;
+
+                                    var overs = p.TryGetProperty("overs", out var op)
+                                        ? (op.ValueKind == JsonValueKind.Number ? op.GetDouble().ToString("0.0") : op.GetString() ?? "0.0")
+                                        : "0.0";
+                                    var maidens = ParseIntProperty(p, "maidens");
+                                    var conceded = ParseIntProperty(p, "conceded");
+                                    var wickets = ParseIntProperty(p, "wickets");
+                                    var econ = p.TryGetProperty("economyRate", out var econp)
+                                        ? (econp.ValueKind == JsonValueKind.Number ? econp.GetDouble().ToString("0.00") : econp.GetString() ?? "0.0")
+                                        : "0.0";
+
+                                    card.Bowlers.Add(new CricketBowlingEntry
+                                    {
+                                        BowlerName = pName,
+                                        Overs = overs,
+                                        Maidens = maidens,
+                                        RunsConceded = conceded,
+                                        Wickets = wickets,
+                                        Economy = econ
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Parse linescores (summary totals, fall of wickets, partnerships)
                 if (root.TryGetProperty("header", out var hdr) && hdr.TryGetProperty("competitions", out var comps) && comps.GetArrayLength() > 0)
                 {
                     var comp = comps[0];
@@ -807,11 +953,14 @@ public sealed partial class SportsService : ObservableObject
                             {
                                 foreach (var ls in linescores.EnumerateArray())
                                 {
+                                    var innPeriod = ls.TryGetProperty("period", out var pp) ? pp.GetInt32() : 1;
                                     var r = ls.TryGetProperty("runs", out var rp) ? rp.GetInt32().ToString() : "0";
                                     var w = ls.TryGetProperty("wickets", out var wp) ? wp.GetInt32().ToString() : "0";
                                     var o = ls.TryGetProperty("overs", out var op) ? op.GetDouble().ToString("0.0") : "0.0";
                                     var isBatting = ls.TryGetProperty("isBatting", out var bp) && bp.GetBoolean();
                                     var desc = ls.TryGetProperty("description", out var dp) ? dp.GetString() ?? "" : "";
+                                    var score = ls.TryGetProperty("score", out var sp) ? sp.GetString() ?? $"{r}/{w}" : $"{r}/{w}";
+
                                     detail.CricketInnings.Add(new CricketInningScore
                                     {
                                         TeamName = tName,
@@ -821,12 +970,110 @@ public sealed partial class SportsService : ObservableObject
                                         IsBatting = isBatting,
                                         Description = desc
                                     });
+
+                                    if (!inningMap.TryGetValue(innPeriod, out var card))
+                                    {
+                                        card = new CricketInningScorecard
+                                        {
+                                            InningNumber = innPeriod,
+                                            TeamName = tName,
+                                            ScoreSummary = $"{score} ({o} ov)"
+                                        };
+                                        inningMap[innPeriod] = card;
+                                    }
+                                    else
+                                    {
+                                        if (string.IsNullOrWhiteSpace(card.TeamName)) card.TeamName = tName;
+                                        if (string.IsNullOrWhiteSpace(card.ScoreSummary)) card.ScoreSummary = $"{score} ({o} ov)";
+                                    }
+
+                                    // Fall of wickets
+                                    if (ls.TryGetProperty("fow", out var fowList))
+                                    {
+                                        foreach (var f in fowList.EnumerateArray())
+                                        {
+                                            var wNum = f.TryGetProperty("wicketNumber", out var wn) ? wn.GetInt32() : 0;
+                                            var wOv = f.TryGetProperty("wicketOver", out var wo)
+                                                ? (wo.ValueKind == JsonValueKind.Number ? wo.GetDouble().ToString("0.0") : wo.GetString() ?? "0.0")
+                                                : "0.0";
+                                            var fRuns = f.TryGetProperty("runs", out var fr) ? fr.GetInt32() : 0;
+                                            var athName = f.TryGetProperty("athlete", out var ath) && ath.TryGetProperty("displayName", out var adn)
+                                                ? adn.GetString() ?? "" : "";
+
+                                            card.FallOfWickets.Add(new CricketFowEntry
+                                            {
+                                                WicketNumber = wNum,
+                                                WicketOver = wOv,
+                                                Score = fRuns,
+                                                BatterName = athName
+                                            });
+
+                                            // Reconstruct older innings batters if matchcard wasn't provided for this inning
+                                            if (card.Batters.Count == 0 && !string.IsNullOrEmpty(athName))
+                                            {
+                                                var scored = f.TryGetProperty("runsScored", out var rsp) ? rsp.GetInt32() : 0;
+                                                var faced = f.TryGetProperty("ballsFaced", out var bfp) ? bfp.GetInt32() : 0;
+                                                var fowType = f.TryGetProperty("fowType", out var ftp) ? ftp.GetString() ?? "out" : "out";
+                                                var sr = faced > 0 ? ((double)scored / faced * 100).ToString("0.0") : "0.0";
+                                                card.Batters.Add(new CricketBattingEntry
+                                                {
+                                                    PlayerName = athName,
+                                                    Dismissal = fowType,
+                                                    Runs = scored,
+                                                    Balls = faced,
+                                                    StrikeRate = sr
+                                                });
+                                            }
+                                        }
+                                    }
+
+                                    // Partnerships
+                                    if (ls.TryGetProperty("partnerships", out var partList))
+                                    {
+                                        foreach (var part in partList.EnumerateArray())
+                                        {
+                                            var wName = part.TryGetProperty("wicketName", out var wnp) ? wnp.GetString() ?? "" : "";
+                                            var pRuns = part.TryGetProperty("runs", out var prp) ? prp.GetInt32() : 0;
+                                            var pOvers = part.TryGetProperty("overs", out var pop)
+                                                ? (pop.ValueKind == JsonValueKind.Number ? pop.GetDouble().ToString("0.0") : pop.GetString() ?? "0.0")
+                                                : "0.0";
+                                            var bParts = new List<string>();
+                                            if (part.TryGetProperty("batsmen", out var batsmenList))
+                                            {
+                                                foreach (var bAth in batsmenList.EnumerateArray())
+                                                {
+                                                    var bName = bAth.TryGetProperty("athlete", out var ath2) && ath2.TryGetProperty("displayName", out var bdn)
+                                                        ? bdn.GetString() ?? "" : "";
+                                                    var br = bAth.TryGetProperty("runs", out var brp) ? (brp.ValueKind == JsonValueKind.Number ? brp.GetInt32().ToString() : brp.GetString() ?? "0") : "0";
+                                                    var bb = bAth.TryGetProperty("balls", out var bbp) ? (bbp.ValueKind == JsonValueKind.Number ? bbp.GetInt32().ToString() : bbp.GetString() ?? "0") : "0";
+                                                    if (!string.IsNullOrEmpty(bName)) bParts.Add($"{bName} {br} ({bb})");
+                                                }
+                                            }
+                                            card.Partnerships.Add(new CricketPartnershipEntry
+                                            {
+                                                WicketName = wName,
+                                                Runs = pRuns,
+                                                Overs = pOvers,
+                                                Batsmen = string.Join(", ", bParts)
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
+                // Finalize titles and ordering
+                foreach (var kvp in inningMap.OrderBy(k => k.Key))
+                {
+                    var c = kvp.Value;
+                    var suffix = kvp.Key switch { 1 => "1st", 2 => "2nd", 3 => "3rd", 4 => "4th", _ => $"{kvp.Key}th" };
+                    c.InningTitle = string.IsNullOrEmpty(c.TeamName) ? $"{suffix} Innings" : $"{c.TeamName} {suffix} Innings";
+                    detail.CricketScorecards.Add(c);
+                }
+
+                // 3. Rosters
                 if (root.TryGetProperty("rosters", out var rosters))
                 {
                     foreach (var r in rosters.EnumerateArray())
@@ -860,6 +1107,16 @@ public sealed partial class SportsService : ObservableObject
             App.Log(ex);
             return null;
         }
+    }
+
+    private static int ParseIntProperty(JsonElement element, string propName)
+    {
+        if (element.TryGetProperty(propName, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var n)) return n;
+            if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var val)) return val;
+        }
+        return 0;
     }
 
     public static (int runs, int wickets, bool valid) ParseCricketScore(string? score)

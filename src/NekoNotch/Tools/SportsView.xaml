@@ -404,42 +404,194 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- Cricket Innings & Summary Panel -->
+                        <!-- Cricket Scorecard & Match Details Panel -->
                         <StackPanel x:Name="CricketDetailPanel" Visibility="Collapsed">
-                            <TextBlock Text="INNINGS SUMMARY" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,0,0,4" />
-                            <ItemsControl x:Name="CricketInningsList">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,4" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding TeamName}" FontWeight="Bold" FontSize="11" />
-                                                    <TextBlock Text="{Binding Description}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="{Binding DisplayScore}" FontWeight="Black" FontSize="12.5" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <!-- Innings Selector Chips (when multiple innings exist) -->
+                            <ScrollViewer x:Name="CricketInningsTabsScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,6">
+                                <StackPanel x:Name="CricketInningsTabsPanel" Orientation="Horizontal" />
+                            </ScrollViewer>
 
-                            <TextBlock Text="SQUAD &amp; PLAYERS" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="2,8,0,4" />
-                            <ItemsControl x:Name="CricketPlayersList">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="6,3" Margin="0,0,0,2">
-                                            <Grid>
-                                                <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="Medium" HorizontalAlignment="Left" />
-                                                <TextBlock Text="{Binding TeamName}" FontSize="9" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" />
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <!-- Selected Inning Scorecard Card -->
+                            <Border x:Name="CricketScorecardCard" Background="{DynamicResource Surface2Brush}" CornerRadius="10" Padding="12,10" Margin="0,0,0,8" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <!-- Inning Title & Score Header -->
+                                    <Grid Margin="0,0,0,8">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock x:Name="InningHeaderTitle" Text="Scorecard" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="InningHeaderScore" Text="" FontSize="11.5" FontWeight="Black" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="InningHeaderExtras" Text="" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <!-- BATTING SECTION -->
+                                    <TextBlock x:Name="BattingHeading" Text="BATTING" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="0,2,0,4" />
+                                    <!-- Batting Table Header -->
+                                    <Grid x:Name="BattingTableHeader" Margin="0,0,0,4" Opacity="0.7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="34" />
+                                            <ColumnDefinition Width="34" />
+                                            <ColumnDefinition Width="48" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Batter" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" />
+                                        <TextBlock Grid.Column="1" Text="Dismissal" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" />
+                                        <TextBlock Grid.Column="2" Text="R" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Text="B" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="4" Text="4s" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="5" Text="6s" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="6" Text="SR" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                    </Grid>
+
+                                    <!-- Batters List -->
+                                    <ItemsControl x:Name="CricketBattersList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="0,3.5" BorderBrush="#12FFFFFF" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="150" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="38" />
+                                                            <ColumnDefinition Width="34" />
+                                                            <ColumnDefinition Width="34" />
+                                                            <ColumnDefinition Width="48" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <!-- Batter Name with Not Out indicator -->
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding DisplayName}" FontSize="10.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="138" />
+                                                            <TextBlock Text="*" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding IsNotOut, Converter={StaticResource BoolToVis}}" Margin="2,0,0,0" />
+                                                        </StackPanel>
+                                                        <!-- Dismissal -->
+                                                        <TextBlock Grid.Column="1" Text="{Binding Dismissal}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="4,0,8,0" />
+                                                        <!-- Runs -->
+                                                        <TextBlock Grid.Column="2" Text="{Binding Runs}" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center" Foreground="{Binding RunsBrush}" />
+                                                        <!-- Balls -->
+                                                        <TextBlock Grid.Column="3" Text="{Binding Balls}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <!-- 4s -->
+                                                        <TextBlock Grid.Column="4" Text="{Binding Fours}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <!-- 6s -->
+                                                        <TextBlock Grid.Column="5" Text="{Binding Sixes}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <!-- SR -->
+                                                        <TextBlock Grid.Column="6" Text="{Binding StrikeRate}" FontSize="9.5" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Empty Batters State -->
+                                    <TextBlock x:Name="NoBattersText" Text="Yet to bat" FontSize="9.5" FontStyle="Italic" Foreground="{DynamicResource SubTextBrush}" Margin="2,4,0,4" Visibility="Collapsed" />
+
+                                    <!-- BOWLING SECTION -->
+                                    <TextBlock x:Name="BowlingHeading" Text="BOWLING" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="0,10,0,4" />
+                                    <!-- Bowling Table Header -->
+                                    <Grid x:Name="BowlingTableHeader" Margin="0,0,0,4" Opacity="0.7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="48" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Bowler" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" />
+                                        <TextBlock Grid.Column="2" Text="O" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Text="M" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="4" Text="R" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="5" Text="W" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="6" Text="Econ" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource SubTextBrush}" TextAlignment="Right" />
+                                    </Grid>
+
+                                    <!-- Bowlers List -->
+                                    <ItemsControl x:Name="CricketBowlersList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="0,3.5" BorderBrush="#12FFFFFF" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="180" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="38" />
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="42" />
+                                                            <ColumnDefinition Width="48" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding BowlerName}" FontSize="10.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding Overs}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <TextBlock Grid.Column="3" Text="{Binding Maidens}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <TextBlock Grid.Column="4" Text="{Binding RunsConceded}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                        <TextBlock Grid.Column="5" Text="{Binding Wickets}" FontSize="10.5" FontWeight="Bold" TextAlignment="Right" VerticalAlignment="Center" Foreground="{Binding WicketsBrush}" />
+                                                        <TextBlock Grid.Column="6" Text="{Binding Economy}" FontSize="9.5" TextAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource SubTextBrush}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- FALL OF WICKETS -->
+                                    <StackPanel x:Name="FowSection" Margin="0,10,0,0" Visibility="Collapsed">
+                                        <TextBlock Text="FALL OF WICKETS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4" />
+                                        <ItemsControl x:Name="CricketFowList">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,2.5" Margin="0,0,5,4">
+                                                        <TextBlock Text="{Binding Formatted}" FontSize="9" Foreground="{DynamicResource SubTextBrush}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <!-- PARTNERSHIPS -->
+                                    <StackPanel x:Name="PartnershipsSection" Margin="0,8,0,0" Visibility="Collapsed">
+                                        <TextBlock Text="KEY PARTNERSHIPS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource SubTextBrush}" Margin="0,0,0,4" />
+                                        <ItemsControl x:Name="CricketPartnershipsList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#15FFFFFF" CornerRadius="4" Padding="6,3" Margin="0,0,0,3">
+                                                        <TextBlock Text="{Binding Formatted}" FontSize="9.5" Foreground="{DynamicResource SubTextBrush}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- SQUADS & PLAYERS SECTION (clean collapsible) -->
+                            <Expander x:Name="CricketSquadsExpander" Header="SQUAD &amp; PLAYING XI" IsExpanded="False" Foreground="{DynamicResource SubTextBrush}" FontSize="9.5" FontWeight="Bold" Margin="0,2,0,4">
+                                <ItemsControl x:Name="CricketPlayersList" Margin="0,6,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="165" Background="{DynamicResource Surface2Brush}" CornerRadius="6" Padding="6,4" Margin="0,0,6,4" BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Role}" FontSize="8.5" Foreground="{DynamicResource SubTextBrush}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding TeamName}" FontSize="8.5" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
