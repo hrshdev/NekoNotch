@@ -641,13 +641,13 @@ public sealed partial class SportsView : UserControl, IToolView
         {
             SquadsContentPanel.Visibility = Visibility.Collapsed;
             SquadsToggleBtnText.Text = "Show";
-            SquadsToggleArrow.Kind = HeroIconKind.ChevronDown;
+            SquadsToggleArrow.Kind = AppIcon.ChevronDown;
         }
         else
         {
             SquadsContentPanel.Visibility = Visibility.Visible;
             SquadsToggleBtnText.Text = "Hide";
-            SquadsToggleArrow.Kind = HeroIconKind.ChevronUp;
+            SquadsToggleArrow.Kind = AppIcon.ChevronUp;
         }
     }
 
@@ -740,14 +740,14 @@ public sealed partial class SportsView : UserControl, IToolView
             CricketScorecardCard.Visibility = Visibility.Collapsed;
             SquadsContentPanel.Visibility = Visibility.Visible;
             SquadsToggleBtnText.Text = "Hide";
-            SquadsToggleArrow.Kind = HeroIconKind.ChevronUp;
+            SquadsToggleArrow.Kind = AppIcon.ChevronUp;
             return;
         }
 
         CricketScorecardCard.Visibility = Visibility.Visible;
         SquadsContentPanel.Visibility = Visibility.Collapsed;
         SquadsToggleBtnText.Text = "Show";
-        SquadsToggleArrow.Kind = HeroIconKind.ChevronDown;
+        SquadsToggleArrow.Kind = AppIcon.ChevronDown;
 
         // If multiple innings, show tabs selector
         if (_currentScorecards.Count > 1)
