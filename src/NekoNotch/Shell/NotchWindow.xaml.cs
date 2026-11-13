@@ -3071,6 +3071,8 @@ public partial class NotchWindow : Window
         if (m.Sport == SportType.Cricket)
         {
             SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
+            SportsTimeBadge.Visibility = Visibility.Visible;
+            SportsTimeBadge.Text = m.IsLive ? "LIVE" : (m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail);
 
             var homeOvers = m.HomeOvers;
             var awayOvers = m.AwayOvers;
@@ -3080,28 +3082,17 @@ public partial class NotchWindow : Window
                 SportsHomeOversText.Text = homeOvers;
                 SportsHomeOversText.Visibility = Visibility.Visible;
                 SportsAwayOversText.Visibility = Visibility.Collapsed;
-                SportsTimeBadge.Visibility = Visibility.Collapsed;
             }
             else if (!string.IsNullOrEmpty(awayOvers))
             {
                 SportsAwayOversText.Text = awayOvers;
                 SportsAwayOversText.Visibility = Visibility.Visible;
                 SportsHomeOversText.Visibility = Visibility.Collapsed;
-                SportsTimeBadge.Visibility = Visibility.Collapsed;
             }
             else
             {
                 SportsHomeOversText.Visibility = Visibility.Collapsed;
                 SportsAwayOversText.Visibility = Visibility.Collapsed;
-                if (!string.IsNullOrEmpty(m.StatusDetail) && !m.StatusDetail.Equals("LIVE", StringComparison.OrdinalIgnoreCase))
-                {
-                    SportsTimeBadge.Text = m.StatusDetail.Length > 8 ? m.StatusDetail[..8] : m.StatusDetail;
-                    SportsTimeBadge.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    SportsTimeBadge.Visibility = Visibility.Collapsed;
-                }
             }
         }
         else // Football
@@ -3111,7 +3102,7 @@ public partial class NotchWindow : Window
             SportsLiveDot.Visibility = m.IsLive ? Visibility.Visible : Visibility.Collapsed;
             SportsTimeBadge.Visibility = Visibility.Visible;
             SportsTimeBadge.Text = !string.IsNullOrEmpty(m.LiveClock)
-                ? m.LiveClock
+                ? (m.IsLive ? $"LIVE {m.LiveClock}" : m.LiveClock)
                 : (string.IsNullOrEmpty(m.StatusDetail) ? (m.IsLive ? "LIVE" : "") : m.StatusDetail);
         }
     }

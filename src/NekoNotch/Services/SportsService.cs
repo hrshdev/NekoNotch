@@ -1103,20 +1103,30 @@ public sealed partial class SportsService : ObservableObject
                                         Description = desc
                                     });
 
+                                    // Skip bowling dummy entries with 0 runs and empty/dummy score unless they have FOW
+                                    if (!isBatting && int.TryParse(r, out var rNum) && rNum == 0 && (string.IsNullOrWhiteSpace(score) || score == "0/0") && !ls.TryGetProperty("fow", out _))
+                                    {
+                                        continue;
+                                    }
+
                                     if (!inningMap.TryGetValue(innPeriod, out var card))
                                     {
                                         card = new CricketInningScorecard
                                         {
                                             InningNumber = innPeriod,
                                             TeamName = tName,
-                                            ScoreSummary = $"{score} ({o} ov)"
+                                            ScoreSummary = !string.IsNullOrWhiteSpace(score) ? score : $"{r}/{w} ({o} ov)"
                                         };
                                         inningMap[innPeriod] = card;
                                     }
                                     else
                                     {
-                                        if (string.IsNullOrWhiteSpace(card.TeamName)) card.TeamName = tName;
-                                        if (string.IsNullOrWhiteSpace(card.ScoreSummary)) card.ScoreSummary = $"{score} ({o} ov)";
+                                        // Update team and score if this team is batting in this inning
+                                        if (isBatting || (!string.IsNullOrWhiteSpace(score) && score != "0/0" && score != "-"))
+                                        {
+                                            card.TeamName = tName;
+                                            card.ScoreSummary = !string.IsNullOrWhiteSpace(score) ? score : $"{r}/{w} ({o} ov)";
+                                        }
                                     }
 
                                     // Fall of wickets
@@ -1132,16 +1142,19 @@ public sealed partial class SportsService : ObservableObject
                                             var athName = f.TryGetProperty("athlete", out var ath) && ath.TryGetProperty("displayName", out var adn)
                                                 ? adn.GetString() ?? "" : "";
 
-                                            card.FallOfWickets.Add(new CricketFowEntry
+                                            if (!card.FallOfWickets.Any(x => x.WicketNumber == wNum))
                                             {
-                                                WicketNumber = wNum,
-                                                WicketOver = wOv,
-                                                Score = fRuns,
-                                                BatterName = athName
-                                            });
+                                                card.FallOfWickets.Add(new CricketFowEntry
+                                                {
+                                                    WicketNumber = wNum,
+                                                    WicketOver = wOv,
+                                                    Score = fRuns,
+                                                    BatterName = athName
+                                                });
+                                            }
 
-                                            // Reconstruct older innings batters if matchcard wasn't provided for this inning
-                                            if (card.Batters.Count == 0 && !string.IsNullOrEmpty(athName))
+                                            // Reconstruct all out batters for this inning
+                                            if (!string.IsNullOrEmpty(athName) && !card.Batters.Any(b => b.PlayerName == athName))
                                             {
                                                 var scored = f.TryGetProperty("runsScored", out var rsp) ? ParseInt(rsp) : 0;
                                                 var faced = f.TryGetProperty("ballsFaced", out var bfp) ? ParseInt(bfp) : 0;
@@ -1159,8 +1172,8 @@ public sealed partial class SportsService : ObservableObject
                                         }
                                     }
 
-                                    // Partnerships
-                                    if (card.Partnerships.Count == 0 && ls.TryGetProperty("partnerships", out var partList))
+                                    // Partnerships & live not-out batsmen
+                                    if (ls.TryGetProperty("partnerships", out var partList))
                                     {
                                         foreach (var part in partList.EnumerateArray())
                                         {
@@ -1178,20 +1191,56 @@ public sealed partial class SportsService : ObservableObject
                                                         ? bdn.GetString() ?? "" : "";
                                                     var br = bAth.TryGetProperty("runs", out var brp) ? (brp.ValueKind == JsonValueKind.Number ? brp.GetInt32().ToString() : brp.GetString() ?? "0") : "0";
                                                     var bb = bAth.TryGetProperty("balls", out var bbp) ? (bbp.ValueKind == JsonValueKind.Number ? bbp.GetInt32().ToString() : bbp.GetString() ?? "0") : "0";
-                                                    if (!string.IsNullOrEmpty(bName)) bParts.Add($"{bName} {br} ({bb})");
+                                                    if (!string.IsNullOrEmpty(bName))
+                                                    {
+                                                        bParts.Add($"{bName} {br} ({bb})");
+                                                        // If not in Batters yet, they are currently batting (not out)!
+                                                        if (!card.Batters.Any(x => x.PlayerName == bName))
+                                                        {
+                                                            int.TryParse(br, out var rVal);
+                                                            int.TryParse(bb, out var bVal);
+                                                            var sr = bVal > 0 ? ((double)rVal / bVal * 100).ToString("0.0") : "0.0";
+                                                            card.Batters.Add(new CricketBattingEntry
+                                                            {
+                                                                PlayerName = bName,
+                                                                Dismissal = "not out",
+                                                                Runs = rVal,
+                                                                Balls = bVal,
+                                                                StrikeRate = sr
+                                                            });
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            card.Partnerships.Add(new CricketPartnershipEntry
-                                             {
-                                                WicketName = wName,
-                                                Runs = pRuns,
-                                                Overs = pOvers,
-                                                Batsmen = string.Join(", ", bParts)
-                                            });
+                                            if (!card.Partnerships.Any(x => x.WicketName == wName))
+                                            {
+                                                card.Partnerships.Add(new CricketPartnershipEntry
+                                                {
+                                                    WicketName = wName,
+                                                    Runs = pRuns,
+                                                    Overs = pOvers,
+                                                    Batsmen = string.Join(", ", bParts)
+                                                });
+                                            }
                                         }
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Fallback: If a card has missing or 0/0 score, fill from match.HomeScore/AwayScore
+                foreach (var c in inningMap.Values)
+                {
+                    if (string.IsNullOrWhiteSpace(c.ScoreSummary) || c.ScoreSummary == "0/0" || c.ScoreSummary.StartsWith("0/0"))
+                    {
+                        if (!string.IsNullOrEmpty(c.TeamName))
+                        {
+                            if (match.HomeTeamName.Contains(c.TeamName, StringComparison.OrdinalIgnoreCase) && match.HomeScore != "-")
+                                c.ScoreSummary = match.HomeScore;
+                            else if (match.AwayTeamName.Contains(c.TeamName, StringComparison.OrdinalIgnoreCase) && match.AwayScore != "-")
+                                c.ScoreSummary = match.AwayScore;
                         }
                     }
                 }
