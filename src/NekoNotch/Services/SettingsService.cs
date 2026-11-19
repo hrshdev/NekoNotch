@@ -98,7 +98,7 @@ public sealed class AppSettings
     public double GlassStrength { get; set; } = 0.6;   // 0 = nearly clear, 1 = nearly opaque tint
 
     // macOS Dock Taskbar styling
-    public bool MacTaskbarEnabled { get; set; } = true;
+    public bool MacTaskbarEnabled { get; set; } = false;
     public string MacTaskbarStyle { get; set; } = "Dock"; // "Dock", "Floating", "Acrylic", "Clear"
     public bool MacTaskbarCenterIcons { get; set; } = true;
     public bool MacTaskbarRestoreOnExit { get; set; } = true;

@@ -7,12 +7,12 @@ using Microsoft.Win32;
 namespace NekoNotch.Services;
 
 /// <summary>
-/// Transforms the Windows taskbar into a macOS-style dock:
-/// - Floating rounded dock segments (Start + app icons dock island & tray status island).
+/// Transforms the Windows taskbar into a modern floating macOS-style dock:
+/// - Smooth floating dock pill with rounded margins and elevation.
 /// - Translucent frosted glass blur and layered opacity.
 /// - Centered dock icons via TaskbarAl registry settings with broadcast.
-/// - Dynamic width tracking as apps are pinned or opened.
-/// - Clean restoration of default Windows taskbar on exit.
+/// - Safe and non-destructive: never clips through active application icons.
+/// - Clean restoration of default Windows taskbar on exit or when disabled.
 /// </summary>
 public sealed class TaskbarService
 {
@@ -23,15 +23,10 @@ public sealed class TaskbarService
     private bool _hasCapturedOriginalAl;
     private bool _lastMaximized;
     private bool _isRunning;
-    private int _lastDockLeft = -1;
-    private int _lastDockRight = -1;
 
     // Win32 Interop
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
-
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string className, string? windowTitle);
 
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -55,10 +50,6 @@ public sealed class TaskbarService
 
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int cx, int cy);
-
-    [DllImport("gdi32.dll")]
-    private static extern int CombineRgn(IntPtr hrgnDest, IntPtr hrgnSrc1, IntPtr hrgnSrc2, int fnCombineMode);
-    private const int RGN_OR = 2;
 
     [DllImport("user32.dll")]
     private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
@@ -88,9 +79,6 @@ public sealed class TaskbarService
     [DllImport("user32.dll")]
     private static extern bool IsZoomed(IntPtr hWnd);
 
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr OpenDesktop(string lpszDesktop, uint dwFlags, bool fInherit, uint dwDesiredAccess);
 
@@ -98,8 +86,6 @@ public sealed class TaskbarService
     private static extern bool SetThreadDesktop(IntPtr hDesktop);
 
     private const int WCA_ACCENT_POLICY = 19;
-    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    private const int DWMWCP_ROUND = 2;
     private const uint WM_SETTINGCHANGE = 0x001A;
     private static readonly IntPtr HWND_BROADCAST = new(0xFFFF);
 
@@ -135,9 +121,13 @@ public sealed class TaskbarService
         if (_isRunning) return;
         _isRunning = true;
         CaptureOriginalTaskbarAlignment();
-        ApplySettings();
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        if (App.Settings.MacTaskbarEnabled)
+        {
+            ApplySettings();
+        }
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
         _timer.Tick += (_, _) => CheckPeriodicState();
         _timer.Start();
     }
@@ -205,9 +195,7 @@ public sealed class TaskbarService
             SetTaskbarAlignment(_originalTaskbarAl.Value);
         }
 
-        _lastDockLeft = -1;
-        _lastDockRight = -1;
-        ApplyDockStyling(_lastMaximized, forceRegionUpdate: true);
+        ApplyDockStyling(_lastMaximized);
     }
 
     public void RestoreDefaultTaskbar()
@@ -262,16 +250,11 @@ public sealed class TaskbarService
         if (isMax != _lastMaximized)
         {
             _lastMaximized = isMax;
-            ApplyDockStyling(isMax, forceRegionUpdate: true);
-        }
-        else
-        {
-            // Dynamically check if icon count changed (dock expanded / contracted)
-            ApplyDockStyling(_lastMaximized, forceRegionUpdate: false);
+            ApplyDockStyling(isMax);
         }
     }
 
-    private void ApplyDockStyling(bool isMaximized, bool forceRegionUpdate)
+    private void ApplyDockStyling(bool isMaximized)
     {
         if (!App.Settings.MacTaskbarEnabled) return;
 
@@ -294,7 +277,7 @@ public sealed class TaskbarService
 
             if (isMaximized && App.Settings.MacTaskbarDynamicMaximized)
             {
-                // Slightly deeper frosted tint for optimal contrast when an app is maximized
+                // Deeper frosted tint when a foreground app is maximized
                 alpha = 245;
                 accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                 accentColor = 0xDF181818u;
@@ -304,25 +287,21 @@ public sealed class TaskbarService
                 switch (style)
                 {
                     case "Clear":
-                        alpha = 135;
+                        alpha = 140;
                         accentState = AccentState.ACCENT_ENABLE_TRANSPARENTGRADIENT;
                         accentColor = 0x00000000u;
                         break;
+                    case "Dock":
                     case "Floating":
-                        alpha = 230;
+                        alpha = 225;
                         accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                         accentColor = 0x351E1E1Eu;
                         break;
                     case "Acrylic":
+                    default:
                         alpha = 215;
                         accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                         accentColor = 0x301E1E1Eu;
-                        break;
-                    case "Dock":
-                    default:
-                        alpha = 220;
-                        accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
-                        accentColor = 0x401E1E1Eu;
                         break;
                 }
             }
@@ -331,89 +310,33 @@ public sealed class TaskbarService
             SetTaskbarOpacity(tb, alpha);
             ApplyAccent(tb, accentState, 2, accentColor);
 
-            // Apply floating rounded dock shape (always kept intact!)
-            ApplyDockRegion(tb, tbRect, style, forceRegionUpdate);
+            // Apply safe floating dock region
+            ApplyDockRegion(tb, tbRect, style);
         }
     }
 
-    private void ApplyDockRegion(IntPtr tb, RECT tbRect, string style, bool force)
+    private static void ApplyDockRegion(IntPtr tb, RECT tbRect, string style)
     {
         int tbW = tbRect.Right - tbRect.Left;
         int tbH = tbRect.Bottom - tbRect.Top;
-        const int marginY = 6;
-        const int radius = 24;
 
-        if (style == "Floating")
+        if (style == "Clear")
         {
-            // Floating pill with margins on sides and bottom
-            const int marginX = 14;
-            IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH - marginY, radius, radius);
-            if (rgn != IntPtr.Zero)
-            {
-                SetWindowRgn(tb, rgn, true);
-            }
+            // Clear glass mode without clipping
+            SetWindowRgn(tb, IntPtr.Zero, true);
             return;
         }
 
-        // Style is "Dock", "Acrylic", or "Clear": Segmented macOS Island Dock
-        var (dockLeft, dockRight, trayLeft, trayRight) = CalculateDockSegments(tb, tbRect, tbW);
+        // Floating rounded dock margins: safely encompasses all apps, weather, and tray
+        const int marginX = 8;
+        const int marginY = 4;
+        const int radius = 18;
 
-        // Avoid flickering if bounds haven't changed
-        if (!force && Math.Abs(dockLeft - _lastDockLeft) < 3 && Math.Abs(dockRight - _lastDockRight) < 3)
+        IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH - marginY, radius, radius);
+        if (rgn != IntPtr.Zero)
         {
-            return;
+            SetWindowRgn(tb, rgn, true);
         }
-
-        _lastDockLeft = dockLeft;
-        _lastDockRight = dockRight;
-
-        IntPtr dockRgn = CreateRoundRectRgn(dockLeft, marginY, dockRight, tbH - marginY, radius, radius);
-        IntPtr trayRgn = CreateRoundRectRgn(trayLeft, marginY, trayRight, tbH - marginY, radius, radius);
-
-        if (dockRgn != IntPtr.Zero && trayRgn != IntPtr.Zero)
-        {
-            IntPtr combined = CreateRoundRectRgn(0, 0, 0, 0, 0, 0);
-            CombineRgn(combined, dockRgn, trayRgn, RGN_OR);
-            SetWindowRgn(tb, combined, true);
-        }
-        else if (dockRgn != IntPtr.Zero)
-        {
-            SetWindowRgn(tb, dockRgn, true);
-        }
-    }
-
-    private static (int dockLeft, int dockRight, int trayLeft, int trayRight) CalculateDockSegments(IntPtr tb, RECT tbRect, int tbW)
-    {
-        IntPtr startHwnd = FindWindowEx(tb, IntPtr.Zero, "Start", null);
-        IntPtr rebar = FindWindowEx(tb, IntPtr.Zero, "ReBarWindow32", null);
-        IntPtr tray = FindWindowEx(tb, IntPtr.Zero, "TrayNotifyWnd", null);
-
-        RECT startRect = new();
-        RECT rebarRect = new();
-        RECT trayRect = new();
-
-        if (startHwnd != IntPtr.Zero) GetWindowRect(startHwnd, out startRect);
-        if (rebar != IntPtr.Zero) GetWindowRect(rebar, out rebarRect);
-        if (tray != IntPtr.Zero) GetWindowRect(tray, out trayRect);
-
-        int sLeft = startRect.Left > 0 ? startRect.Left : (rebarRect.Left > 0 ? rebarRect.Left : tbRect.Left + tbW / 4);
-        int rRight = rebarRect.Right > 0 ? rebarRect.Right : (startRect.Right > 0 ? startRect.Right : tbRect.Left + (tbW * 3) / 4);
-
-        int dockLeft = Math.Min(sLeft, rebarRect.Left > 0 ? rebarRect.Left : sLeft) - tbRect.Left - 20;
-        int dockRight = Math.Max(startRect.Right, rRight) - tbRect.Left + 20;
-
-        dockLeft = Math.Max(8, dockLeft);
-        dockRight = Math.Min(tbW - 16, dockRight);
-
-        int tLeft = trayRect.Left > 0 ? trayRect.Left : tbRect.Right - 280;
-        int tRight = trayRect.Right > 0 ? trayRect.Right : tbRect.Right;
-
-        int trayLeft = tLeft - tbRect.Left - 12;
-        int trayRight = tRight - tbRect.Left + 6;
-        trayLeft = Math.Max(dockRight + 12, trayLeft);
-        trayRight = Math.Min(tbW - 8, trayRight);
-
-        return (dockLeft, dockRight, trayLeft, trayRight);
     }
 
     private static void SetTaskbarOpacity(IntPtr tb, byte alpha)
