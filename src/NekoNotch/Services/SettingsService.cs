@@ -99,7 +99,7 @@ public sealed class AppSettings
 
     // macOS Dock Taskbar styling
     public bool MacTaskbarEnabled { get; set; } = true;
-    public string MacTaskbarStyle { get; set; } = "Acrylic"; // "Acrylic", "Clear", "Dock"
+    public string MacTaskbarStyle { get; set; } = "Dock"; // "Dock", "Floating", "Acrylic", "Clear"
     public bool MacTaskbarCenterIcons { get; set; } = true;
     public bool MacTaskbarRestoreOnExit { get; set; } = true;
     public bool MacTaskbarDynamicMaximized { get; set; } = true;

@@ -614,8 +614,8 @@ public partial class SettingsView : UserControl, IToolView
         if (S.MacTaskbarEnabled)
         {
             Section("STYLE & APPEARANCE");
-            var styles = new[] { "Acrylic", "Clear", "Dock" };
-            var styleLabels = new[] { "Frosted Glass (Acrylic)", "Clear Transparent", "Floating Dock (Rounded)" };
+            var styles = new[] { "Dock", "Floating", "Acrylic", "Clear" };
+            var styleLabels = new[] { "macOS Island Dock", "Floating Dock Pill", "Frosted Glass (Acrylic)", "Clear Transparent" };
             var styleIdx = Math.Max(0, Array.IndexOf(styles, S.MacTaskbarStyle));
             Row("Dock appearance", "Choose the visual material for your taskbar.",
                 Combo(styleLabels, styleIdx, i =>
