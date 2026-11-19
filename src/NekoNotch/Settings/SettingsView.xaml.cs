@@ -20,6 +20,7 @@ public partial class SettingsView : UserControl, IToolView
     [
         ("general", "General", AppIcon.Adjust, null),
         ("appearance", "Appearance", AppIcon.Palette, null),
+        ("taskbar", "macOS Dock", AppIcon.Stack, null),
         ("display", "Display", AppIcon.Monitor, "NOTCH"),
         ("tabs", "Tabs", AppIcon.Grid, null),
         ("keyboard", "Keyboard", AppIcon.Keyboard, null),
@@ -120,6 +121,7 @@ public partial class SettingsView : UserControl, IToolView
         {
             case "general": RenderGeneral(); break;
             case "appearance": RenderAppearance(); break;
+            case "taskbar": RenderTaskbar(); break;
             case "display": RenderDisplay(); break;
             case "tabs": RenderTabs(); break;
             case "keyboard": RenderKeyboard(); break;
@@ -593,6 +595,64 @@ public partial class SettingsView : UserControl, IToolView
 
         Section("UNITS");
         Row("Fahrenheit & mph", "Weather units.", Toggle(S.UseFahrenheit, v => { S.UseFahrenheit = v; Save(false); }));
+    }
+
+    private void RenderTaskbar()
+    {
+        Title("macOS Dock", "Transform the Windows taskbar into a modern floating macOS-style dock.");
+
+        Section("TASKBAR TRANSFORMATION");
+        Row("Enable macOS Dock", "Automatically styles your Windows taskbar with frosted glass acrylic blur and centered icons.",
+            Toggle(S.MacTaskbarEnabled, v =>
+            {
+                S.MacTaskbarEnabled = v;
+                Save(false);
+                TaskbarService.Instance.ApplySettings();
+                Render();
+            }));
+
+        if (S.MacTaskbarEnabled)
+        {
+            Section("STYLE & APPEARANCE");
+            var styles = new[] { "Acrylic", "Clear", "Dock" };
+            var styleLabels = new[] { "Frosted Glass (Acrylic)", "Clear Transparent", "Floating Dock (Rounded)" };
+            var styleIdx = Math.Max(0, Array.IndexOf(styles, S.MacTaskbarStyle));
+            Row("Dock appearance", "Choose the visual material for your taskbar.",
+                Combo(styleLabels, styleIdx, i =>
+                {
+                    S.MacTaskbarStyle = styles[i];
+                    Save(false);
+                    TaskbarService.Instance.ApplySettings();
+                }, width: 220));
+
+            Row("Center taskbar icons", "Positions Start button and application icons in the center like macOS Dock.",
+                Toggle(S.MacTaskbarCenterIcons, v =>
+                {
+                    S.MacTaskbarCenterIcons = v;
+                    Save(false);
+                    TaskbarService.Instance.ApplySettings();
+                }));
+
+            Row("Dynamic tint on maximize", "Automatically adapts taskbar opacity when a foreground app is maximized.",
+                Toggle(S.MacTaskbarDynamicMaximized, v =>
+                {
+                    S.MacTaskbarDynamicMaximized = v;
+                    Save(false);
+                    TaskbarService.Instance.ApplySettings();
+                }));
+
+            Section("BEHAVIOR");
+            Row("Restore taskbar on exit", "Reverts Windows taskbar to its default appearance when NekoNotch closes.",
+                Toggle(S.MacTaskbarRestoreOnExit, v =>
+                {
+                    S.MacTaskbarRestoreOnExit = v;
+                    Save(false);
+                }));
+
+            var refreshBtn = new Button { Content = "Re-apply Now", Height = RowControlHeight };
+            refreshBtn.Click += (_, _) => TaskbarService.Instance.ApplySettings();
+            Row("Refresh taskbar", "Instantly re-detect and style all connected monitor taskbars.", refreshBtn);
+        }
     }
 
     private void RenderDisplay()

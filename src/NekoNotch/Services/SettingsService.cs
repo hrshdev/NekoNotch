@@ -97,6 +97,13 @@ public sealed class AppSettings
     public bool Glass { get; set; }                    // see-through, tinted notch with a glass sheen
     public double GlassStrength { get; set; } = 0.6;   // 0 = nearly clear, 1 = nearly opaque tint
 
+    // macOS Dock Taskbar styling
+    public bool MacTaskbarEnabled { get; set; } = true;
+    public string MacTaskbarStyle { get; set; } = "Acrylic"; // "Acrylic", "Clear", "Dock"
+    public bool MacTaskbarCenterIcons { get; set; } = true;
+    public bool MacTaskbarRestoreOnExit { get; set; } = true;
+    public bool MacTaskbarDynamicMaximized { get; set; } = true;
+
     /// <summary>Small, Default, Large or ExtraLarge — size of the closed notch.</summary>
     public string NotchSize { get; set; } = "Default";
 

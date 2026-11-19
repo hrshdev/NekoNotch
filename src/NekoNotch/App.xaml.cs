@@ -93,6 +93,7 @@ public partial class App : Application
         CalendarFeedService.Instance.Start(); // subscribed calendars, every 30 minutes
         PetSoundService.Initialize();
         VoiceAssistantService.Instance.Start(); // offline voice assistant & wake word ("Hey Neko")
+        TaskbarService.Instance.Start(); // macOS Dock taskbar transformation
 
         // `NekoNotch.exe --open weather` starts with the panel open on a tool.
         var openAt = Array.IndexOf(e.Args, "--open");
@@ -108,6 +109,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        TaskbarService.Instance.Stop();
         _tray?.Dispose();
         ShelfService.Instance.Save();
         _ = PhoneTransferService.Instance.StopAsync(); // sockets close with the process anyway
