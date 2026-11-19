@@ -9,9 +9,9 @@ namespace NekoNotch.Services;
 /// <summary>
 /// Transforms the Windows taskbar into a modern floating macOS-style dock:
 /// - Smooth floating dock pill with rounded margins and elevation.
+/// - Full Auto-hide & Hover-to-Show support without broken hit-testing.
 /// - Translucent frosted glass blur and layered opacity.
 /// - Centered dock icons via TaskbarAl registry settings with broadcast.
-/// - Safe and non-destructive: never clips through active application icons.
 /// - Clean restoration of default Windows taskbar on exit or when disabled.
 /// </summary>
 public sealed class TaskbarService
@@ -20,11 +20,30 @@ public sealed class TaskbarService
 
     private DispatcherTimer? _timer;
     private int? _originalTaskbarAl;
-    private bool _hasCapturedOriginalAl;
+    private bool? _originalAutoHide;
+    private bool _hasCapturedOriginals;
     private bool _lastMaximized;
     private bool _isRunning;
 
     // Win32 Interop
+    private const int ABM_GETSTATE = 0x00000004;
+    private const int ABM_SETSTATE = 0x0000000A;
+    private const int ABS_AUTOHIDE = 0x00000001;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct APPBARDATA
+    {
+        public uint cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
+    [DllImport("shell32.dll", CallingConvention = CallingConvention.StdCall)]
+    private static extern IntPtr SHAppBarMessage(int dwMessage, ref APPBARDATA pData);
+
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
 
@@ -120,14 +139,14 @@ public sealed class TaskbarService
     {
         if (_isRunning) return;
         _isRunning = true;
-        CaptureOriginalTaskbarAlignment();
+        CaptureOriginals();
 
         if (App.Settings.MacTaskbarEnabled)
         {
             ApplySettings();
         }
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _timer.Tick += (_, _) => CheckPeriodicState();
         _timer.Start();
     }
@@ -145,17 +164,68 @@ public sealed class TaskbarService
         }
     }
 
-    private void CaptureOriginalTaskbarAlignment()
+    private void CaptureOriginals()
     {
-        if (_hasCapturedOriginalAl) return;
+        if (_hasCapturedOriginals) return;
         try
         {
             using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
             if (key?.GetValue("TaskbarAl") is int val)
             {
                 _originalTaskbarAl = val;
-                _hasCapturedOriginalAl = true;
             }
+
+            _originalAutoHide = GetTaskbarAutoHide();
+            _hasCapturedOriginals = true;
+        }
+        catch { }
+    }
+
+    public static bool GetTaskbarAutoHide()
+    {
+        try
+        {
+            var primary = FindWindow("Shell_TrayWnd", null);
+            if (primary == IntPtr.Zero)
+            {
+                primary = EnsureTaskbarHandle();
+            }
+            if (primary == IntPtr.Zero) return false;
+
+            var abd = new APPBARDATA
+            {
+                cbSize = (uint)Marshal.SizeOf<APPBARDATA>(),
+                hWnd = primary
+            };
+            var res = SHAppBarMessage(ABM_GETSTATE, ref abd);
+            return (res.ToInt32() & ABS_AUTOHIDE) != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static void SetTaskbarAutoHide(bool enable)
+    {
+        try
+        {
+            var primary = FindWindow("Shell_TrayWnd", null);
+            if (primary == IntPtr.Zero)
+            {
+                primary = EnsureTaskbarHandle();
+            }
+            if (primary == IntPtr.Zero) return;
+
+            var abd = new APPBARDATA
+            {
+                cbSize = (uint)Marshal.SizeOf<APPBARDATA>(),
+                hWnd = primary
+            };
+            var cur = SHAppBarMessage(ABM_GETSTATE, ref abd).ToInt32();
+            int newState = enable ? (cur | ABS_AUTOHIDE) : (cur & ~ABS_AUTOHIDE);
+            abd.lParam = new IntPtr(newState);
+            SHAppBarMessage(ABM_SETSTATE, ref abd);
         }
         catch { }
     }
@@ -195,6 +265,7 @@ public sealed class TaskbarService
             SetTaskbarAlignment(_originalTaskbarAl.Value);
         }
 
+        SetTaskbarAutoHide(App.Settings.MacTaskbarAutoHide);
         ApplyDockStyling(_lastMaximized);
     }
 
@@ -225,6 +296,11 @@ public sealed class TaskbarService
             {
                 SetTaskbarAlignment(_originalTaskbarAl.Value);
             }
+
+            if (_originalAutoHide.HasValue)
+            {
+                SetTaskbarAutoHide(_originalAutoHide.Value);
+            }
         }
         catch { }
     }
@@ -250,8 +326,9 @@ public sealed class TaskbarService
         if (isMax != _lastMaximized)
         {
             _lastMaximized = isMax;
-            ApplyDockStyling(isMax);
         }
+
+        ApplyDockStyling(_lastMaximized);
     }
 
     private void ApplyDockStyling(bool isMaximized)
@@ -270,6 +347,13 @@ public sealed class TaskbarService
             int tbH = tbRect.Bottom - tbRect.Top;
             if (tbW <= 0 || tbH <= 0) continue;
 
+            // When autohidden (height < 35), NEVER clip so bottom-edge hover works immediately
+            if (tbH < 35)
+            {
+                SetWindowRgn(tb, IntPtr.Zero, false);
+                continue;
+            }
+
             // Determine opacity & accent color
             byte alpha;
             AccentState accentState;
@@ -277,7 +361,6 @@ public sealed class TaskbarService
 
             if (isMaximized && App.Settings.MacTaskbarDynamicMaximized)
             {
-                // Deeper frosted tint when a foreground app is maximized
                 alpha = 245;
                 accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                 accentColor = 0xDF181818u;
@@ -293,7 +376,7 @@ public sealed class TaskbarService
                         break;
                     case "Dock":
                     case "Floating":
-                        alpha = 225;
+                        alpha = 220;
                         accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                         accentColor = 0x351E1E1Eu;
                         break;
@@ -320,19 +403,20 @@ public sealed class TaskbarService
         int tbW = tbRect.Right - tbRect.Left;
         int tbH = tbRect.Bottom - tbRect.Top;
 
-        if (style == "Clear")
+        if (tbH < 35 || style == "Clear")
         {
-            // Clear glass mode without clipping
             SetWindowRgn(tb, IntPtr.Zero, true);
             return;
         }
 
-        // Floating rounded dock margins: safely encompasses all apps, weather, and tray
-        const int marginX = 8;
-        const int marginY = 4;
-        const int radius = 18;
+        // Floating rounded dock margins:
+        // By using nBottomRect = tbH, the top and lateral edges are rounded and floating (inset),
+        // while the bottom edge stays flush with the screen so mouse hover is never lost.
+        const int marginX = 10;
+        const int marginY = 5;
+        const int radius = 20;
 
-        IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH - marginY, radius, radius);
+        IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH, radius, radius);
         if (rgn != IntPtr.Zero)
         {
             SetWindowRgn(tb, rgn, true);
@@ -387,6 +471,21 @@ public sealed class TaskbarService
         catch { }
     }
 
+    private static IntPtr EnsureTaskbarHandle()
+    {
+        try
+        {
+            IntPtr hDesk = OpenDesktop("default", 0, false, 0x01FF);
+            if (hDesk != IntPtr.Zero)
+            {
+                SetThreadDesktop(hDesk);
+                return FindWindow("Shell_TrayWnd", null);
+            }
+        }
+        catch { }
+        return IntPtr.Zero;
+    }
+
     private static List<IntPtr> GetAllTaskbars()
     {
         var list = new List<IntPtr>();
@@ -395,16 +494,7 @@ public sealed class TaskbarService
             var primary = FindWindow("Shell_TrayWnd", null);
             if (primary == IntPtr.Zero)
             {
-                try
-                {
-                    IntPtr hDesk = OpenDesktop("default", 0, false, 0x01FF);
-                    if (hDesk != IntPtr.Zero)
-                    {
-                        SetThreadDesktop(hDesk);
-                        primary = FindWindow("Shell_TrayWnd", null);
-                    }
-                }
-                catch { }
+                primary = EnsureTaskbarHandle();
             }
             if (primary != IntPtr.Zero) list.Add(primary);
 

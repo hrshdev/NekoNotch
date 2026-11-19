@@ -633,6 +633,14 @@ public partial class SettingsView : UserControl, IToolView
                     TaskbarService.Instance.ApplySettings();
                 }));
 
+            Row("Auto-hide (Hover to show)", "Automatically slides the dock down when idle and smoothly reveals it when hovering at the bottom edge.",
+                Toggle(S.MacTaskbarAutoHide, v =>
+                {
+                    S.MacTaskbarAutoHide = v;
+                    Save(false);
+                    TaskbarService.Instance.ApplySettings();
+                }));
+
             Row("Dynamic tint on maximize", "Automatically adapts taskbar opacity when a foreground app is maximized.",
                 Toggle(S.MacTaskbarDynamicMaximized, v =>
                 {
