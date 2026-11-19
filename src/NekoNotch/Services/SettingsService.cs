@@ -102,7 +102,7 @@ public sealed class AppSettings
     public string MacTaskbarStyle { get; set; } = "Dock"; // "Dock", "Floating", "Acrylic", "Clear"
     public bool MacTaskbarCenterIcons { get; set; } = true;
     public bool MacTaskbarRestoreOnExit { get; set; } = true;
-    public bool MacTaskbarDynamicMaximized { get; set; } = true;
+    public bool MacTaskbarDynamicMaximized { get; set; } = false;
 
     /// <summary>Small, Default, Large or ExtraLarge — size of the closed notch.</summary>
     public string NotchSize { get; set; } = "Default";

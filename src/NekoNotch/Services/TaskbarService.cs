@@ -11,7 +11,6 @@ namespace NekoNotch.Services;
 /// - Floating rounded dock segments (Start + app icons dock island & tray status island).
 /// - Translucent frosted glass blur and layered opacity.
 /// - Centered dock icons via TaskbarAl registry settings with broadcast.
-/// - Dynamic opacity & margin adaptation when a window is maximized.
 /// - Dynamic width tracking as apps are pinned or opened.
 /// - Clean restoration of default Windows taskbar on exit.
 /// </summary>
@@ -288,22 +287,20 @@ public sealed class TaskbarService
             int tbH = tbRect.Bottom - tbRect.Top;
             if (tbW <= 0 || tbH <= 0) continue;
 
+            // Determine opacity & accent color
+            byte alpha;
+            AccentState accentState;
+            uint accentColor;
+
             if (isMaximized && App.Settings.MacTaskbarDynamicMaximized)
             {
-                // Maximized window mode: clear region for solid full-width taskbar
-                SetWindowRgn(tb, IntPtr.Zero, true);
-
-                // Fully opaque / deep frosted tint
-                SetTaskbarOpacity(tb, 255);
-                ApplyAccent(tb, AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND, 2, 0xD0181818u);
+                // Slightly deeper frosted tint for optimal contrast when an app is maximized
+                alpha = 245;
+                accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
+                accentColor = 0xDF181818u;
             }
             else
             {
-                // Determine styling parameters
-                byte alpha;
-                AccentState accentState;
-                uint accentColor;
-
                 switch (style)
                 {
                     case "Clear":
@@ -317,25 +314,25 @@ public sealed class TaskbarService
                         accentColor = 0x351E1E1Eu;
                         break;
                     case "Acrylic":
-                        alpha = 210;
+                        alpha = 215;
                         accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                         accentColor = 0x301E1E1Eu;
                         break;
                     case "Dock":
                     default:
-                        alpha = 225;
+                        alpha = 220;
                         accentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND;
                         accentColor = 0x401E1E1Eu;
                         break;
                 }
-
-                // Apply opacity and acrylic blur
-                SetTaskbarOpacity(tb, alpha);
-                ApplyAccent(tb, accentState, 2, accentColor);
-
-                // Apply shape / region
-                ApplyDockRegion(tb, tbRect, style, forceRegionUpdate);
             }
+
+            // Apply opacity and acrylic blur
+            SetTaskbarOpacity(tb, alpha);
+            ApplyAccent(tb, accentState, 2, accentColor);
+
+            // Apply floating rounded dock shape (always kept intact!)
+            ApplyDockRegion(tb, tbRect, style, forceRegionUpdate);
         }
     }
 
@@ -343,13 +340,13 @@ public sealed class TaskbarService
     {
         int tbW = tbRect.Right - tbRect.Left;
         int tbH = tbRect.Bottom - tbRect.Top;
-        const int marginY = 5;
-        const int radius = 22;
+        const int marginY = 6;
+        const int radius = 24;
 
-        if (style == "Floating" || style == "Acrylic" || style == "Clear")
+        if (style == "Floating")
         {
             // Floating pill with margins on sides and bottom
-            const int marginX = 12;
+            const int marginX = 14;
             IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH - marginY, radius, radius);
             if (rgn != IntPtr.Zero)
             {
@@ -358,7 +355,7 @@ public sealed class TaskbarService
             return;
         }
 
-        // Style is "Dock": Segmented macOS Island Dock
+        // Style is "Dock", "Acrylic", or "Clear": Segmented macOS Island Dock
         var (dockLeft, dockRight, trayLeft, trayRight) = CalculateDockSegments(tb, tbRect, tbW);
 
         // Avoid flickering if bounds haven't changed
@@ -402,8 +399,8 @@ public sealed class TaskbarService
         int sLeft = startRect.Left > 0 ? startRect.Left : (rebarRect.Left > 0 ? rebarRect.Left : tbRect.Left + tbW / 4);
         int rRight = rebarRect.Right > 0 ? rebarRect.Right : (startRect.Right > 0 ? startRect.Right : tbRect.Left + (tbW * 3) / 4);
 
-        int dockLeft = Math.Min(sLeft, rebarRect.Left > 0 ? rebarRect.Left : sLeft) - tbRect.Left - 18;
-        int dockRight = Math.Max(startRect.Right, rRight) - tbRect.Left + 18;
+        int dockLeft = Math.Min(sLeft, rebarRect.Left > 0 ? rebarRect.Left : sLeft) - tbRect.Left - 20;
+        int dockRight = Math.Max(startRect.Right, rRight) - tbRect.Left + 20;
 
         dockLeft = Math.Max(8, dockLeft);
         dockRight = Math.Min(tbW - 16, dockRight);
@@ -411,7 +408,7 @@ public sealed class TaskbarService
         int tLeft = trayRect.Left > 0 ? trayRect.Left : tbRect.Right - 280;
         int tRight = trayRect.Right > 0 ? trayRect.Right : tbRect.Right;
 
-        int trayLeft = tLeft - tbRect.Left - 10;
+        int trayLeft = tLeft - tbRect.Left - 12;
         int trayRight = tRight - tbRect.Left + 6;
         trayLeft = Math.Max(dockRight + 12, trayLeft);
         trayRight = Math.Min(tbW - 8, trayRight);
@@ -473,6 +470,19 @@ public sealed class TaskbarService
         try
         {
             var primary = FindWindow("Shell_TrayWnd", null);
+            if (primary == IntPtr.Zero)
+            {
+                try
+                {
+                    IntPtr hDesk = OpenDesktop("default", 0, false, 0x01FF);
+                    if (hDesk != IntPtr.Zero)
+                    {
+                        SetThreadDesktop(hDesk);
+                        primary = FindWindow("Shell_TrayWnd", null);
+                    }
+                }
+                catch { }
+            }
             if (primary != IntPtr.Zero) list.Add(primary);
 
             EnumWindows((hwnd, _) =>
