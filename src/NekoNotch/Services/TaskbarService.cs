@@ -496,27 +496,11 @@ Restart-Service Windhawk -ErrorAction SilentlyContinue
 
     private static void ApplyDockRegion(IntPtr tb, RECT tbRect, string style)
     {
-        int tbW = tbRect.Right - tbRect.Left;
-        int tbH = tbRect.Bottom - tbRect.Top;
-
-        if (tbH < 35 || style == "Clear")
-        {
-            SetWindowRgn(tb, IntPtr.Zero, true);
-            return;
-        }
-
-        // Floating rounded dock margins:
-        // By using nBottomRect = tbH, the top and lateral edges are rounded and floating (inset),
-        // while the bottom edge stays flush with the screen so mouse hover is never lost.
-        const int marginX = 10;
-        const int marginY = 5;
-        const int radius = 20;
-
-        IntPtr rgn = CreateRoundRectRgn(marginX, marginY, tbW - marginX, tbH, radius, radius);
-        if (rgn != IntPtr.Zero)
-        {
-            SetWindowRgn(tb, rgn, true);
-        }
+        // Never apply Win32 region clipping to Shell_TrayWnd:
+        // In Windows 11, clipping Shell_TrayWnd cuts off the 2px auto-hide hover trigger
+        // strip at the edge and prevents mouse hover from detecting and un-hiding the taskbar.
+        // The rounded dock capsule pill is styled cleanly by Windhawk / XAML elements.
+        SetWindowRgn(tb, IntPtr.Zero, true);
     }
 
     private static void SetTaskbarOpacity(IntPtr tb, byte alpha)
