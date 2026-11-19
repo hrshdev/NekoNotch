@@ -633,14 +633,6 @@ public partial class SettingsView : UserControl, IToolView
                     TaskbarService.Instance.ApplySettings();
                 }));
 
-            Row("Auto-hide (Hover to show)", "Automatically slides the dock down when idle and smoothly reveals it when hovering at the bottom edge.",
-                Toggle(S.MacTaskbarAutoHide, v =>
-                {
-                    S.MacTaskbarAutoHide = v;
-                    Save(false);
-                    TaskbarService.Instance.ApplySettings();
-                }));
-
             Row("Dynamic tint on maximize", "Automatically adapts taskbar opacity when a foreground app is maximized.",
                 Toggle(S.MacTaskbarDynamicMaximized, v =>
                 {
@@ -648,6 +640,14 @@ public partial class SettingsView : UserControl, IToolView
                     Save(false);
                     TaskbarService.Instance.ApplySettings();
                 }));
+
+            var oneUiBtn = new Button { Content = "Apply Dark Dock", Height = RowControlHeight };
+            oneUiBtn.Click += (_, _) =>
+            {
+                TaskbarService.ApplyWindhawkOneUIDarkDock(out _);
+                TaskbarService.Instance.ApplySettings();
+            };
+            Row("One UI 8.5 Dark Dock", "Applies dark squircle icons, centered capsule dock pill, and hides system tray completely.", oneUiBtn);
 
             Section("BEHAVIOR");
             Row("Restore taskbar on exit", "Reverts Windows taskbar to its default appearance when NekoNotch closes.",

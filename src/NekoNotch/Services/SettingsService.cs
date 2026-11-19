@@ -101,7 +101,7 @@ public sealed class AppSettings
     public bool MacTaskbarEnabled { get; set; } = false;
     public string MacTaskbarStyle { get; set; } = "Dock"; // "Dock", "Floating", "Acrylic", "Clear"
     public bool MacTaskbarCenterIcons { get; set; } = true;
-    public bool MacTaskbarAutoHide { get; set; } = true;
+    public bool MacTaskbarAutoHide { get; set; } = false;
     public bool MacTaskbarRestoreOnExit { get; set; } = true;
     public bool MacTaskbarDynamicMaximized { get; set; } = false;
 

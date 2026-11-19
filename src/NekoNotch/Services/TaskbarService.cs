@@ -47,6 +47,15 @@ public sealed class TaskbarService
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string className, string? windowTitle);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    private const int SW_HIDE = 0;
+    private const int SW_SHOW = 5;
+
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -158,6 +167,8 @@ public sealed class TaskbarService
         _timer?.Stop();
         _timer = null;
 
+        SetTrayVisibility(true);
+
         if (App.Settings.MacTaskbarRestoreOnExit)
         {
             RestoreDefaultTaskbar();
@@ -265,14 +276,34 @@ public sealed class TaskbarService
             SetTaskbarAlignment(_originalTaskbarAl.Value);
         }
 
+        SetTrayVisibility(false);
         SetTaskbarAutoHide(App.Settings.MacTaskbarAutoHide);
         ApplyDockStyling(_lastMaximized);
+    }
+
+    public static void SetTrayVisibility(bool visible)
+    {
+        try
+        {
+            var taskbars = GetAllTaskbars();
+            foreach (var tb in taskbars)
+            {
+                var tray = FindWindowEx(tb, IntPtr.Zero, "TrayNotifyWnd", null);
+                if (tray != IntPtr.Zero)
+                {
+                    ShowWindow(tray, visible ? SW_SHOW : SW_HIDE);
+                }
+            }
+        }
+        catch { }
     }
 
     public void RestoreDefaultTaskbar()
     {
         try
         {
+            SetTrayVisibility(true);
+
             var taskbars = GetAllTaskbars();
             foreach (var tb in taskbars)
             {
@@ -309,6 +340,9 @@ public sealed class TaskbarService
     {
         if (!App.Settings.MacTaskbarEnabled) return;
 
+        // Ensure tray remains hidden when dock feature is active
+        SetTrayVisibility(false);
+
         bool isMax = false;
         if (App.Settings.MacTaskbarDynamicMaximized)
         {
@@ -329,6 +363,68 @@ public sealed class TaskbarService
         }
 
         ApplyDockStyling(_lastMaximized);
+    }
+
+    /// <summary>
+    /// Configures Windhawk windows-11-taskbar-styler mod to match the One UI 8.5 Dark Dock style:
+    /// - Theme: One_UI_8_5_variant_Dock
+    /// - Squircle icons: dark theme (darkbg.png)
+    /// - System tray: collapsed completely
+    /// - Dock capsule: fully rounded symmetric pill (CornerRadius=25, BorderThickness=1)
+    /// </summary>
+    public static bool ApplyWindhawkOneUIDarkDock(out string? error)
+    {
+        error = null;
+        try
+        {
+            const string regKey = @"SOFTWARE\Windhawk\Engine\Mods\windows-11-taskbar-styler\Settings";
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(regKey, writable: true);
+                if (key != null)
+                {
+                    key.SetValue("theme", "One_UI_8_5_variant_Dock", RegistryValueKind.String);
+                    key.SetValue("styleConstants[0]", @"IconBackground=<ImageBrush Stretch=""Uniform""> <ImageBrush.ImageSource> <BitmapImage UriSource=""https://raw.githubusercontent.com/ramensoftware/windows-11-taskbar-styling-guide/refs/heads/main/Themes/One%20UI%208.5/Assets/darkbg.png"" DecodePixelType=""Logical"" DecodePixelWidth=""64"" DecodePixelHeight=""64"" /> </ImageBrush.ImageSource> </ImageBrush>", RegistryValueKind.String);
+                    key.SetValue("controlStyles[0].target", "Taskbar.TaskbarExtensionElement", RegistryValueKind.String);
+                    key.SetValue("controlStyles[0].styles[0]", "Visibility=Collapsed", RegistryValueKind.String);
+                    key.SetValue("controlStyles[1].target", "Grid#RootGrid > Taskbar.TaskbarBackground > Grid", RegistryValueKind.String);
+                    key.SetValue("controlStyles[1].styles[0]", "CornerRadius=25", RegistryValueKind.String);
+                    key.SetValue("controlStyles[1].styles[1]", "BorderThickness=1", RegistryValueKind.String);
+                    return true;
+                }
+            }
+            catch { }
+
+            var psScript = @"$path = 'HKLM:\SOFTWARE\Windhawk\Engine\Mods\windows-11-taskbar-styler\Settings'
+if (!(Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+Set-ItemProperty -Path $path -Name 'theme' -Value 'One_UI_8_5_variant_Dock'
+Set-ItemProperty -Path $path -Name 'styleConstants[0]' -Value 'IconBackground=<ImageBrush Stretch=""Uniform""> <ImageBrush.ImageSource> <BitmapImage UriSource=""https://raw.githubusercontent.com/ramensoftware/windows-11-taskbar-styling-guide/refs/heads/main/Themes/One%20UI%208.5/Assets/darkbg.png"" DecodePixelType=""Logical"" DecodePixelWidth=""64"" DecodePixelHeight=""64"" /> </ImageBrush.ImageSource> </ImageBrush>'
+Set-ItemProperty -Path $path -Name 'controlStyles[0].target' -Value 'Taskbar.TaskbarExtensionElement'
+Set-ItemProperty -Path $path -Name 'controlStyles[0].styles[0]' -Value 'Visibility=Collapsed'
+Set-ItemProperty -Path $path -Name 'controlStyles[1].target' -Value 'Grid#RootGrid > Taskbar.TaskbarBackground > Grid'
+Set-ItemProperty -Path $path -Name 'controlStyles[1].styles[0]' -Value 'CornerRadius=25'
+Set-ItemProperty -Path $path -Name 'controlStyles[1].styles[1]' -Value 'BorderThickness=1'
+Restart-Service Windhawk -ErrorAction SilentlyContinue
+";
+            var tempPs1 = Path.Combine(Path.GetTempPath(), "apply_nekonotch_dark_dock.ps1");
+            File.WriteAllText(tempPs1, psScript);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempPs1}\"",
+                UseShellExecute = true,
+                Verb = "runas"
+            };
+            var proc = System.Diagnostics.Process.Start(psi);
+            proc?.WaitForExit(5000);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     private void ApplyDockStyling(bool isMaximized)
